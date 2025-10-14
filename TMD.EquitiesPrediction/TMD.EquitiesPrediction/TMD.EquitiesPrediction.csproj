@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!--<GenerateProgramFile>false</GenerateProgramFile>-->
+    <Version>2.6.3.2</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="ExecCryptoPricePrediction.cs" />
+    <Compile Remove="ExecStockPricePrediction.cs" />
+    <Compile Remove="Startup.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Azure.Functions.Extensions" Version="1.1.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="9.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="9.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\TMD.Database.Connect\TMD.Database.Connect\TMD.Database.Connect.csproj" />
+    <ProjectReference Include="..\..\TMD.PricePrediction.Classes\TMD.PricePrediction.Classes\TMD.PricePrediction.Classes.csproj" />
+    <ProjectReference Include="..\..\TMD.Services\TMD.Services\TMD.Services.csproj" />
+    <ProjectReference Include="..\..\TMDInvestments.Models\TMDInvestments.Models\TMDInvestments.Models.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

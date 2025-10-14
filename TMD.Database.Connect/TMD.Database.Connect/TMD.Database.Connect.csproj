@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="ClientBase.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.5.0" />
+    <PackageReference Include="EntityFramework" Version="6.5.1" />
+    <PackageReference Include="MailKit" Version="4.10.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.1" />
+    <PackageReference Include="MongoDB.Driver" Version="3.1.0" />
+    <PackageReference Include="System.Runtime.InteropServices" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\TMDInvestments.Models\TMDInvestments.Models\TMDInvestments.Models.csproj" />
+  </ItemGroup>
+
+</Project>

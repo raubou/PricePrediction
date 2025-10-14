@@ -1,0 +1,96 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace NewsAggregator.models.returnModel
+{
+    public sealed class ImpactModel
+    {
+        public string @page { get; set; }//": "1",
+        public int @numpages { get; set; }//": "2",
+        public int @pagesize { get; set; }//": "100",
+        public int @total { get; set; }//": "145",
+        public int @start { get; set; }//": "0",
+        public int @end { get; set; }//": "99",
+        public string @uri { get; set; }//": "/Mediapartners/IRB3qLkYikxk1877680RhmjBNprcMSrhY1/Ads",
+        public string @firstpageuri { get; set; }//": "/Mediapartners/IRB3qLkYikxk1877680RhmjBNprcMSrhY1/Ads?PageSize=100&Page=1",
+        public string @previouspageuri { get; set; }//": "",
+        public string @nextpageuri { get; set; }//": "/Mediapartners/IRB3qLkYikxk1877680RhmjBNprcMSrhY1/Ads?PageSize=100&Page=2",
+        public string @lastpageuri { get; set; }//": "/Mediapartners/IRB3qLkYikxk1877680RhmjBNprcMSrhY1/Ads?PageSize=100&Page=2",
+        public List<Ads> ads { get; set; } = new List<Ads>();
+
+    }
+
+    public class Ads
+    {
+        public string Id { get; set; }//": "1212429",
+        public string Name { get; set; }//": "Get 6 Free Months Of Apple News+.",
+        public string Description { get; set; }//": "",
+        public string CampaignId { get; set; }//": "10014",
+        public string CampaignName { get; set; }//": "Best Buy U.S",
+        public string Type { get; set; }//": "TEXT_LINK",
+        public string TrackingLink { get; set; }//": "https://bestbuy.7tiv.net/c/1877680/1212429/10014",
+        public string LandingPageUrl { get; set; }//": "https://www.bestbuy.com/site/apple-free-apple-news-for-6-months-new-subscribers-only-digital/6451507.p?skuId=6451507",
+        public string AdvertiserId { get; set; }//": "1434782",
+        public string AdvertiserName { get; set; }//": "Best Buy U.S.",
+        public string Code { get; set; }//": "<h3 id=\"1212429\"><a href=\"https://bestbuy.7tiv.net/c/1877680/1212429/10014\">Get 6 Free Months Of Apple News+.</a></h3>\n<img height=\"0\" width=\"0\" src=\"https://imp.pxf.io/i/1877680/1212429/10014\" style=\"position:absolute;visibility:hidden;\" border=\"0\" />",
+        public string IFrameCode { get; set; }//": "<iframe id=\"iframe_757\" src=\"//a.impactradius-go.com/gen-ad-code/1877680/1212429/10014/\" scrolling=\"yes\" frameborder=\"0\" marginheight=\"0\" marginwidth=\"0\"></iframe>",
+        public string Width { get; set; }//": "",
+        public string Height { get; set; }//": "",
+        public string CreativeUrl { get; set; }//": "",
+        public string Labels { get; set; }//": "Subscriptions",
+        public string AllowDeepLinking { get; set; }//": "true",
+        public string MobileReady { get; set; }//": "false",
+        public string Language { get; set; }//": "ENGLISH",
+        public DateTime StartDate { get; set; }//": "2021-11-30T00:00:00-05:00",
+        public string EndDate { get; set; }//": "2022-09-26T00:59:59-04:00",
+                                           //"Season": "",
+                                           //"TopSeller": "false",
+                                           //"SubjectLines": "",
+                                           //"FromAddresses": "",
+                                           //"UnsubscribeLink": "",
+                                           //"DealId": "",
+                                           //"DealName": "",
+                                           //"DealDescription": "",
+                                           //"DealState": "",
+                                           //"DealType": "",
+                                           //"DealScope": "",
+                                           //"DealPublic": "",
+                                           //"DealProducts": [],
+                                           //"DealCategories": "",
+                                           //"DiscountType": "",
+                                           //"DiscountAmount": "",
+                                           //"DiscountCurrency": "",
+                                           //"DiscountPercent": "",
+                                           //"DiscountMaximumPercent": "",
+                                           //"DiscountPercentRangeStart": "",
+                                           //"DiscountPercentRangeEnd": "",
+                                           //"Gift": "",
+                                           //"RebateAmount": "",
+                                           //"RebateCurrency": "",
+                                           //"DealDefaultPromoCode": "",
+                                           //"MinimumPurchaseAmount": "",
+                                           //"MinimumPurchaseAmountCurrency": "",
+                                           //"MaximumSavingsAmount": "",
+                                           //"MaximumSavingsCurrency": "",
+                                           //"BogoBuyQuantity": "",
+                                           //"BogoBuyScope": "",
+                                           //"BogoBuyName": "",
+                                           //"BogoBuyImageUrl": "",
+                                           //"BogoGetQuantity": "",
+                                           //"BogoGetScope": "",
+                                           //"BogoGetDiscountType": "",
+                                           //"BogoGetName": "",
+                                           //"BogoGetImageUrl": "",
+                                           //"BogoGetDiscountAmount": "",
+                                           //"BogoGetDiscountCurrency": "",
+                                           //"BogoGetDiscountPercent": "",
+                                           //"PurchaseLimitQuantity": "",
+                                           //"DealStartDate": "",
+                                           //"DealEndDate": "",
+                                           //"DealDateCreated": "",
+                                           //"DealDateLastUpdated": "",
+        public string Uri { get; set; }//": "/Mediapartners/IRB3qLkYikxk1877680RhmjBNprcMSrhY1/Ads/1212429"
+    }
+}

@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net8.0;net48</TargetFrameworks>
+     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Title>Coinbase.AdvancedTrade</Title>
+    <PackageProjectUrl>https://github.com/barrywood78/Coinbase.AdvancedTrade</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+	<PackageLicenseExpression>MIT</PackageLicenseExpression>
+	<AssemblyVersion>1.4</AssemblyVersion>
+	<FileVersion>1.4</FileVersion>
+	<Version>1.4</Version>
+	<Description>An unofficial Coinbase API Wrapper</Description>
+	<GenerateDocumentationFile>True</GenerateDocumentationFile>
+
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.5.0" />
+    <PackageReference Include="jose-jwt" Version="5.1.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="RestSharp" Version="112.1.0" />
+    <PackageReference Include="System.Formats.Asn1" Version="9.0.1" />
+    <PackageReference Include="System.Runtime.InteropServices" Version="4.3.0" />
+    <PackageReference Include="System.Text.Json" Version="9.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+</Project>

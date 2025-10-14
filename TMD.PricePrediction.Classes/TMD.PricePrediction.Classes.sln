@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35327.3
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TMD.PricePrediction.Classes", "TMD.PricePrediction.Classes\TMD.PricePrediction.Classes.csproj", "{DAF932C1-1D5B-4FA0-A198-48C825916BA6}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DAF932C1-1D5B-4FA0-A198-48C825916BA6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DAF932C1-1D5B-4FA0-A198-48C825916BA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DAF932C1-1D5B-4FA0-A198-48C825916BA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DAF932C1-1D5B-4FA0-A198-48C825916BA6}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {AC70C605-8F16-45D3-8E13-F863224FFB2B}
+	EndGlobalSection
+EndGlobal

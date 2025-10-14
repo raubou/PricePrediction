@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Helper\GeneralHelper.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.5.0" />
+    <PackageReference Include="DotNetOpenAuth.OAuth.Consumer" Version="4.3.4.13329" />
+    <PackageReference Include="DotNetOpenAuth.OAuth.Core" Version="4.3.4.13329" />
+    <PackageReference Include="GraphQL" Version="8.3.1" />
+    <PackageReference Include="GraphQL.Client" Version="6.1.0" />
+    <PackageReference Include="GraphQL.Client.Serializer.Newtonsoft" Version="6.1.0" />
+    <PackageReference Include="log4net" Version="3.0.3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="System.Runtime.InteropServices" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Coinbase.AdvancedTrade-main\Coinbase.AdvancedTrade-main\Coinbase.AdvancedTrade\Coinbase.AdvancedTrade.csproj" />
+    <ProjectReference Include="..\..\TinyOAuth2-master\TinyOAuth2\TinyOAuth2.csproj" />
+    <ProjectReference Include="..\..\TMD.Database.Connect\TMD.Database.Connect\TMD.Database.Connect.csproj" />
+    <ProjectReference Include="..\..\TMDInvestments.Models\TMDInvestments.Models\TMDInvestments.Models.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
