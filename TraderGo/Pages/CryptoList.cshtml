@@ -1,0 +1,86 @@
+﻿@page
+@model CryptoListModel
+@{
+    ViewData["Title"] = "Tradergo.com - Crypto List";
+}
+<h4 style="color:#006699;">Crypto List</h4>
+<div class="row">
+    <div class="col">
+        @await Html.PartialAsync("~/Pages/Partial/_CryptoMenu.cshtml")
+    </div>
+</div>
+<div class="row">
+    <div class="col"><b>Total: @Model.Total</b></div>
+</div>
+<hr />
+<div class="border rounded-3 p-3" style="width:100%;height:auto;margin:0px auto;float:none;position: relative; top: 40px;overflow:hidden;overflow-x:auto;font-size:13px;">
+    <div class="container-fluid">
+        <div class="row fw-bold fixRowHeaderBlue">
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Symbol</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Name</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Use Rsi</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Use Sma 200</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Use Ema 200</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Use Vwap</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Use Ema 9</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Use Ema 12</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Use Ema 26</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Use Macd</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Exclude From Automation</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Date Created</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap"></div>
+        </div>
+        @foreach (var item in Model?.CryptoLists)
+        {
+            <form id="frmCryptoList_@item.Id" name="frmCryptoList_@item.Id" method="post">
+            <div class="row border border-1 border-info">
+                <div class="col">
+                    <b><a href="javascript:objContext.Quote2('@item.Coin.ToUpper()', '@item.Name');">@item.Coin.ToUpper()</a></b>
+                </div>
+                    <div class="col overflow-hidden">
+                    @item.Name
+                        <input type="hidden" asp-for="CryptoList.Id" value="@item.Id" />
+                        <input type="hidden" asp-for="CryptoList.Name" value="@item.Name" />
+                        <input type="hidden" asp-for="CryptoList.Coin" value="@item.Coin" />
+                </div>
+                <div class="col">
+                        @Html.CheckBox("CryptoList.UseRsi", item.UseRsi, new { @class = "form-check-input", onchange = "javascript:objContext.PostCryptoList(this,'frmCryptoList_" + item.Id + "')" })
+                </div>
+                <div class="col">
+                        @Html.CheckBox("CryptoList.UseSma200", item.UseSma200, new { @class = "form-check-input", onchange = "javascript:objContext.PostCryptoList(this,'frmCryptoList_" + item.Id + "')" })
+                </div>
+                <div class="col">
+                        @Html.CheckBox("CryptoList.UseEma200", item.UseEma200, new { @class = "form-check-input", onchange = "javascript:objContext.PostCryptoList(this,'frmCryptoList_" + item.Id + "')" })
+                </div>
+                <div class="col">
+                        @Html.CheckBox("CryptoList.UseVwap", item.UseVwap, new { @class = "form-check-input", onchange = "javascript:objContext.PostCryptoList(this,'frmCryptoList_" + item.Id + "')" })
+                </div>
+                <div class="col">
+                        @Html.CheckBox("CryptoList.UseEma9", item.UseEma9, new { @class = "form-check-input", onchange = "javascript:objContext.PostCryptoList(this,'frmCryptoList_" + item.Id + "')" })
+                </div>
+                <div class="col">
+                        @Html.CheckBox("CryptoList.UseEma12", item.UseEma12, new { @class = "form-check-input", onchange = "javascript:objContext.PostCryptoList(this,'frmCryptoList_" + item.Id + "')" })
+                </div>
+                <div class="col">
+                        @Html.CheckBox("CryptoList.UseEma26", item.UseEma26, new { @class = "form-check-input", onchange = "javascript:objContext.PostCryptoList(this,'frmCryptoList_" + item.Id + "')" })
+                </div>
+                <div class="col">
+                        @Html.CheckBox("CryptoList.UseMacd", item.UseMacd, new { @class = "form-check-input", onchange = "javascript:objContext.PostCryptoList(this,'frmCryptoList_" + item.Id + "')" })
+                </div>
+                    <div class="col">
+                        @Html.CheckBox("CryptoList.ExcludeFromAutomation", item.ExcludeFromAutomation, new { @class = "form-check-input", onchange = "javascript:objContext.PostCryptoList(this,'frmCryptoList_" + item.Id + "')" })
+
+                    </div>
+                <div class="col">
+                    @item.DateCreated
+                        <input type="hidden" asp-for="CryptoList.DateCreated" value="@item.DateCreated" />
+                        <input type="hidden" asp-for="CryptoList.LastUpdatedBy" value="@item.LastUpdatedBy" />
+                </div>
+                <div class="col">
+                        <input type="button" id="btnDeleteCryptoList_@item.Id" value="Delete" class="btn btn-danger" onclick="objContext.DeleteFromCryptoTracker('@item.Coin');" />
+                </div>
+            </div>
+            </form>
+        }
+    </div>
+</div>

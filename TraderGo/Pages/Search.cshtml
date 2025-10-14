@@ -1,0 +1,61 @@
+﻿@page
+@model TraderGo.Pages.SearchModel
+@{
+    ViewData["Title"] = "Tradergo.com - Search Trends";
+}
+<div class="cotainer-fluid border rounded-3 p-3">
+    <h1 class="d-flex justify-content-center text-muted">Search Stock Trends</h1>
+    <br /><br />
+    <div class="row">
+        <div class="col">
+            <label for="direction" class="form-label fw-bold">Stocks that are trending (direction)</label>
+            <select id="direction" class="form-select">
+                <option value="Up">Up</option>
+                <option value="Down">Down</option>
+            </select>
+        </div>
+@*         <div class="col">
+            <label for="numQualifier" class="form-label fw-bold">For the last (Qualifier)</label>
+            <select id="numQualifier" class="form-select">
+                <option value="Days">Days</option>
+                <option value="Weeks">Weeks</option>
+                <option value="Months">Months</option>
+                <option value="Years">Years</option>
+            </select>
+        </div> *@
+    </div>
+    <br /><br />
+    <div class="row">
+@*         <div class="col">
+            <label for="numofIndices" class="form-label fw-bold">Number of Indices (For the last)</label>
+            <input id="numofIndices" type="number" value="1" class="form-control form-control-sm" style="width:80px" />
+        </div> *@
+@*         <div class="col">
+            <label for="volumeFrom" class="form-label fw-bold">With a Volume Range Of</label>
+            <div class="row">
+                <div class="col"> From <input id="volumeFrom" type="number" class="form-control form-control-sm" style="width:100px" /></div>
+                <div class="col"> To <input id="volumeTo" type="number" class="form-control form-control-sm" style="width:100px" /></div>
+            </div>
+        </div> *@
+        <div class="row">
+            <div class="col">
+                <label for="datepickerFrom" class="form-label fw-bold">From Date</label>
+                <div class="input-group date">
+                    <input id="datepickerFrom" width="276" />
+                </div>
+            </div>
+            <div class="col">
+                <label for="datepickerTo" class="form-label fw-bold">To Date</label>
+                <div class="input-group date">
+                    <input id="datepickerTo" width="276" />
+                </div>
+            </div>
+        </div>
+    </div>   
+    <br /><br />
+    <div class="row">
+        <div class="col d-flex justify-content-center">
+            <input type="button" onclick="objSearch.SearchTrends()" value="Search" class="btn btn-outline-primary" />
+        </div>
+    </div>
+</div>

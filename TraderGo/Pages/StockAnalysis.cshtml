@@ -1,0 +1,55 @@
+﻿@page
+@model TraderGo.Pages.StockAnalysisModel
+@{
+    ViewData["Title"] = "Tradergo.com - Stock Analysis";
+}
+<div class="row">
+    <div class="col">
+        <h4 class="d-flex text-muted">Stock Analysis</h4>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        @await Html.PartialAsync("~/Pages/Partial/_StockMenu.cshtml")
+    </div>
+</div>
+<div class="row">
+    <div class="col"><b>Total: @Model.Total</b></div>
+</div>
+<hr />
+<div class="border rounded-3 p-3" style="width:100%;height:auto;margin:0px auto;float:none;position: relative; top: 40px;overflow:hidden;overflow-x:auto;">
+
+    <div class="container-fluid">
+        <form id="frmStockAnalysis" name="frmStockAnalysis" method="post">
+        <div class="input-group rounded-pill bg-white SearchWrapper" style="width:100%;">
+            <input class="form-control border-end-0 border rounded-pill" type="search" placeholder="Enter multiple symbols comma delimited" title="Enter multiple symbols comma delimited" alt="Enter multiple symbols comma delimited" asp-for="Search" value="@Model.Search">
+            <span class="input-group-append">
+                <button class="btn btn-outline-secondary bg-white border-bottom-0 border rounded-pill ms-n5" type="submit" id="btnSearch2">
+                    <i class="bi bi-search"></i>
+                </button>
+            </span>
+            @* <div id="searchResults" class="searchResults"></div> *@
+        </div>
+        </form>
+    </div>
+    <div class="row fw-bold fixRowHeaderBlue">
+        <div class="col border border-1 border-info bg-info text-white text-nowrap">Symbol</div>
+        <div class="col border border-1 border-info bg-info text-white text-nowrap">Name</div>
+        <div class="col border border-1 border-info bg-info text-white text-nowrap">Last Price</div>
+    </div>
+    @foreach (var item in Model.results)
+    {
+
+        <div class="row border border-1 border-info">
+            <div class="col">
+                <a href="javascript:objContext.GetQuote('@item["Symbol"].ToString().ToUpper()', '@item["Name"]');">@item["Symbol"].ToString().ToUpper()</a>
+            </div>
+            <div class="col">
+                @item["Name"].ToString()
+            </div>
+            <div class="col">
+                @String.Format("{0:C}", Convert.ToDecimal(item["lastPrice"].ToString()))
+            </div>
+        </div>
+    }
+</div>

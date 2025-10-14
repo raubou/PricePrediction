@@ -1,0 +1,10 @@
+﻿@page
+@model TraderGo.Pages.StockModel
+@{
+    ViewData["Title"] = "Tradergo.com - Stock";
+}
+<div class="row">
+    <div class="col">
+        @await Html.PartialAsync("~/Pages/Partial/_StockMenu.cshtml")
+    </div>
+</div>

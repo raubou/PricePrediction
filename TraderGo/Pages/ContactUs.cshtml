@@ -1,0 +1,127 @@
+﻿@page
+@model TraderGo.Pages.ContactUsModel
+@{
+    ViewData["Title"] = "Tradergo.com - Contact Us";
+}
+<h1>@ViewData["Title"]</h1>
+<div class="container">
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="info-box mb-4">
+                <i class="bx bx-map"></i>
+                <h3>Our Address</h3>
+                <p>Sunrise, Fl 33351</p>
+            </div>
+        </div>
+
+        @*<div class="col-lg-3 col-md-6">*@
+        <div class="col-lg-6">
+            <div class="info-box  mb-4">
+                <i class="bx bx-envelope"></i>
+                <h3>Email Us</h3>
+                <p><a href="mailto:">tradergo@trimarkdirect.com</a></p>
+            </div>
+        </div>
+
+        @*<div class="col-lg-3 col-md-6">
+        <div class="info-box  mb-4">
+        <i class="bx bx-phone-call"></i>
+        <h3>Call Us</h3>
+        <p>+1 5589 55488 55</p>
+        </div>
+        </div>*@
+
+    </div>
+
+    <div class="row">
+
+        <div class="col-lg-6 ">
+            <iframe class="mb-4 mb-lg-0" src="https://maps.google.com/maps?q=sunrise,%20fl%2033351&t=&z=13&ie=UTF8&iwloc=&output=embed" frameborder="0" style="border:0; width: 100%; height: 384px;" allowfullscreen></iframe>
+        </div>
+
+        <div class="col-lg-6">
+            @*<form action="" method="post" role="form" class="php-email-form">*@
+            @*<form action="" method="post">*@
+            <div id="contactForm">
+                <div class="row">
+                    <div class="col-md-6 form-group">
+                        <input type="text" name="ContactUs.Name" class="form-control" id="Name" placeholder="Your Name" required>
+                    </div>
+                    <div class="col-md-6 form-group mt-3 mt-md-0">
+                        <input type="email" class="form-control" name="ContactUs.Email" id="Email" placeholder="Your Email" required>
+                    </div>
+                </div>
+                <div class="form-group mt-3">
+                    <input type="text" class="form-control" name="ContactUs.Subject" id="Subject" placeholder="Subject" required>
+                </div>
+                <div class="form-group mt-3">
+                    <textarea class="form-control" name="ContactUs.Message" rows="5" placeholder="Message" id="Message" required></textarea>
+                </div>
+            </div>
+            <div class="my-3">
+                <div class="loading">Loading</div>
+                <div class="error-message"></div>
+                <div class="sent-message">Your message has been sent. Thank for your feedback!</div>
+            </div>
+            <div class="text-center"><button type="button" id="btnSubmit" class="btn btn-success">Send Message</button></div>
+            @*</form>*@
+        </div>
+
+    </div>
+
+</div>
+<script type="text/javascript">
+    $(document).ready(function () {
+        $("#btnSubmit").click(function (e) {
+            e.preventDefault();
+            if (CheckConstraints()) {
+                let data = {
+                    Name: $('#Name').val(),
+                    Email: $('#Email').val(),
+                    Subject: $('#Subject').val(),
+                    Message: $('#Message').val()
+                }
+                let mail = {
+                    Name: $('#Name').val(),
+                    FromEmail: $('#Email').val(),
+                    Subject: $('#Subject').val(),
+                    Body: $('#Message').val()
+                }
+                objContext.ContactUs(data);
+                //objContext.SendMail(mail);
+                $('.sent-message').show();
+                $("#contactForm").hide();
+                $("#btnSubmit").hide();
+            }
+        });
+        $('.loading').hide();
+        $('.sent-message').hide();
+        $('.error-message').hide();
+    })
+    function CheckConstraints() {
+        if ($.trim($("#Name").val()) == '') {
+            $('.error-message').html('Name cannot be left blank.');
+            $('.error-message').show();
+            return false;
+        }
+        if ($.trim($("#Email").val()) == '') {
+            $('.error-message').html('Email cannot be left blank.');
+            $('.error-message').show();
+            return false;
+        }
+        if ($.trim($("#Subject").val()) == '') {
+            $('.error-message').html('Subject cannot be left blank.');
+            $('.error-message').show();
+            return false;
+        }
+        if ($.trim($("#Message").val()) == '') {
+            $('.error-message').html('Message cannot be left blank.');
+            $('.error-message').show();
+            return false;
+        }
+        $('.error-message').html('');
+        $('.error-message').hide();
+        return true;
+    }
+</script>

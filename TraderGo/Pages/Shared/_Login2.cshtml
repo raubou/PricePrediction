@@ -1,0 +1,80 @@
+﻿@using TMDInvestments.Models;
+@model LoginRegister
+<div id="divLogin" class="container modalDialog">
+    <div class="modalDialogDismiss" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></div>
+    <h3>Login</h3>
+    <form method="post" id="frmLogin" name="frmLogin" asp-page="login">
+        <div class="form-group form-group-Input">
+            <input type="text" class="form-control" asp-for="login.UserName" id="login.UserName" data-val="true" data-val-required="The UserName field is required." placeholder="Enter email">
+            <span class="field-validation-valid" data-valmsg-for="login.UserName" data-valmsg-replace="true"></span>
+        </div>
+        <br />
+        <div class="form-group form-group-Input">
+            @*<label for="exampleInputPassword1">Password</label>*@
+            <input type="password" class="form-control" asp-for="login.Password" id="login.Password" data-val="true" data-val-required="The Password field is required." placeholder="Password">
+            <a href="javascript:objContext.TogglePassword('login.Password');" title="Show/Hide Password" alt="Show/Hide Password"><i class="bi bi-eye"></i></a>
+            <span class="field-validation-valid" data-valmsg-for="login.Password" data-valmsg-replace="true"></span>
+        </div>
+        <br />
+        <button type="submit" class="btn btn-success">Login</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Not Registered? <a href="javascript:objContext.ShowLoginRegisterRecover(2)">Click Here</a><br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Forget your Password? <a href="javascript:objContext.ShowLoginRegisterRecover(3)">Click Here</a>
+    </form>
+    <div id="divMessage1" class="alert">@Html.ValidationMessageFor(m => m.login.UserName)@Html.ValidationMessageFor(m => m.register.UserName)@Html.ValidationMessageFor(m => m.register.AgreetoTerms)</div>
+</div>
+
+<div id="divRegister" class="container register" style="display:none;">
+    <div class="modalDialogDismiss" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></div>
+    <h3>Registor</h3>
+    <form method="post" id="frmRegister" name="frmRegister" asp-page="login">
+        <div class="form-group  form-group-Input">
+            <input type="text" class="form-control" asp-for="register.UserName" id="register.UserName" data-val="true" data-val-required="The UserName field is required." placeholder="Enter email">
+            <span class="field-validation-valid" data-valmsg-for="register.UserName" data-valmsg-replace="true"></span>
+        </div>
+        <br />
+        <div class="form-group form-group-Input">
+            <input type="password" class="form-control" asp-for="register.Password" id="register.Password" data-val="true" data-val-required="The UserName field is required." placeholder="Password">
+            <a href="javascript:objContext.TogglePassword('register.Password');" title="Show/Hide Password" alt="Show/Hide Password"><i class="bi bi-eye"></i></a>
+            <span class="field-validation-valid" data-valmsg-for="register.Password" data-valmsg-replace="true"></span>
+        </div>
+        <br />
+        <div class="form-group form-group-Input">
+            <input type="password" class="form-control" asp-for="register.Password2" id="register.Password2" data-val="true" data-val-equalto="Make sure both passwords are the same." data-val-equalto-other="*.Password" data-val-required="The Password2 field is required." placeholder="Confirm Password">
+            <a href="javascript:objContext.TogglePassword('register.Password2');" title="Show/Hide Password" alt="Show/Hide Password"><i class="bi bi-eye"></i></a>
+            <span class="field-validation-valid" data-valmsg-for="register.Password2" data-valmsg-replace="true"></span>
+        </div>
+        <br />
+        <div class="form-check form-group-Input">
+            <input type="checkbox" class="form-check-input" id="register.AgreetoTerms" asp-for="register.AgreetoTerms" data-val="true" data-val-required="You must agree to terms.">
+            <label class="form-check-label" for="register.AgreetoTerms">I agree to terms</label>
+            <span class="field-validation-valid" data-valmsg-for="register.AgreetoTerms" data-valmsg-replace="true"></span>
+        </div>
+        <br />
+        <button type="submit" class="btn btn-danger">Registor</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Registered? <a href="javascript:objContext.ShowLoginRegisterRecover(1)">Login Here</a>
+    </form>
+    <div id="divMessage2" class="alert">@Html.ValidationMessageFor(m => m.login.UserName)@Html.ValidationMessageFor(m => m.register.UserName)@Html.ValidationMessageFor(m => m.register.AgreetoTerms)</div>
+</div>
+<div id="divRecover" class="container register" style="display:none;">
+    <div class="modalDialogDismiss" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></div>
+    <h3>Recover Password</h3>
+    <form method="post" id="frmRecover" name="frmRecover" asp-page="login">
+        <div class="form-group  form-group-Input">
+            <input type="text" class="form-control" asp-for="recover.UserName" id="recover.UserName" data-val="true" data-val-required="The UserName field is required." placeholder="Enter email">
+            <span class="field-validation-valid" data-valmsg-for="recover.UserName" data-valmsg-replace="true"></span>
+        </div>
+        <br />
+        <button id="btnRecoverPassword" type="submit" class="btn btn-danger">Recover Password</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Registered? <a href="javascript:objContext.ShowLoginRegisterRecover(1)">Login Here</a>
+    </form>
+    <div id="divMessage3" class="alert">@Html.ValidationMessageFor(m => m.recover.UserName)</div>
+</div>
+<script type="text/javascript">
+    //alert(window.location.pathname)
+    $(document).ready(function () {
+        $("#btnRecoverPassword").click(function () {
+            $("#divMessage3").html("Email sent with password recovery.")
+        })
+        if (window.location.pathname.toLocaleLowerCase().indexOf("login") > -1) {
+            $(".modalDialogDismiss").hide();
+        }
+    });
+</script>
+

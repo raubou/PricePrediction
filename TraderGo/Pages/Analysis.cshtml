@@ -1,0 +1,154 @@
+﻿@page
+@model TraderGo.Pages.AnalysisModel
+@{
+    ViewData["Title"] = "Tradergo.com - Analysis";
+    int? shortCnt = 0;
+    int? longCnt = 0;
+    int? totalShort8 = 0;
+    int? totalLong8 = 0;
+    int? totalShort9 = 0;
+    int? totalLong9 = 0;
+    int? totalShort = 0;
+    int? totalLong = 0;
+    string shortCol = string.Empty;
+    string longCol = string.Empty;
+
+}
+<div class="row">
+    <div class="col">
+        <h4 class="d-flex text-muted">Stock Analysis</h4>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        @await Html.PartialAsync("~/Pages/Partial/_StockMenu.cshtml")
+    </div>
+</div>
+<div class="row">
+    <div class="col"><b>Total: @Model.Total</b></div>
+    <div class="col"><b>Total long: <span id="spntotalLong"></span></b></div>
+    <div class="col"><b>Total short: <span id="spntotalShort"></span></b></div>
+    <div class="col"><b>Total long 8: <span id="spntotalLong8"></span></b></div>
+    <div class="col"><b>Total short 8: <span id="spntotalShort8"></span></b></div>
+    <div class="col"><b>Total long 9: <span id="spntotalLong9"></span></b></div>
+    <div class="col"><b>Total short 9: <span id="spntotalShort9"></span></b></div>
+</div>
+<hr />
+<div class="border rounded-3 p-3" style="width:100%;height:auto;margin:0px auto;float:none;position: relative; top: 40px;overflow:hidden;overflow-x:auto;font-size:13px;">
+    <div class="container-fluid">
+        <div class="row fw-bold fixRowHeaderBlue">
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Symbol</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Name</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Last Price</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Rsi</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Sma 200</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Ema 200</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Vwap</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Ema 9</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Ema 12</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Ema 26</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Macd 9</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Macd</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Short Score</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Long Score</div>
+        </div>
+        @foreach (var item in Model?.Analysis)
+        {
+             shortCnt = 0;
+            longCnt = 0;
+            <div class="row border border-1 border-info">
+                <div class="col">
+                    <b><a href="javascript:objContext.GetQuote('@item["Symbol"].ToString()', '@item["Name"].ToString()');">@item["Symbol"].ToString()</a></b>
+                </div>
+                <div class="col overflow-hidden">
+                    @item["Name"].ToString()
+                </div>
+                <div class="col overflow-hidden">
+                    @item["lastPrice"].ToString()
+                </div>
+                <div class="col overflow-hidden">
+                    @item["RSI"].ToString()
+                    @if (Convert.ToDecimal(item["RSI"].ToString()) >= 51) { shortCnt++; }
+                    @if (Convert.ToDecimal(item["RSI"].ToString()) <= 49) { longCnt++; }
+                </div>
+                <div class="col overflow-hidden">
+                    @item["SMA"].ToString()
+                    @if (Convert.ToDecimal(item["SMA"].ToString()) <= Convert.ToDecimal(item["lastPrice"].ToString())) { shortCnt++; } 
+                    @if (Convert.ToDecimal(item["SMA"].ToString()) >= Convert.ToDecimal(item["lastPrice"].ToString())) { longCnt++; }
+                </div>
+                <div class="col overflow-hidden">
+                    @item["EMA"].ToString()
+                    @if (Convert.ToDecimal(item["EMA"].ToString()) <= Convert.ToDecimal(item["lastPrice"].ToString())) { shortCnt++; }
+                    @if (Convert.ToDecimal(item["EMA"].ToString()) >= Convert.ToDecimal(item["lastPrice"].ToString())) { longCnt++; }
+                </div>
+                <div class="col overflow-hidden">
+                    @item["VWAP"].ToString()
+                    @if (Convert.ToDecimal(item["VWAP"].ToString()) <= Convert.ToDecimal(item["lastPrice"].ToString())) { shortCnt = shortCnt + 2; }
+                    @if (Convert.ToDecimal(item["VWAP"].ToString()) >= Convert.ToDecimal(item["lastPrice"].ToString())) { longCnt = longCnt + 2; }
+                </div>
+                <div class="col overflow-hidden">
+                    @item["EmaNinePeriod"].ToString()
+                    @if (Convert.ToDecimal(item["EmaNinePeriod"].ToString()) <= Convert.ToDecimal(item["lastPrice"].ToString())) { shortCnt++; }
+                    @if (Convert.ToDecimal(item["EmaNinePeriod"].ToString()) >= Convert.ToDecimal(item["lastPrice"].ToString())) { longCnt++; }
+                </div>
+                <div class="col overflow-hidden">
+                    @item["EmaTwelvePeriod"].ToString()
+                    @if (Convert.ToDecimal(item["EmaTwelvePeriod"].ToString()) <= Convert.ToDecimal(item["lastPrice"].ToString())) { shortCnt++; }
+                    @if (Convert.ToDecimal(item["EmaTwelvePeriod"].ToString()) >= Convert.ToDecimal(item["lastPrice"].ToString())) { longCnt++; }
+                </div>
+                <div class="col overflow-hidden">
+                    @item["EmaTwentySixPeriod"].ToString()
+                    @if (Convert.ToDecimal(item["EmaTwentySixPeriod"].ToString()) <= Convert.ToDecimal(item["lastPrice"].ToString())) { shortCnt++; }
+                    @if (Convert.ToDecimal(item["EmaTwentySixPeriod"].ToString()) >= Convert.ToDecimal(item["lastPrice"].ToString())) { longCnt++; }
+                </div>
+                <div class="col overflow-hidden">
+                    @item["MACD9"].ToString()
+                    @if (Convert.ToDecimal(item["MACD9"].ToString()) >= Convert.ToDecimal(item["MACD"].ToString())) { shortCnt = shortCnt + 2; }
+                    @if (Convert.ToDecimal(item["MACD9"].ToString()) <= Convert.ToDecimal(item["MACD"].ToString())) { longCnt = longCnt  + 2; }
+                </div>
+                <div class="col overflow-hidden">
+                    @item["MACD"].ToString()
+                    @if (Convert.ToDecimal(item["MACD"].ToString()) <= 0) { shortCnt++; }
+                    @if (Convert.ToDecimal(item["MACD"].ToString()) >= 0) { longCnt++; }
+                </div>
+                @if(shortCnt > longCnt)
+                {
+                    totalLong++;
+                    longCol = "text-success";
+                    shortCol = "text-danger";
+                }else
+                if(longCnt > shortCnt)
+                {
+                    totalShort++;
+                    longCol = "text-danger";
+                    shortCol = "text-success";
+                }
+                else
+                {
+                    longCol = "";
+                    shortCol = "";
+                }
+                @if (longCnt == 8) { totalLong8++; }
+                @if (shortCnt == 8) { totalShort8++; }
+                @if (longCnt == 9) { totalLong9++; }
+                @if (shortCnt == 9) { totalShort9++; }
+                <div class="col fw-bold @longCol">
+                    @shortCnt.ToString()
+                </div>
+                <div class="col fw-bold @shortCol">
+                    @longCnt.ToString()
+                </div>
+            </div> 
+        }
+    </div>
+</div>
+<script type="text/javascript">
+    $(document).ready(function () {
+        $("#spntotalLong").text('@totalLong');
+        $("#spntotalShort").text('@totalShort');
+        $("#spntotalLong8").text('@totalLong8');
+        $("#spntotalShort8").text('@totalShort8');
+        $("#spntotalLong9").text('@totalLong9');
+        $("#spntotalShort9").text('@totalShort9');
+    })
+</script>

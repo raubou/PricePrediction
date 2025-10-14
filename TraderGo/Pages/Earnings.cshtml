@@ -1,0 +1,88 @@
+﻿@page
+@model TraderGo.Pages.EarningsModel
+@using System.Globalization;
+@{
+    ViewData["Title"] = "Tradergo.com - Earnings";
+}
+<div class="row">
+    <div class="col">
+        <h4 class="d-flex justify-content-center text-muted">Upcomming Earnings</h4>
+    </div>
+    @{
+        var lastUpdated = (@Model.Earnings?.Count > 0) ? @Model.Earnings?[0].datecreated : DateTime.MinValue; ;
+    }
+    <div class="col">Last Updated @lastUpdated</div>
+    <div class="col">
+        <form method="post" id="formSubmit" name="formSubmit">
+            <input type="submit" id="btnUpdate" value="Update Earnings" class="btn btn-primary" />
+        </form>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        @await Html.PartialAsync("~/Pages/Partial/_StockMenu.cshtml")
+    </div>
+</div>
+<div class="row">
+    <div class="col"><b>Total: @Model.Total</b></div>
+</div>
+<hr />
+<div class="border rounded-3 p-3" style="width:100%;height:auto;margin:0px auto;float:none;position: relative; top: 40px;overflow:hidden;overflow-x:auto;">
+
+    <div class="container-fluid">
+
+        <div class="row fw-bold fixRowHeaderBlue">
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Symbol</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Name</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Year</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Quarter</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Hour</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Revenue Estimate</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Revenue Actual</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">EPS Estimate</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">EPS Actual</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Last Earning Date</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Date Expected</div>
+        </div>
+
+        @foreach (var item in Model?.Earnings)
+                {
+            <div class="row border border-1 border-info">
+                        <div class="col">
+                    <b><a rel="canonical" href="javascript:objContext.GetQuote('@item.symbol','@item.name.ToString().Replace(@"'"," ")')" style="color:#006699;text-decoration:none;">@item.symbol</a></b>
+                        </div>
+                <div class="col overflow-hidden">
+                    @item.name
+                </div>
+                <div class="col">
+                            @item.year
+                        </div>
+                <div class="col">
+                            @item.quarter
+                        </div>
+                <div class="col">
+                            @item.hour
+                        </div>
+                <div class="col">
+                            @item.revenueEstimate.ToString()
+                        </div>
+                <div class="col">
+                            @item.revenueActual.ToString()
+                        </div>
+                <div class="col">
+                            @item.epsEstimate
+                        </div>
+                <div class="col">
+                            @item.epsActual
+                        </div>
+                <div class="col">
+                    @item.LastEarningDate.ToString()
+                </div>
+                <div class="col">
+                            @item.date.ToString()
+                        </div>
+                    </div>
+
+                }
+    </div>
+</div>

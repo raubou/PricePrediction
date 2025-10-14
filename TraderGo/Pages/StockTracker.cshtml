@@ -1,0 +1,203 @@
+﻿@page
+@model TraderGo.Pages.StockTrackerModel
+@using TMDInvestments.Models;
+@{
+    ViewData["Title"] = "Tradergo.com - Stock Tracker";
+    string textColor = string.Empty;
+    decimal? unRealizedGains = 0;
+    decimal? unRealizedLosses = 0;
+    decimal? totalGains = 0;
+    decimal? totalLosses = 0;
+    decimal? totalCost = 0;
+    decimal? totalShort = 0;
+}
+<div class="row">
+    <div class="col">
+        <h4 class="d-flex text-muted">Stock Tracker</h4>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        @await Html.PartialAsync("~/Pages/Partial/_StockMenu.cshtml")
+    </div>
+</div>
+<div class="row" style="font-size:12px;">
+    <div class="col"><b>Total:<br />@Model.Total</b></div>
+    <div class="col"><b>Un Realized Gains:<br /><span id="spnunRealizedGains"></span></b></div>
+    <div class="col"><b>Un Realized Losses:<br /><span id="spnunRealizedLosses"></span></b></div>
+    <div class="col"><b>Un Realized Total:<br /><span id="spnunRealizedTotal"></span></b></div>
+    <div class="col"><b>Total Gains:<br /><span id="spntotalGains"></span></b></div>
+    <div class="col"><b>Total Losses:<br /><span id="spntotalLosses"></span></b></div>
+    <div class="col"><b>Total:<br /><span id="spnTotal"></span></b></div>
+    <div class="col"><b>Total Cost:<br /><span id="spntotalCost"></span></b></div>
+    <div class="col"><b>Total Short:<br /><span id="spntotalShort"></span></b></div>
+</div>
+<hr />
+<div class="border rounded-3 p-3" style="width:100%;height:auto;margin:0px auto;float:none;position: relative; top: 40px;overflow:hidden;overflow-x:auto;font-size:13px;">
+    <div class="container-fluid">
+        <div class="row fw-bold fixRowHeaderBlue">
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Symbol</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Name</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Trade Direction</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Platform</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Purchased Price</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Last Price</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Sold Price</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Quantity</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Date Purchaed</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Date Sold</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Last Updated</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap"></div>
+@*             <div class="col border border-1 border-info bg-info text-white text-nowrap">Macd</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Short Score</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Long Score</div> *@
+        </div>
+        @foreach (var item in Model?.StockTracker)
+        {
+            <div class="row border border-1 border-info">
+                <div class="col">
+                    <b><a href="javascript:objContext.GetQuote('@item.Symbol.ToString()', '@item.Name.ToString()');">@item.Symbol.ToString()</a></b>
+                </div>
+                <div class="col overflow-hidden">
+                    @item.Name.ToString()
+                </div>
+                <div class="col overflow-hidden">
+                    @Enum.GetName(typeof(TradeDirection), item.TradeDirection)
+                </div>
+                <div class="col overflow-hidden">
+                    @Enum.GetName(typeof(Platform), item.TradePlatform)
+                </div>
+                <div class="col overflow-hidden">
+                    $@item.PricePurchased.ToString()
+                </div>
+                @{
+                    textColor = string.Empty;
+                    switch ((TradeDirection)item.TradeDirection)
+                    {
+                        case TradeDirection.BUY:
+                            if (item.LastPrice > item.PricePurchased)
+                            {
+                                textColor = "text-success";
+                            }
+                            else if (item.LastPrice < item.PricePurchased)
+                            {
+                                textColor = "text-danger";                                
+                            }
+                            //unRealizedGains += ((item.LastPrice - item.PricePurchased) * item.Quantity);
+                            if (item.LastPrice > item.PricePurchased)
+                            {
+                                unRealizedGains += (Math.Abs((decimal)item.LastPrice - (decimal)item.PricePurchased) * item.Quantity);
+                            }
+                            else
+                            {
+                                unRealizedLosses += (Math.Abs((decimal)item.PricePurchased - (decimal)item.LastPrice) * item.Quantity);
+                            }
+                            break;
+                        case TradeDirection.SELL_SHORT:
+                            if (item.LastPrice < item.PricePurchased)
+                            {
+                                textColor = "text-success";
+                            }
+                            else if (item.LastPrice > item.PricePurchased)
+                            {
+                                textColor = "text-danger";
+                            }
+                            //unRealizedGains += ((item.PricePurchased - item.LastPrice) * item.Quantity);
+                            if (item.LastPrice < item.PricePurchased)
+                            {
+                                unRealizedGains += (Math.Abs((decimal)item.LastPrice - (decimal)item.PricePurchased) * item.Quantity);
+                            }
+                            else
+                            {
+                                unRealizedLosses += (Math.Abs((decimal)item.PricePurchased - (decimal)item.LastPrice) * item.Quantity);
+                            }
+                            break;
+                    }
+                    if (item.Quantity > 0)
+                        totalCost += (item.PricePurchased * item.Quantity);
+                    if (item.Quantity < 0)
+                        totalShort += (item.PricePurchased * Math.Abs(item.Quantity));
+                }
+                <div class="col overflow-hidden @textColor">
+                    $@item.LastPrice.ToString()
+                </div>
+                @{
+                    textColor = string.Empty;
+                    switch ((TradeDirection)item.TradeDirection)
+                    {
+                        case TradeDirection.BUY:
+                            if (item.PriceSold > item.PricePurchased)
+                            {
+                                textColor = "text-success";
+                            }
+                            else if (item.PriceSold < item.PricePurchased)
+                            {
+                                textColor = "text-danger";
+                            }
+                            //totalGains += ((item.PriceSold - item.PricePurchased) * item.Quantity);
+                            if (item.PriceSold != null)
+                                if (item.PriceSold > item.PricePurchased)
+                                {
+                                    totalGains += ((item.LastPrice - item.PricePurchased) * item.Quantity);
+                                }
+                                else
+                                {
+                                    totalGains += ((item.PricePurchased - item.LastPrice) * item.Quantity);
+                                }
+                            break;
+                        case TradeDirection.SELL_SHORT:
+                            if (item.PriceSold < item.PricePurchased)
+                            {
+                                textColor = "text-success";
+                            }
+                            else if (item.PriceSold > item.PricePurchased)
+                            {
+                                textColor = "text-danger";
+                            }
+                            //totalGains += ((item.PricePurchased - item.PriceSold) * item.Quantity);
+                            if (item.PriceSold != null)
+                                if (item.PriceSold < item.PricePurchased)
+                                {
+                                    totalLosses += ((item.LastPrice - item.PricePurchased) * item.Quantity);
+                                }
+                                else
+                                {
+                                    totalLosses += ((item.PricePurchased - item.LastPrice) * item.Quantity);
+                                }
+                            break;
+                    }
+                }
+                <div class="col overflow-hidden @textColor">
+                    $@item.PriceSold.ToString()
+                </div>
+                <div class="col overflow-hidden">
+                    @item.Quantity.ToString()
+                </div>
+                <div class="col overflow-hidden">
+                    @item.DatePurchased.ToString()
+                </div>
+                <div class="col overflow-hidden">
+                    @item.DateSold.ToString()
+                </div>
+                <div class="col overflow-hidden">
+                    @item.DateUpdated.ToString()
+                </div>
+                <div class="col overflow-hidden">
+                    <input type="button" class="btn btn-danger" value="Sell" onclick="javascript:if(confirm('Are you sure you want to Sell/Buy to Cover @item.Symbol')){}" />
+                </div>
+            </div>
+        }
+    </div>
+</div>
+<script type="text/javascript">
+    $(document).ready(function () {
+        $("#spnunRealizedGains").text('@unRealizedGains');
+        $("#spnunRealizedLosses").text('@unRealizedLosses')
+        $("#spntotalGains").text('@totalGains');
+        $("#spntotalLosses").text('@totalLosses');
+        $("#spnTotal").text('@(totalGains - totalLosses)');
+        $("#spntotalCost").text('@totalCost');
+        $("#spntotalShort").text('@totalShort'); 
+        $('#spnunRealizedTotal').text('@(unRealizedGains - unRealizedLosses)')
+    })
+</script>

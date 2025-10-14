@@ -1,0 +1,93 @@
+﻿@page
+@model TraderGo.Pages.StockListModel
+@{
+    ViewData["Title"] = "Tradergo.com - Stock List";
+}
+<div class="row">
+    <div class="col">
+        <h4 class="d-flex text-muted">Stock List</h4>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        @await Html.PartialAsync("~/Pages/Partial/_StockMenu.cshtml")
+    </div>
+</div>
+<div class="row">
+    <div class="col"><b>Total: @Model.Total</b></div>
+</div>
+<hr />
+<div class="border rounded-3 p-3" style="width:100%;height:auto;margin:0px auto;float:none;position: relative; top: 40px;overflow:hidden;overflow-x:auto;font-size:13px;">
+    <div class="container-fluid">
+        <div class="row fw-bold fixRowHeaderBlue">
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Symbol</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Name</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Use Rsi</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Use Sma 200</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Use Ema 200</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Use Vwap</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Use Ema 9</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Use Ema 12</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Use Ema 26</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Use Macd</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Exclude From Automation</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Quote Retry</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Date Created</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap"></div>
+        </div>
+        @foreach (var item in Model?.StockLists)
+        {
+            <form id="frmStockList_@item.Id" name="frmStockList_@item.Id" method="post">
+            <div class="row border border-1 border-info">
+                <div class="col">
+                    <b><a href="javascript:objContext.GetQuote('@item.Symbol.ToUpper()', '@item.Name');">@item.Symbol.ToUpper()</a></b>
+                </div>
+                    <div class="col overflow-hidden">
+                    @item.Name
+                        <input type="hidden" asp-for="StockList.Id" value="@item.Id" />
+                        <input type="hidden" asp-for="StockList.Name" value="@item.Name" />
+                        <input type="hidden" asp-for="StockList.Symbol" value="@item.Symbol" />
+                </div>
+                <div class="col">
+                        @Html.CheckBox("StockList.UseRsi", item.UseRsi, new { @class = "form-check-input", onchange = "javascript:objContext.PostStockList(this,'frmStockList_" + item.Id + "')" })
+                </div>
+                <div class="col">
+                        @Html.CheckBox("StockList.UseSma200", item.UseSma200, new { @class = "form-check-input", onchange = "javascript:objContext.PostStockList(this,'frmStockList_" + item.Id + "')" })
+                </div>
+                <div class="col">
+                        @Html.CheckBox("StockList.UseEma200", item.UseEma200, new { @class = "form-check-input", onchange = "javascript:objContext.PostStockList(this,'frmStockList_" + item.Id + "')" })
+                </div>
+                <div class="col">
+                        @Html.CheckBox("StockList.UseVwap", item.UseVwap, new { @class = "form-check-input", onchange = "javascript:objContext.PostStockList(this,'frmStockList_" + item.Id + "')" })
+                </div>
+                <div class="col">
+                        @Html.CheckBox("StockList.UseEma9", item.UseEma9, new { @class = "form-check-input", onchange = "javascript:objContext.PostStockList(this,'frmStockList_" + item.Id + "')" })
+                </div>
+                <div class="col">
+                        @Html.CheckBox("StockList.UseEma12", item.UseEma12, new { @class = "form-check-input", onchange = "javascript:objContext.PostStockList(this,'frmStockList_" + item.Id + "')" })
+                </div>
+                <div class="col">
+                        @Html.CheckBox("StockList.UseEma26", item.UseEma26, new { @class = "form-check-input", onchange = "javascript:objContext.PostStockList(this,'frmStockList_" + item.Id + "')" })
+                </div>
+                <div class="col">
+                        @Html.CheckBox("StockList.UseMacd", item.UseMacd, new { @class = "form-check-input", onchange = "javascript:objContext.PostStockList(this,'frmStockList_" + item.Id + "')" })
+                </div>
+                    <div class="col">
+                        @Html.CheckBox("StockList.ExcludeFromAutomation", item.ExcludeFromAutomation, new { @class = "form-check-input", onchange = "javascript:objContext.PostStockList(this,'frmStockList_" + item.Id + "')" })
+                    </div>
+                    <div class="col">
+                        @(@item.QuoteRetry ?? 0)
+                    </div>
+                <div class="col">
+                    @item.DateCreated
+                        <input type="hidden" asp-for="StockList.DateCreated" value="@item.DateCreated" />
+                        <input type="hidden" asp-for="StockList.LastUpdatedBy" value="@item.LastUpdatedBy" />
+                </div>
+                <div class="col">
+                    <input type="button" id="btnDeleteStockList_@item.Id" value="Delete" class="btn btn-danger" onclick="objContext.DeleteFromStockTracker('@item.Symbol');" />
+                </div>
+            </div>
+            </form>
+        }
+    </div>
+</div>

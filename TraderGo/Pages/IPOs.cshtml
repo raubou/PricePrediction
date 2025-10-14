@@ -1,0 +1,84 @@
+﻿@page
+@model TraderGo.Pages.IPOsandEarningsModel
+@using System.Globalization;
+@{
+    ViewData["Title"] = "Tradergo.com - IPO's";
+}
+<div class="row">
+    <div class="col">
+        <h4 class="d-flex justify-content-center text-muted">Upcomming IPO's</h4>
+    </div>
+    @{
+        var lastUpdated = (@Model.IPOs?.Count > 0) ? @Model.IPOs?[0].datecreated : DateTime.MinValue; ;
+    }
+    <div class="col">Last Updated @lastUpdated</div>
+    <div class="col">
+        <form method="post" id="formSubmit" name="formSubmit">
+            <input type="submit" id="btnUpdate" value="Update ipo's" class="btn btn-primary" />
+        </form>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        @await Html.PartialAsync("~/Pages/Partial/_StockMenu.cshtml")
+    </div>
+</div>
+<div class="row">
+    <div class="col"><b>Total: @Model.Total</b></div>
+</div>
+<hr />
+<div class="border rounded-3 p-3" style="width:100%;height:auto;margin:0px auto;float:none;position: relative; top: 40px;overflow:hidden;overflow-x:auto;">
+
+    @*     <div style="width:2000px;height:inherit;margin:0px auto;float:none;"> *@
+    <div class="container-fluid">
+        @* <table class="table"> *@
+        @* <thead> *@
+        <div class="row fw-bold fixRowHeaderBlue">
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Symbol</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Name</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Exchange</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Price</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Status</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Number of Shares</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Total Shares Value</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Date Expected</div>
+        </div>
+@*         </thead>
+        <tbody>  *@
+@*         @if(Model?.IPOs.Count() <= 0){
+            <div class="row"><div class="col text-center"><b>No upcoming IPO(s)</b></div></div>
+        }  *@   
+        @foreach (var item in Model?.IPOs)
+        {
+            <div class="row border border-1 border-info">
+                <div class="col">
+                    <b><a rel="canonical" href="javascript:objContext.GetQuote('@item.symbol','@item.name.ToString().Replace(@"'"," ")')" style="color:#006699;text-decoration:none;">@item.symbol</a></b>
+                </div>
+                <div class="col">
+                    @item.name
+                </div>
+                <div class="col">
+                    @item.exchange
+                </div>
+                <div class="col">
+                    $@item.price
+                </div>
+                <div class="col">
+                    @item.status
+                </div>
+                <div class="col">
+                    @item.numberOfShares.ToString()
+                </div>
+                <div class="col">
+                    @item.totalSharesValue.ToString()
+                </div>
+                <div class="col">
+                    @item.dateExpected.ToString()
+                </div>
+            </div>
+
+        }
+@*         </tbody>    
+        </table> *@
+    </div>
+</div>

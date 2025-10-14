@@ -1,0 +1,88 @@
+﻿@page
+@model IndexModel
+@using System.Text.Json;
+@{
+    ViewData["Title"] = "Tradergo.com - Home page";
+    int width = 0;
+}
+<h1 style="visibility:hidden;">Stock lookup, financial and stock trade news</h1>
+<div style="width:100%;height:110px;margin:0px auto;float:none;overflow:hidden;border-radius:3px;border:1px solid #cacaca;padding:5px;overflow-x:auto;">
+    <strong>Markets</strong>
+    <div id="MarketsScroll" style="width:3200px;height:75px;margin:0px auto;float:none;overflow:hidden;">
+        @if (Model.Markets is object)
+        @foreach (var item in Model.Markets)
+        {
+            string st = string.Empty;
+            @* var aa = item.GetProperty("regularMarketChange").GetProperty("fmt").ToString();
+            var bb = Convert.ToDecimal(aa); *@
+            @if (Convert.ToDecimal(item.GetProperty("regularMarketChange").GetProperty("fmt").ToString()) < 0)
+            {
+                st = "background-color:red;color:white;";
+            }
+            else 
+            { 
+                st = "background-color:green;color:white;"; 
+            }
+            <div style="width:200px;height:80px;margin:0px auto;float:left;overflow:hidden;border:1px solid #Cacaca;margin-left:5px;padding:3px;border-radius:3px;@st">
+                <span style="white-space: nowrap;"><strong>@item.GetProperty("shortName") - @item.GetProperty("symbol")</strong></span><br>
+                <span style="white-space: nowrap;font-size:14px;">
+                    @item.GetProperty("regularMarketPrice").GetProperty("raw") &nbsp; @Html.Raw("$")@((Convert.ToDecimal(item.GetProperty("regularMarketChange").GetProperty("fmt").ToString()) < 0) ? @item.GetProperty("regularMarketChange").GetProperty("fmt").ToString() : @Html.Raw(" + ") + @item.GetProperty("regularMarketChange").GetProperty("fmt").ToString()) &nbsp; @item.GetProperty("regularMarketChangePercent").GetProperty("raw")@Html.Raw(" % ")
+                </span><br>
+                @* @item.MarketTime *@
+            </div>
+            width = width + 200;
+        }
+    </div>
+</div>
+<script type="text/javascript">
+    $("#MarketsScroll").css("width", @width + "px")
+</script>
+<div style="width:100%;height:110px;margin:0px auto;float:left;overflow:hidden;border-radius:3px;border:1px solid #cacaca;padding:5px;overflow-x:auto;">
+    <strong>Gainers and Losers</strong>
+    <div id="GandAScroll" style="width:3200px;height:75px;margin:0px auto;float:none;overflow:hidden;">
+        @{width = 0;}
+        @if (Model.GainersandLosers != null && Model.GainersandLosers.Gainers is object)
+        @foreach (var item in Model?.GainersandLosers.Gainers)
+        {
+            string st = string.Empty;
+            if (!item.TryGetProperty("regularMarketChange", out JsonElement value))
+            {
+                continue;
+            }
+            decimal rmc = Convert.ToDecimal(item.GetProperty("regularMarketChange").ToString());
+            if (rmc < 0m) { st = "background-color:red;color:white;"; } else { st = "background-color:green;color:white;"; }
+            <div style="width:200px;height:80px;margin:0px auto;float:left;overflow:hidden;border:1px solid #Cacaca;margin-left:5px;padding:3px;border-radius:3px;@st">
+                <span style="white-space: nowrap;cursor:pointer;text-decoration:underline;" onclick="javascript:objContext.GetQuote('@item.GetProperty("symbol")','@item.GetProperty("shortName").ToString().Replace(@"'"," ")');">
+                    <strong>@item.GetProperty("shortName") - @item.GetProperty("symbol")</strong>
+                </span><br>
+                <span style="white-space: nowrap;font-size:14px;">@item.GetProperty("regularMarketPrice") &nbsp; @Html.Raw("$")@((Convert.ToDecimal(item.GetProperty("regularMarketChange").ToString()) < 0m) ? @item.GetProperty("regularMarketChange").ToString() : @Html.Raw("+") + @item.GetProperty("regularMarketChange").ToString()) &nbsp; @item.GetProperty("regularMarketChangePercent")@Html.Raw("%")</span><br>
+            </div>
+            width = width + 200;
+        }
+        @if (Model.GainersandLosers != null && Model.GainersandLosers.Losers is object)
+        @foreach (var item in Model?.GainersandLosers.Losers)
+        {
+            string st = string.Empty;
+            if (!item.TryGetProperty("regularMarketChange", out JsonElement value))
+            {
+                continue;
+            }
+            decimal rmc = Convert.ToDecimal(item.GetProperty("regularMarketChange").ToString());
+            if (rmc < 0m) { st = "background-color:red;color:white;"; } else { st = "background-color:green;color:white;"; }
+            <div style="width:200px;height:80px;margin:0px auto;float:left;overflow:hidden;border:1px solid #Cacaca;margin-left:5px;padding:3px;border-radius:3px;@st">
+                <span style="white-space: nowrap;cursor:pointer;text-decoration:underline;" onclick="javascript:objContext.GetQuote('@item.GetProperty("symbol")','@item.GetProperty("shortName")');">
+                    <strong>@item.GetProperty("shortName") - @item.GetProperty("symbol")</strong>
+                </span><br>
+                <span style="white-space: nowrap;font-size:14px;">@item.GetProperty("regularMarketPrice") &nbsp; @Html.Raw("$")@((Convert.ToDecimal(item.GetProperty("regularMarketChange").ToString()) < 0m) ? @item.GetProperty("regularMarketChange").ToString() : @Html.Raw("+") + @item.GetProperty("regularMarketChange").ToString()) &nbsp; @item.GetProperty("regularMarketChangePercent")@Html.Raw("%")</span><br>
+            </div>
+            width = width + 200;
+        }
+    </div>
+</div>
+<script type="text/javascript">
+    $("#GandAScroll").css("width",@width + "px")
+</script>
+<div class="text-center">
+    <h4 style="text-align:center;">Latest News</h4>
+    <div id="newsContent"></div>
+</div>

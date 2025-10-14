@@ -1,0 +1,11 @@
+﻿@page
+@model TraderGo.Pages.LoginModel
+@{
+    ViewData["Title"] = "Tradergo.com - Login page";
+}
+<partial name="_Login2" model="Model.loginRegister" />
+<script src="~/js/admin.js" asp-append-version="true"></script>
+
+@section scripts{
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,193 @@
+﻿@page
+@using TMDInvestments.Models
+@model TraderGo.Pages.CryptoAccountInfoModel
+@{
+    ViewData["Title"] = "Tradergo.com - Crypto Account Info";
+    string status = string.Empty;
+    string bold = string.Empty;
+    int cryptoCnt = 1;
+    dynamic? results = null;
+    CryptoTracker? coin = null;
+}
+<h4 style="color:#006699;">Crypto Accounts</h4>
+<div class="row">
+    <div class="col">
+        @await Html.PartialAsync("~/Pages/Partial/_CryptoMenu.cshtml")
+    </div>
+</div>
+<div class="border border-1 border-primary rounded-3 overflow-hidden w-100 h-75 p-2 m-2">
+    <h6 style="color:#006699;">Balances</h6>
+
+    <div class='row bg-info text-light p-0' style="font-size:11px;">
+        <div class='col fw-bold border border-1 border-light'>Total Balance</div>
+        <div class='col fw-bold border border-1 border-light'>Total Cash Equivalent</div>
+        <div class='col fw-bold border border-1 border-light'>Total Crypto Balance</div>
+        <div class='col fw-bold border border-1 border-light'>Total Wallets</div>
+    </div>
+    @foreach(var item in Model.Portfolios)
+    {
+        <div class="row  p-0" style="font-size:11px;">
+            <div class='col border border-1 border-info'>@item.Portfolio_balances.total_Balance.value</div>
+            <div class='col border border-1 border-info'>@item.Portfolio_balances.total_cash_equivalent_balance.value</div>
+            <div class='col border border-1 border-info'>@item.Portfolio_balances.total_crypto_balance.value</div>
+            <div class='col border border-1 border-info'>@Model.Accounts.Count</div>
+        </div>
+    }
+</div>
+<div class="border border-1 border-primary rounded-3 overflow-hidden w-100 h-75 p-2 m-2">
+    <h6 style="color:#006699;">Positions</h6>
+    <div class="row fw-bold bg-info text-light p-0" style="font-size:11px;">
+        <div class='col border border-1 border-light text-center'>&nbsp;</div>
+        <div class='col border border-1 border-light text-center'>Symbol</div>
+        <div class='col border border-1 border-light text-center'>Name</div>
+        <div class='col border border-1 border-light text-center'>Default</div>
+        <div class='col border border-1 border-light text-center'>Id</div>
+        <div class='col border border-1 border-light text-center'>Balance</div>
+        <div class='col border border-1 border-light text-center'>Currency</div>
+        <div class='col border border-1 border-light text-center'>Value of Wallet/Crypto</div>
+        <div class='col border border-1 border-light text-center'>Current Price</div>
+        <div class="col border border-1 border-light text-center">Last Price</div>
+        <div class="col border border-1 border-light text-center">Price Purchased</div>        
+        <div class="col border border-1 border-light text-center">Percent Difference Price Purchased/Current Price</div>
+        <div class="col border border-1 border-light text-center">Percent Difference Last Price/Current Price</div>
+        <div class="col border border-1 border-light text-center">&nbsp;</div>
+        <div class='col border border-1 border-light text-center'>Created at</div>
+    </div>
+    @{
+        var caca = Model?.Accounts?.Where(x => x.Currency.ToLower().Contains("btc")).ToList();
+    }
+    @foreach (var item in Model?.Accounts)
+    {
+        var baseName = item.Currency.ToUpper() + "-USD";
+        try
+        {
+            coin = Model.CryptoTracker.Where(x => x.Coin.ToUpper() == baseName).FirstOrDefault();
+            if (coin is null)
+            {
+                continue;
+            }
+        }
+        catch (Exception)
+        {
+            //continue;
+        }
+        var publicProduct = Model.PublicProducts.Where(x => x.DisplayName == item.Currency + "-USD").FirstOrDefault();
+        var valueofNonTrackedAsset = Math.Round(Convert.ToDecimal(item.AvailableBalance.Value) * Convert.ToDecimal(publicProduct?.Price), 5);
+        //if (Math.Round(Convert.ToDecimal(item.AvailableBalance.Value), 2) >= 1.5m)
+        if (valueofNonTrackedAsset >= 1.5m)
+        {
+            try
+            {                
+                results = Model.coinBaseService.GetQuote(item.Currency + "-USD");
+            }
+            catch (Exception ex)
+            {
+                //continue;
+            }            
+            //var baseName = item.Currency.ToUpper() + "-USD";
+
+            <div class="row" style="font-size:13px;">
+                <div class="col border border-1">@cryptoCnt</div>
+                <div class="col border border-1"><a href="javascript:objContext.Quote2('@baseName','@item.Name')">@item.Currency</a></div>
+                <div class="col border border-1">@item.Name</div>
+                <div class="col border border-1">@item.Default</div>
+                <div class="col border border-1">@item.Uuid</div>
+                <div class="col border border-1">@valueofNonTrackedAsset</div>
+                <div class="col border border-1">@item.AvailableBalance.Currency-USB</div>
+                <div class="col border border-1">
+                    $@(Math.Round(Convert.ToDecimal(item.AvailableBalance.Value) * Convert.ToDecimal(results["lastPrice"].ToString()), 2))
+                </div>
+                <div class="col border border-1">$@results["lastPrice"].ToString()</div>
+                <div class="col border border-1">$@coin?.LastPrice</div>
+                <div class="col border border-1">$@coin?.PricePurchased</div>
+                @{
+                    status = string.Empty;
+                    if (coin != null && coin?.PricePurchased > Convert.ToDecimal(results["lastPrice"].ToString()))
+                    {
+                        status = "text-danger";
+                    } else
+                    {
+                        status = "text-success";
+                    }
+                }
+                <div class="col border border-1 @status">
+                    @Math.Round(Math.Abs((((decimal)coin?.PricePurchased - Convert.ToDecimal(results["lastPrice"].ToString())) / (((decimal)coin?.PricePurchased + Convert.ToDecimal(results["lastPrice"].ToString())) / 2)) * 100), 5)%
+                </div>
+                @{
+                    status = string.Empty;
+                    if (coin?.LastPrice > Convert.ToDecimal(results["lastPrice"].ToString()))
+                    {
+                        status = "text-danger";
+                    }
+                    else
+                    {
+                        status = "text-success";
+                    }
+                }
+                <div class="col border border-1 @status">
+                    @Math.Round(Math.Abs((((decimal)coin?.LastPrice - Convert.ToDecimal(results["lastPrice"].ToString())) / (((decimal)coin?.LastPrice + Convert.ToDecimal(results["lastPrice"].ToString())) / 2)) * 100), 5)%
+                </div>
+                <div class="col border border-1">
+                    <form method="post">
+                        <input type="hidden" id="btn_@item.Currency" name="Currency" class="btn btn-success" value="@item.Currency" />
+                        <input type="submit" class="btn btn-success" value="Sell" />
+                    </form>
+                    </div>
+                <div class="col border border-1">@item.CreatedAt</div>
+            </div>
+            cryptoCnt++;
+        }
+        
+    }
+    <br /><br />
+    <div class="row fw-bold bg-info text-light p-0" style="font-size:11px;">
+        <div class='col border border-1 border-light text-center'>&nbsp;</div>
+        <div class='col border border-1 border-light text-center'>Symbol</div>
+        <div class='col border border-1 border-light text-center'>Name</div>
+        <div class='col border border-1 border-light text-center'>Volume</div>
+        <div class='col border border-1 border-light text-center'>Current Price</div>
+        <div class='col border border-1 border-light text-center'>Quote Display Symbol</div>
+        <div class="col border border-1 border-light text-center">Quote Name</div>
+        <div class="col border border-1 border-light text-center">Product Type</div>
+        <div class="col border border-1 border-light text-center">Product Venue</div>
+        <div class="col border border-1 border-light text-center">Product Id</div>
+        <div class="col border border-1 border-light text-center">Quote Name</div>
+        <div class="col border border-1 border-light text-center">Base Currency Id</div>
+        <div class="col border border-1 border-light text-center">Base Display Symbol</div>
+        <div class="col border border-1 border-light text-center">Display Name</div>
+        <div class="col border border-1 border-light text-center">View Only</div>
+    </div>
+    @{cryptoCnt = 1;}
+        @foreach(var item in Model.PublicProducts)
+    {
+        bold = string.Empty;
+        if (Model.CryptoList.Any(x => x.Coin == item.DisplayName))
+        {
+            bold = "fw-bold";
+        } 
+@*         @if (!product.Contains(item.BaseDisplaySymbol))
+        { *@
+        if (item.QuoteName == "US Dollar"){
+            <div class="row @bold" style="font-size:13px;">
+                <div class="col overflow-hidden border border-1">@cryptoCnt</div>
+                <div class="col border border-1 overflow-hidden"><a href="javascript:objContext.Quote2('@item.DisplayName','@item.BaseName')">@item.DisplayName</a></div>
+                <div class="col overflow-hidden border border-1">@item.BaseName</div>
+                <div class="col overflow-hidden border border-1">@item.Volume24h</div>
+                <div class="col overflow-hidden border border-1">$@item?.Price</div>
+                <div class="col overflow-hidden border border-1">@item?.QuoteDisplaySymbol</div>
+                <div class="col overflow-hidden border border-1">@item.QuoteName</div>
+                <div class="col overflow-hidden border border-1">@item.ProductType</div>
+                <div class="col overflow-hidden border border-1">@item.ProductVenue</div>
+                <div class="col overflow-hidden border border-1">@item.ProductId</div>
+                <div class="col overflow-hidden border border-1">@item.QuoteName</div>
+                <div class="col overflow-hidden border border-1">@item.BaseCurrencyId</div>
+                <div class="col overflow-hidden border border-1">@item.BaseDisplaySymbol</div>
+                <div class="col overflow-hidden border border-1">@item.DisplayName</div>
+                <div class="col overflow-hidden border border-1">@item.ViewOnly</div>
+            </div>
+            {cryptoCnt++;}
+            }
+@*             product.Add(item.BaseDisplaySymbol);
+        } *@
+    }
+</div>

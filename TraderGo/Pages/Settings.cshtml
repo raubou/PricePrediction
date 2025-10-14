@@ -1,0 +1,139 @@
+﻿@page
+@model TraderGo.Pages.SettingsModel
+@{
+    ViewData["Title"] = "Tradergo.com - Settings";
+}
+<div class="row">
+    <div class="col">
+        <h4 class="d-flex justify-content-center text-muted">Stock/Crypto Rules Settings</h4>
+    </div>
+</div>
+
+<hr />
+<div class="border rounded-3 p-3" style="width:100%;height:auto;margin:0px auto;float:none;position: relative; top: 40px;overflow:hidden;overflow-x:auto;font-size:13px;">
+    <div class="container">
+        <form asp-action="submit" id="frmSettings" name="frmSettings">
+            <div class="row">
+                <div class="col">
+                    @* <div asp-validation-summary="ModelOnly" class="text-danger"></div> *@
+                    <label class="form-label">Min Number of Stocks to Buy</label>
+                    <input type="number" class="form-control form-control-sm" asp-for="RulesEngines.MinNumberofStockstoBuy" value="@Model?.RulesEngine.MinNumberofStockstoBuy" />
+                </div>
+                <div class="col">
+                    <label class="form-label">Max Number of Stocks to Buy</label>
+                    <input type="number" class="form-control form-control-sm" asp-for="RulesEngines.MaxNumberofStockstoBuy" value="@Model?.RulesEngine.MaxNumberofStockstoBuy" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <label class="form-label">Min Number of Crypto to Buy</label>
+                    <input type="number" class="form-control form-control-sm" asp-for="RulesEngines.MinNumberofCryptotoBuy" value="@Model?.RulesEngine.MinNumberofCryptotoBuy" />
+                </div>
+                <div class="col">
+                    <label class="form-label">Max Number of Crypto to Buy</label>
+                    <input type="number" class="form-control form-control-sm" asp-for="RulesEngines.MaxNumberofCryptotoBuy" value="@Model?.RulesEngine.MaxNumberofCryptotoBuy" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <label class="form-label">Max Percent Balance to Use</label>
+                    <input type="number" class="form-control form-control-sm" asp-for="RulesEngines.MaxPercentBalancetoUse" value="@Model?.RulesEngine.MaxPercentBalancetoUse" />
+                </div>
+                <div class="col">
+                    <label class="form-label">Min Stock Price</label>
+                    <input type="number" class="form-control form-control-sm" asp-for="RulesEngines.MinStockPrice" value="@Model?.RulesEngine.MinStockPrice" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <label class="form-label">Short Enabled</label>
+                    @Html.CheckBox("RulesEngines.ShortEnabled", Model.RulesEngine.ShortEnabled, new { @class = "form-check-input" })
+                </div>
+                <div class="col">
+                    <label class="form-label">Schwab Day Trade Enabled</label>
+                    @Html.CheckBox("RulesEngines.SchwabDayTradeEnabled", Model.RulesEngine.SchwabDayTradeEnabled, new { @class = "form-check-input" })
+                </div>
+                <div class="col">
+                    <label class="form-label">Etrade Day Trade Enabled</label>
+                    @Html.CheckBox("RulesEngines.EtradeDayTradeEnabled", Model.RulesEngine.EtradeDayTradeEnabled, new { @class = "form-check-input" })
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <label class="form-label">Schwab Analysis Trade Enabled</label>
+                    @Html.CheckBox("RulesEngines.SchwabAnalysisTradeEnabled", Model.RulesEngine.SchwabAnalysisTradeEnabled, new { @class = "form-check-input" })
+                </div>
+                <div class="col">
+                    <label class="form-label">Etrade Analysis Trade Enabled</label>
+                    @Html.CheckBox("RulesEngines.EtradeAnalysisTradeEnabled", Model.RulesEngine.EtradeAnalysisTradeEnabled, new { @class = "form-check-input" })
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <label class="form-label">Stock Long Count</label>
+                    <input type="number" class="form-control form-control-sm" asp-for="RulesEngines.StockLongCount" value="@Model?.RulesEngine.StockLongCount" />
+                </div>
+                <div class="col">
+                    <label class="form-label">Stock Short Count</label>
+                    <input type="number" class="form-control form-control-sm" asp-for="RulesEngines.StockShortCount" value="@Model?.RulesEngine.StockShortCount" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <label class="form-label">Crypto Long Count</label>
+                    <input type="number" class="form-control form-control-sm" asp-for="RulesEngines.CryptoLongCount" value="@Model?.RulesEngine.CryptoLongCount" />
+                </div>
+                <div class="col">
+                    <label class="form-label">Crypto Short Count</label>
+                    <input type="number" class="form-control form-control-sm" asp-for="RulesEngines.CryptoShortCount" value="@Model?.RulesEngine.CryptoShortCount" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <label class="form-label">Stop Loss Percent Purchased Price Crypto</label>
+                    <input type="number" class="form-control form-control-sm" id="RulesEngines_StopLossPercentPurchasedCrypto" NAME="RulesEngines.StopLossPercentPurchasedCrypto" value="@Model?.RulesEngine.StopLossPercentPurchasedCrypto" step=".01" pattern="^\d*(\.\d{0,2})?$" />
+                </div>
+                <div class="col">
+                    <label class="form-label">Stop Loss Percent Last Price Crypto</label>
+                    <input type="number" class="form-control form-control-sm" id="RulesEngines_StopLossPercentLastPriceCrypto" NAME="RulesEngines.StopLossPercentLastPriceCrypto" value="@Model?.RulesEngine.StopLossPercentLastPriceCrypto" step=".01" pattern="^\d*(\.\d{0,2})?$" />
+                </div>
+                <div class="col">
+                    <label class="form-label">Max Percent of Avail Balance Per Order</label>
+                    <input type="number" class="form-control form-control-sm" asp-for="RulesEngines.MaxPercentofAvailBalancePerOrder" value="@Model?.RulesEngine.MaxPercentofAvailBalancePerOrder" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <label class="form-label">Stop Loss Percent Purchased Price Stock</label>
+                    <input type="number" class="form-control form-control-sm" id="RulesEngines_StopLossPercentPurchasedStock" NAME="RulesEngines.StopLossPercentPurchasedStock" value="@Model?.RulesEngine.StopLossPercentPurchasedStock" step=".01" pattern="^\d*(\.\d{0,2})?$" />
+                </div>
+                <div class="col">
+                    <label class="form-label">Stop Loss Percent Last Price Stock</label>
+                    <input type="number" class="form-control form-control-sm" id="RulesEngines_StopLossPercentLastPriceStock" NAME="RulesEngines.StopLossPercentLastPriceStock" value="@Model?.RulesEngine.StopLossPercentLastPriceStock" step=".01" pattern="^\d*(\.\d{0,2})?$" />
+                </div>
+                <div class="col">
+                    <label class="form-label">Max Number of Shares Per Stock</label>
+                    <input type="number" class="form-control form-control-sm" asp-for="RulesEngines.MaxNumberofSharesPerStock" value="@Model?.RulesEngine.MaxNumberofSharesPerStock" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <label class="form-label">MaxDollarAmountPerCrypto</label>
+                    <input type="number" class="form-control form-control-sm" asp-for="RulesEngines.MaxDollarAmountPerCrypto" value="@Model?.RulesEngine.MaxDollarAmountPerCrypto" />
+                </div>
+                <div class="col">
+
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <input type="hidden" asp-for="RulesEngines.Id" value="@Model?.RulesEngine?.Id" />
+                    <input type="hidden" asp-for="RulesEngines.LastUpdatedBy" value="1" />
+                    <input type="hidden" asp-for="RulesEngines.DateCreated" value="@Model?.RulesEngine?.DateCreated" />
+                    <input type="hidden" asp-for="RulesEngines.DateUpdated" value="@Model?.RulesEngine?.DateUpdated" />
+                    <button type="submit" class="btn btn-primary">Update</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
