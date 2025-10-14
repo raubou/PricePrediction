@@ -1,0 +1,55 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.34018.315
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TraderGo", "TraderGo.csproj", "{CAEBFAB4-F9F0-4E82-AB6D-B98762B3689F}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TMD.Database.Connect", "..\TMD.Database.Connect\TMD.Database.Connect\TMD.Database.Connect.csproj", "{40289147-9AD9-4D58-B02C-893ABC757581}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TMDInvestments.Models", "..\TMDInvestments.Models\TMDInvestments.Models\TMDInvestments.Models.csproj", "{BCC36C0F-9730-4F81-B1E8-6DD918A1411E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TMD.Services", "..\TMD.Services\TMD.Services\TMD.Services.csproj", "{AAE8ACC3-538B-4F3A-8465-A58A92369E8F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Coinbase.AdvancedTrade", "..\Coinbase.AdvancedTrade-main\Coinbase.AdvancedTrade-main\Coinbase.AdvancedTrade\Coinbase.AdvancedTrade.csproj", "{032047DA-D6B4-4EA2-AF40-12490378A078}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyOAuth2", "..\TinyOAuth2-master\TinyOAuth2\TinyOAuth2.csproj", "{03D33269-EE0D-4035-AB81-A770E4C1B28D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CAEBFAB4-F9F0-4E82-AB6D-B98762B3689F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CAEBFAB4-F9F0-4E82-AB6D-B98762B3689F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CAEBFAB4-F9F0-4E82-AB6D-B98762B3689F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CAEBFAB4-F9F0-4E82-AB6D-B98762B3689F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{40289147-9AD9-4D58-B02C-893ABC757581}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{40289147-9AD9-4D58-B02C-893ABC757581}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{40289147-9AD9-4D58-B02C-893ABC757581}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{40289147-9AD9-4D58-B02C-893ABC757581}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BCC36C0F-9730-4F81-B1E8-6DD918A1411E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BCC36C0F-9730-4F81-B1E8-6DD918A1411E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BCC36C0F-9730-4F81-B1E8-6DD918A1411E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BCC36C0F-9730-4F81-B1E8-6DD918A1411E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AAE8ACC3-538B-4F3A-8465-A58A92369E8F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AAE8ACC3-538B-4F3A-8465-A58A92369E8F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AAE8ACC3-538B-4F3A-8465-A58A92369E8F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AAE8ACC3-538B-4F3A-8465-A58A92369E8F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{032047DA-D6B4-4EA2-AF40-12490378A078}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{032047DA-D6B4-4EA2-AF40-12490378A078}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{032047DA-D6B4-4EA2-AF40-12490378A078}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{032047DA-D6B4-4EA2-AF40-12490378A078}.Release|Any CPU.Build.0 = Release|Any CPU
+		{03D33269-EE0D-4035-AB81-A770E4C1B28D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{03D33269-EE0D-4035-AB81-A770E4C1B28D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{03D33269-EE0D-4035-AB81-A770E4C1B28D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{03D33269-EE0D-4035-AB81-A770E4C1B28D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9AA96BB5-DAE7-4154-9CB1-1A0A97DA9C6F}
+	EndGlobalSection
+EndGlobal

@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PricePredictionTest", "..\P
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyOAuth2", "..\TinyOAuth2-master\TinyOAuth2\TinyOAuth2.csproj", "{C143701E-95F9-4690-A6C3-14113F25967A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TMDPricePrediction", "..\TMDPricePrediction\TMDPricePrediction\TMDPricePrediction.csproj", "{A20A0059-6673-D0AE-087D-BAF65604F92C}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TraderGo", "..\TraderGo\TraderGo.csproj", "{C8515F41-1398-CB29-F948-BDF09A40DDB3}"
 EndProject
 Global
@@ -59,6 +61,10 @@ Global
 		{C143701E-95F9-4690-A6C3-14113F25967A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C143701E-95F9-4690-A6C3-14113F25967A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C143701E-95F9-4690-A6C3-14113F25967A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A20A0059-6673-D0AE-087D-BAF65604F92C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A20A0059-6673-D0AE-087D-BAF65604F92C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A20A0059-6673-D0AE-087D-BAF65604F92C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A20A0059-6673-D0AE-087D-BAF65604F92C}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C8515F41-1398-CB29-F948-BDF09A40DDB3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C8515F41-1398-CB29-F948-BDF09A40DDB3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C8515F41-1398-CB29-F948-BDF09A40DDB3}.Release|Any CPU.ActiveCfg = Release|Any CPU
