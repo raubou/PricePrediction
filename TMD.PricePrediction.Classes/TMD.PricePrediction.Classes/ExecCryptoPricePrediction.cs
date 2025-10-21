@@ -520,7 +520,7 @@ namespace TMD.PricePrediction.Classes
                 }
                 else
                 //if (currentPrice < lastPrice) // try to kill the loss by selling only if above amount balance
-                if (currentPrice < lastPrice && currentBalance > (crypto.Amount * 1.07m))
+                if (currentPrice < lastPrice && currentBalance > (crypto.Amount * 1.075m))
                 {
                     if (percentDiffLastPrice > settings.StopLossPercentLastPriceCrypto)
                     {

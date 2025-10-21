@@ -461,7 +461,7 @@ namespace TMD.PricePrediction
             //if (Convert.ToDecimal(results["MACDHistogram"].ToString()) < 0m) { shortCnt++; }
             System.Threading.Thread.Sleep(150); //Sleep for 150 milliseconds to avoid throttling
         }
-        //public void CheckDowNasdaqandSandP(JsonObject vix, JsonObject sandp, JsonObject dow, JsonObject vxd, JsonObject nasdaq, JsonObject vxn, int? longMax, int? shortMax, ILogger _logger, ref int? vixsandpLongCnt, ref int? vixsandpShortCnt)
+
         public void CheckDowNasdaqandSandP(JsonObject vix, JsonObject sandp, JsonObject dow, JsonObject vxd, JsonObject nasdaq, JsonObject vxn, int? longMax, int? shortMax, ILogger _logger, ref int? SandPLong, ref int? SandPShort, ref int? DOWLong, ref int? DOWShort, ref int? NASDAQLong, ref int? NASDAQShort)
         {
             int? shortCnt = 0;
@@ -744,7 +744,7 @@ namespace TMD.PricePrediction
 
             decimal cash = Convert.ToDecimal(initialBalances.GetProperty("cashBalance").ToString());
             decimal margin = 0m;// Convert.ToDecimal(initialBalances.GetProperty("margin").ToString());
-            totalAvailiableforLongTrade = Math.Round((cash + margin) * .9m, 2);
+            totalAvailiableforLongTrade = Math.Round((cash + margin) * .85m, 2);
             //totalAvailiableforLongTrade = 0m;
 
             Log(_logger, LogLevel.Information, $"Cash Balance ${cash}. Margin Balance ${margin}. Total Availiable ${totalAvailiableforLongTrade}");
@@ -958,7 +958,7 @@ namespace TMD.PricePrediction
             decimal cash = Convert.ToDecimal(securitiesAccount.Element("cashBuyingPower").Value.ToString());
             decimal margin = 0m;// Convert.ToDecimal(securitiesAccount.Element("marginBuyingPower").Value.ToString());
             //totalAvailiableforLongTrade = Math.Round((cash + margin), 2);
-            totalAvailiableforLongTrade = Math.Round((cash + margin) * .9m, 2);
+            totalAvailiableforLongTrade = Math.Round((cash + margin) * .85m, 2);
             //totalAvailiableforLongTrade = 200m;
 
             Log(_logger, LogLevel.Information, $"Cash Balance ${cash}. Margin Balance ${margin}. Total Availiable ${totalAvailiableforLongTrade}");
