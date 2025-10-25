@@ -226,7 +226,7 @@ namespace TMD.PricePrediction
                     }
                     if (Convert.ToDecimal(results["lastPrice"].ToString()) >= settings.MinStockPrice /*&& !stock.ExcludeFromAutomation*/)
                     {
-                        CalculatePoints(results, true, false, false, ref shortCnt, ref longCnt);
+                        CalculatePoints(results, true, false, true, ref shortCnt, ref longCnt);
                     }
                     else
                     {
@@ -471,7 +471,7 @@ namespace TMD.PricePrediction
 
             //_logger.LogInformation($"Checking VIX and S&P. VIX at {vix["lastPrice"].ToString()}. S&P at {sandp["lastPrice"].ToString()}.");
 
-            CalculatePoints(vix, true, false, false, ref shortCnt, ref longCnt);
+            CalculatePoints(vix, true, false, true, ref shortCnt, ref longCnt);
 
             _logger.LogInformation($"VIX Score. Long score: {longCnt}. Short score {shortCnt}");
 
@@ -481,7 +481,7 @@ namespace TMD.PricePrediction
             shortCnt = 0;
             longCnt = 0;
 
-            CalculatePoints(sandp, true, false, false, ref shortCnt, ref longCnt);
+            CalculatePoints(sandp, true, false, true, ref shortCnt, ref longCnt);
 
             _logger.LogInformation($"S&P Score. Long score: {longCnt}. Short score {shortCnt}");
 
@@ -490,7 +490,7 @@ namespace TMD.PricePrediction
             shortCnt = 0;
             longCnt = 0;
 
-            CalculatePoints(vxd, true, false, false, ref shortCnt, ref longCnt);
+            CalculatePoints(vxd, true, false, true, ref shortCnt, ref longCnt);
 
             _logger.LogInformation($"VXD Score. Long score: {longCnt}. Short score {shortCnt}");
 
@@ -500,7 +500,7 @@ namespace TMD.PricePrediction
             shortCnt = 0;
             longCnt = 0;
 
-            CalculatePoints(dow, true, false, false, ref shortCnt, ref longCnt);
+            CalculatePoints(dow, true, false, true, ref shortCnt, ref longCnt);
 
             _logger.LogInformation($"DOW Score. Long score: {longCnt}. Short score {shortCnt}");
 
@@ -509,7 +509,7 @@ namespace TMD.PricePrediction
             shortCnt = 0;
             longCnt = 0;
 
-            CalculatePoints(vxn, true, false, false, ref shortCnt, ref longCnt);
+            CalculatePoints(vxn, true, false, true, ref shortCnt, ref longCnt);
 
             _logger.LogInformation($"VXN Score. Long score: {longCnt}. Short score {shortCnt}");
 
@@ -519,7 +519,7 @@ namespace TMD.PricePrediction
             shortCnt = 0;
             longCnt = 0;
 
-            CalculatePoints(nasdaq, true, false, false, ref shortCnt, ref longCnt);
+            CalculatePoints(nasdaq, true, false, true, ref shortCnt, ref longCnt);
 
             _logger.LogInformation($"NASDAQ Score. Long score: {longCnt}. Short score {shortCnt}");
 
