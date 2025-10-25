@@ -73,7 +73,7 @@ class PricePrediction
                 //helper.CheckETradeOrderStatus(ref totalAvailiableforLongTradeETrade);
 
                 //if (totalAvailiableforLongTradeSchwab > 100 || totalAvailiableforLongTradeETrade > 100)
-                    BuySellStockList = helper.GetQuoteList();
+                    //BuySellStockList = helper.GetQuoteList();
 
                 //if (totalAvailiableforLongTradeSchwab > 100)
                 //    exec1.Exec(totalAvailiableforLongTradeSchwab, ref BuySellStockList);
@@ -104,7 +104,7 @@ class PricePrediction
         ExecCrypto:
             try
             {
-                //exec2.Exec();
+                exec2.Exec();
             }
             catch (Exception ex)
             {

@@ -133,8 +133,8 @@ namespace PricePredictionTest
         [TestMethod]
         public void TestCoinBaseGetFills()
         {
-            var results = services.GetOrders("ZEN-USD");
-            var lastSell = services.GetOrders("ZEN-USD").Where(x => x.Side == "SELL").OrderByDescending(y => Convert.ToDateTime(y.SequenceTimestamp)).FirstOrDefault();
+            var results = services.GetOrders("EUL-USD");
+            var lastSell = results.Where(x => x.Side == "BUY").OrderByDescending(y => Convert.ToDateTime(y.SequenceTimestamp)).FirstOrDefault();
             Assert.IsNotNull(results);
         }
         [TestMethod]
