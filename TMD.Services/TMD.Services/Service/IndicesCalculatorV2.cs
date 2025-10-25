@@ -156,7 +156,6 @@ namespace TMD.Services.Service
             decimal? averageGain = gains.Sum() / 14;
             decimal? averageLoss = losses.Sum() / 14;
 
-            //if (averageLoss == 0) return 100;
             decimal? rs = 0m;
             decimal? rsi = 0m;
             try
@@ -321,10 +320,17 @@ namespace TMD.Services.Service
             decimal? averageGain = gains.Sum() / 14;
             decimal? averageLoss = losses.Sum() / 14;
 
-            //if (averageLoss == 0) return 100;
-
-            decimal? rs = averageGain / averageLoss;
-            decimal? rsi = 100 - (100 / (1 + rs));
+            decimal? rs = 0m;
+            decimal? rsi = 0m;
+            try
+            {
+                rs = averageGain / averageLoss;
+                rsi = 100 - (100 / (1 + rs));
+            }
+            catch (Exception ex2)
+            {
+                _log.LogError($"{ex2.Message}", ex2);
+            }
 
             JsonObject output = new JsonObject();
             output.Add("Symbol", product.ProductId);
