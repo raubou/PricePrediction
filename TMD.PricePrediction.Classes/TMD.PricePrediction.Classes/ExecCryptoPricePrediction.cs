@@ -226,7 +226,7 @@ namespace TMD.PricePrediction.Classes
                     //    helper.Log(_logger, LogLevel.Information, $"Not buying/selling short {results["Symbol"].ToString()} - ({results["Symbol"].ToString()}). Volume fall below min of 50000");
                     //    continue;
                     //}
-                    helper.CalculatePoints(results, true, false, false, ref shortCnt, ref longCnt);
+                    helper.CalculatePoints(results, true, false, true, ref shortCnt, ref longCnt);
 
                     //_logger.LogInformation($"{crypto.Coin} - ({crypto.Name}) Score. Long score: {longCnt}. Short score {shortCnt}");
                     helper.Log(_logger, LogLevel.Information, $"{crypto.Coin} - ({crypto.Name}) Score. Long score: {longCnt}. Short score {shortCnt}");
