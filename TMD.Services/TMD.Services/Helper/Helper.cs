@@ -116,8 +116,8 @@ namespace TMD.PricePrediction
             }
             Log(_logger, LogLevel.Information, $"S&P: {sandp["lastPrice"].ToString()}. Dow: {dow["lastPrice"].ToString()}. Nasdaq: {nasdaq["lastPrice"].ToString()}");
 
-            //CheckDowNasdaqandSandP(vix, sandp, dow, vxd, nasdaq, vxn, (settings?.StockLongCount - 1), (settings?.StockShortCount - 1), _logger, ref vixsandpLongCnt, ref vixsandpShortCnt);
-            CheckDowNasdaqandSandP(vix, sandp, dow, vxd, nasdaq, vxn, settings?.StockLongCount, settings?.StockShortCount, _logger, ref SandPLong, ref SandPShort, ref DOWLong, ref DOWShort, ref NASDAQLong, ref NASDAQShort);
+            //Disabling Calculate VIX and S&P points
+            //CheckDowNasdaqandSandP(vix, sandp, dow, vxd, nasdaq, vxn, settings?.StockLongCount, settings?.StockShortCount, _logger, ref SandPLong, ref SandPShort, ref DOWLong, ref DOWShort, ref NASDAQLong, ref NASDAQShort);
             Log(_logger, LogLevel.Information, $"DOW Long: {DOWLong}. S&P Long: {SandPLong}. NASDAQ Long: {NASDAQLong}");
             Log(_logger, LogLevel.Information, $"DOW Short: {DOWShort}. S&P Short: {SandPShort}. NASDAQ Short: {NASDAQShort}");
 
