@@ -73,10 +73,10 @@ class PricePrediction
                 //helper.CheckETradeOrderStatus(ref totalAvailiableforLongTradeETrade);
 
                 //if (totalAvailiableforLongTradeSchwab > 100 || totalAvailiableforLongTradeETrade > 100)
-                    //BuySellStockList = helper.GetQuoteList();
+                    BuySellStockList = helper.GetQuoteList();
 
                 //if (totalAvailiableforLongTradeSchwab > 100)
-                //    exec1.Exec(totalAvailiableforLongTradeSchwab, ref BuySellStockList);
+                    exec1.Exec(totalAvailiableforLongTradeSchwab, ref BuySellStockList);
                 //else
                 //    logger.LogInformation($"Not enough buying power in Schwab account to make a trade. ${totalAvailiableforLongTradeSchwab}");
                 //}
