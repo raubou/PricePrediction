@@ -316,7 +316,7 @@ namespace TMD.PricePrediction.Classes
                     }
                 }
                 //else if (currentPrice <= pricePurchased)
-                else if (currentPrice <= lastPrice)
+                else //if (currentPrice <= lastPrice)
                 {
                     //update price
                     helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentDiffLastPrice, 4)}% tolerance since purchase. Updating last Price.");
@@ -361,7 +361,7 @@ namespace TMD.PricePrediction.Classes
                         //UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
                     }
                 }
-                else if (currentPrice >= lastPrice)
+                else //if (currentPrice >= lastPrice)
                 {
                     //update price
                     helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentDiffLastPrice, 4)}% tolerance since purchase. Updating last Price.");

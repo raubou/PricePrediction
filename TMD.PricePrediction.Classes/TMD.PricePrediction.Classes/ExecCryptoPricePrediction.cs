@@ -493,7 +493,7 @@ namespace TMD.PricePrediction.Classes
             //            //UpdateLastPrice(currentPrice, balance, ref crypto);
             //        }
             //    }
-            //    else if (currentPrice <= lastPrice)
+            //    else //if (currentPrice <= lastPrice)
             //    {
             //            //update price
             //            helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) still within about {Math.Round(percentDiffLastPrice, 5)}% tolerance since last price. Updating last Price.");
@@ -536,7 +536,7 @@ namespace TMD.PricePrediction.Classes
                         //UpdateLastPrice(currentPrice, balance, ref crypto);
                     }
                 }
-                else if (currentPrice >= lastPrice)
+                else //if (currentPrice >= lastPrice)
                 {
                         //update price
                         helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) still within about {Math.Round(percentDiffLastPrice, 5)}% tolerance since last price. Updating last Price.");
@@ -584,10 +584,10 @@ namespace TMD.PricePrediction.Classes
             //check if there is a wallet with cash not in tracker
             foreach (var item in Accounts)
             {
-                if (item.Currency == "BTC" || item.Currency == "LTC")
-                {
-                    //they do exist
-                }
+                //if (item.Currency == "BTC" || item.Currency == "LTC")
+                //{
+                //    //they do exist
+                //}
                 var publicProduct = PublicProducts.Where(x => x.DisplayName == item.Currency + "-USD").FirstOrDefault();
                 var valueofNonTrackedAsset = Math.Round(Convert.ToDecimal(item.AvailableBalance.Value) * Convert.ToDecimal(publicProduct?.Price), 5);
                 if (valueofNonTrackedAsset <= .80m)

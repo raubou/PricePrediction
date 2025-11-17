@@ -69,14 +69,14 @@ class PricePrediction
                 //if (helper.IsNotHolidayorWeekend())
                 //{
                 //helper.UnloadAgingStocks();
-                //helper.CheckSchwabOrderStatus(ref totalAvailiableforLongTradeSchwab);
-                //helper.CheckETradeOrderStatus(ref totalAvailiableforLongTradeETrade);
+                ///helper.CheckSchwabOrderStatus(ref totalAvailiableforLongTradeSchwab);
+                ///helper.CheckETradeOrderStatus(ref totalAvailiableforLongTradeETrade);
 
                 //if (totalAvailiableforLongTradeSchwab > 100 || totalAvailiableforLongTradeETrade > 100)
-                    BuySellStockList = helper.GetQuoteList();
+                //BuySellStockList = helper.GetQuoteList();
 
                 //if (totalAvailiableforLongTradeSchwab > 100)
-                    exec1.Exec(totalAvailiableforLongTradeSchwab, ref BuySellStockList);
+                    //exec1.Exec(totalAvailiableforLongTradeSchwab, ref BuySellStockList);
                 //else
                 //    logger.LogInformation($"Not enough buying power in Schwab account to make a trade. ${totalAvailiableforLongTradeSchwab}");
                 //}
@@ -93,7 +93,7 @@ class PricePrediction
             try
             {
                 //if(totalAvailiableforLongTradeETrade > 100)
-                //    exec3.Exec(totalAvailiableforLongTradeETrade, ref BuySellStockList);
+                    //exec3.Exec(totalAvailiableforLongTradeETrade, ref BuySellStockList);
                 //else
                 //    logger.LogInformation($"Not enough buying power in ETrade account to make a trade. ${totalAvailiableforLongTradeETrade}");
             }
