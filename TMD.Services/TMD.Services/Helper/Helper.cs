@@ -16,6 +16,7 @@ namespace TMD.PricePrediction
     {
         SchwabSettings? _settings = null;
         ETradeSettings? _settings2 = null;
+        RulesEngine? rulesEngine = null;
         private readonly ILogger? _logger = null;
         private readonly IHttpClientFactory? _factory = null;
         SchwabServices? services = null;
@@ -72,7 +73,7 @@ namespace TMD.PricePrediction
             int? NASDAQShort = 0;
 
             var BuySellStockList = new List<BuySellCommodity>();
-            RulesEngine settings = ctx.RulesEngine.FirstOrDefault();
+            rulesEngine = ctx.RulesEngine.FirstOrDefault();
 
             //Get stock already in trade being tracked.
             var stockTracker = ctx.StockTracker.Where(x => x.PriceSold == null && x.DateSold == null && x.Status == "Filled"/* && x.TradePlatform == (int)Platform.CharlesSchwab*/).ToList();
@@ -224,7 +225,7 @@ namespace TMD.PricePrediction
                         Log(_logger, LogLevel.Information, $"Not buying/selling short {results["Symbol"].ToString()} - ({results["Symbol"].ToString()}). Volume fall below min of 40000");
                         continue;
                     }
-                    if (Convert.ToDecimal(results["lastPrice"].ToString()) >= settings.MinStockPrice /*&& !stock.ExcludeFromAutomation*/)
+                    if (Convert.ToDecimal(results["lastPrice"].ToString()) >= rulesEngine.MinStockPrice /*&& !stock.ExcludeFromAutomation*/)
                     {
                         CalculatePoints(results, true, false, true, ref shortCnt, ref longCnt);
                     }
@@ -235,14 +236,14 @@ namespace TMD.PricePrediction
 
                     Log(_logger, LogLevel.Information, $"{stock.Symbol} - ({stock.Name}) Score. Long score: {longCnt}. Short score {shortCnt}");
 
-                    if ((longCnt + vixsandpLongCnt) >= settings.StockLongCount)
+                    if ((longCnt + vixsandpLongCnt) >= rulesEngine.StockLongCount)
                     {
                         Log(_logger, LogLevel.Information, $"Adding {stock.Symbol} - ({stock.Name}) to potential long list.");
                         BuySellStockList.Add(new BuySellCommodity((longCnt + vixsandpLongCnt), TradeDirection.BUY, results));
                         stockCnt++;
                     }
                     else
-                    if ((shortCnt + vixsandpShortCnt) >= settings.StockShortCount && (bool)settings.ShortEnabled)
+                    if ((shortCnt + vixsandpShortCnt) >= rulesEngine.StockShortCount && (bool)rulesEngine.ShortEnabled)
                     {
                         Log(_logger, LogLevel.Information, $"Adding {stock.Symbol} - ({stock.Name}) to potential short list.");
                         BuySellStockList.Add(new BuySellCommodity((shortCnt + vixsandpShortCnt), TradeDirection.SELL_SHORT, results));
@@ -425,14 +426,14 @@ namespace TMD.PricePrediction
             ////{
             //if (!MACDFocus)
             //{
-            //if (Convert.ToDecimal(results["MACD"].ToString()) >= Convert.ToDecimal(results["MACDSignal"].ToString()) && (Convert.ToDecimal(results["MACDSignal"].ToString()) < 0 && Convert.ToDecimal(results["MACD"].ToString()) > 0))
-            //    {
-            //        longCnt = longCnt + 8;
-            //    }
-            //    if (Convert.ToDecimal(results["MACD"].ToString()) <= Convert.ToDecimal(results["MACDSignal"].ToString()) && (Convert.ToDecimal(results["MACDSignal"].ToString()) > 0 && Convert.ToDecimal(results["MACD"].ToString()) < 0))
-            //    {
-            //        shortCnt = shortCnt + 8;
-            //    }
+            if (Convert.ToDecimal(results["MACD"].ToString()) >= Convert.ToDecimal(results["MACDSignal"].ToString()) && (Convert.ToDecimal(results["MACDSignal"].ToString()) < 0 && Convert.ToDecimal(results["MACD"].ToString()) > 0))
+            {
+                longCnt = longCnt + 8;
+            }
+            if (Convert.ToDecimal(results["MACD"].ToString()) <= Convert.ToDecimal(results["MACDSignal"].ToString()) && (Convert.ToDecimal(results["MACDSignal"].ToString()) > 0 && Convert.ToDecimal(results["MACD"].ToString()) < 0))
+            {
+                shortCnt = shortCnt + 8;
+            }
             //}
             //else
             //{
@@ -1233,6 +1234,31 @@ namespace TMD.PricePrediction
             catch (Exception ex)
             {
                 //helper.Log(_logger, LogLevel.Error, $"Error in buying stock - {ex.Message}");
+            }
+            return true;
+        }
+        public bool ReverseStock(StockTracker stock, JsonObject? results, dynamic services)
+        {
+            //reverse stock
+            Log(_logger, LogLevel.Information, $"Attempting Reversing stock {stock.Symbol} - ({stock.Name})");
+            TradeDirection tradeDirection = (TradeDirection)stock.TradeDirection;
+            int? shortCnt = 0; int? longCnt = 0;
+            Log(_logger, LogLevel.Information, $"Checking {stock.Symbol} - ({stock.Name}) Points");
+            CalculatePoints(results, true, false, false, ref shortCnt, ref longCnt);
+            if ((longCnt) >= (rulesEngine.StockLongCount - 1) && tradeDirection == TradeDirection.SELL_SHORT)
+            {
+                BuySellStock(null, results, TradeDirection.BUY, stock.Quantity, true, services);
+                Log(_logger, LogLevel.Information, $"Reversing stock {stock.Symbol} - ({stock.Name}). Long score: {longCnt}. Short score {shortCnt}.");
+            }
+            else
+            if ((shortCnt >= rulesEngine.StockShortCount - 1) && tradeDirection == TradeDirection.BUY)
+            {
+                BuySellStock(null, results, TradeDirection.SELL_SHORT, stock.Quantity, true, services);
+                Log(_logger, LogLevel.Information, $"Reversing stock {stock.Symbol} - ({stock.Name}). Long score: {longCnt}. Short score {shortCnt}.");
+            }
+            else
+            {
+                Log(_logger, LogLevel.Information, $"Not Reversing stock {stock.Symbol} - ({stock.Name}) as it does not meet the points criteria. Long score: {longCnt}. Short score {shortCnt}.");
             }
             return true;
         }

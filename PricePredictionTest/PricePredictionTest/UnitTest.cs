@@ -730,14 +730,16 @@ namespace PricePredictionTest
         [TestMethod]
         public void GetMACD()
         {
-            var results = SchwabService.GetPriceHistory("META", "month", "1", "daily", 1, DateTime.Now.AddDays(-90), DateTime.Now);//.ToList();
+            var results = SchwabService.GetPriceHistory("AMZN", "day", "1", "minute", 15, DateTime.Now.AddDays(-1), DateTime.Now);//.ToList();
             var ser = JsonSerializer.Serialize(results.GetProperty("candles"));
             List<TMDInvestment.Models.CandleItems> candle90 = JsonSerializer.Deserialize<List<TMDInvestment.Models.CandleItems>>(ser);
             //var closes = new List<double> { 10, 12, 11, 13, 15, 14, 16, 18, 17, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30 };
             //var closes = candle90.OrderBy(x => x.datetime).Take(52).Select(x => Convert.ToDouble(x.close)).ToList();
-            var closes = candle90.OrderBy(x => x.datetime)/*.Take(52)*/.Select(y => new MACDClosesDateTime { Close = (double)y.close, Datetime = DateTimeOffset.FromUnixTimeMilliseconds(y.datetime).DateTime }).ToList();
-            var calculator = new MacdCalculator();
-            var (macd, signal, histogram) = calculator.CalculateMacd(closes);
+            var closes = candle90.OrderBy(x => x.datetime)/*.Take(52)*/.Select(y => new MACDClosesDateTime { Price = (double)y.close, Datetime = DateTimeOffset.FromUnixTimeMilliseconds(y.datetime).DateTime }).ToList();
+            //var calculator = new MacdCalculator();
+            //var (macd, signal, histogram) = calculator.CalculateMacd(closes);
+            var macdCalculator = new MacdCalculator();
+            List<MacdResult> macdCalculatorResults = macdCalculator.CalculateMacd(closes);
         }
         [TestMethod]
         public void GetSchwabQuote()

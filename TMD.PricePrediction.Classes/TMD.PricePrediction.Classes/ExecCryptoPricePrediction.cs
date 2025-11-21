@@ -333,6 +333,12 @@ namespace TMD.PricePrediction.Classes
                         case 5:
                             minSubtract = .00001m;
                             break;
+                        case 6:
+                            minSubtract = .000001m;
+                            break;
+                        case 7:
+                            minSubtract = .0000001m;
+                            break;
                     }
                     var baseSize = decimal.Round(Convert.ToDecimal(account.AvailableBalance.Value), precision.Length) - minSubtract;
                     output = services.SetOrder(product.DisplayName, coinbaseDirection, baseSize);

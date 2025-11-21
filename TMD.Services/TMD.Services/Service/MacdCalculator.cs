@@ -15,159 +15,130 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace TMD.Services.Service
 {
-    //The MACD(Moving Average Convergence Divergence) formula involves calculating two exponential moving averages(EMAs) and then finding the difference between them.Here's the step-by-step formula:
-    //Calculate the 26-period EMA:
-    //EMA26 = (Close* 2/(26+1)) + (Previous EMA26 * (1 - 2/(26+1)))
-    //Calculate the 12-period EMA:
-    //EMA12 = (Close* 2/(12+1)) + (Previous EMA12 * 1 - 2/(12+1))
-    //Calculate the MACD line:
-    //MACD = EMA12 - EMA26
-    //Calculate the signal line(9-period EMA of MACD) :
-    //Signal = (MACD* 2/(9+1)) + (Previous Signal * (1 - 2/(9+1)))
-    //You can use these formulas to calculate the MACD for any given set of closing prices.
-
-    //This code defines a MacdCalculator class that calculates the MACD, signal, and histogram 
-    //for a given list of closing prices.The CalculateMacd method returns a tuple containing the 
-    //MACD, signal, and histogram values.The CalculateEma method calculates the exponential moving
-    //average for a given list of values and period.The Main method demonstrates how to use the 
-    //MacdCalculator class to calculate the MACD for a sample list of closing prices.
-    public sealed class MacdCalculator
+    // Class to hold the results for each data point
+    public class MacdResult
     {
-        private readonly int _shortPeriod;
-        private readonly int _longPeriod;
-        private readonly int _signalPeriod;
+        public DateTime Date { get; set; }
+        public double ClosePrice { get; set; }
+        public double MacdLine { get; set; }
+        public double SignalLine { get; set; }
+        public double Histogram { get; set; }
+    }
 
-        public MacdCalculator(int shortPeriod = 12, int longPeriod = 26, int signalPeriod = 9)
+    // EMA Calculator Helper Class
+    public class EmaCalculator
+    {
+        private readonly int _period;
+        private readonly double _multiplier;
+        private double _emaValue;
+        private bool _isInitialized;
+        public int Period => _period; // Expose the period
+
+        public EmaCalculator(int period)
         {
-            _shortPeriod = shortPeriod;
-            _longPeriod = longPeriod;
-            _signalPeriod = signalPeriod;
+            _period = period;
+            _multiplier = 2.0 / (_period + 1);
+            _isInitialized = false;
         }
 
-        //public (List<double> Macd, List<double> Signal, List<double> Histogram) CalculateMacd(List<double> closes)
-        //{
-        //    var emaShort = CalculateEma(closes, _shortPeriod);
-        //    var emaLong = CalculateEma(closes, _longPeriod);
-        //    var macd = emaShort.Zip(emaLong, (s, l) => s - l).ToList();
-        //    var signal = CalculateEma(macd, _signalPeriod);
-        //    var histogram = macd.Zip(signal, (m, s) => m - s).ToList();
-
-        //    return (macd, signal, histogram);
-        //}
-
-        //The issue is likely due to the fact that the signal and histogram calculations rely on the MACD values,
-        //which are not fully calculated until a certain number of periods have passed.
-        //Here's an updated version of the code that should correctly calculate the signal and histogram values:
-        //public (List<double> Macd, List<double> Signal, List<double> Histogram) CalculateMacd(List<double> closes)
-        public (List<MACDClosesDateTime> Macd, List<MACDClosesDateTime> Signal, List<MACDClosesDateTime> Histogram) CalculateMacd(List<MACDClosesDateTime> closes)
+        public double Calculate(double currentValue)
         {
-            var emaShort = CalculateEma(closes, _shortPeriod);
-            var emaLong = CalculateEma(closes, _longPeriod);
-            // Replace this line:
-            // var macd = emaShort.Zip(emaLong, (s, l) => s - l).ToList();
-            // With the following code to subtract the Close values and keep the DateTime:
-            var macd = emaShort.Zip(emaLong, (s, l) => new MACDClosesDateTime
+            if (!_isInitialized)
             {
-                Close = s.Close - l.Close,
-                Datetime = s.Datetime // or l.DateTime, assuming they are aligned
-            }).ToList();
-            //var macd = emaShort.Zip(emaLong, (s, l) => s - l).ToList();
-            var signal = CalculateEma(macd.Skip(Math.Max(_longPeriod - 1, 0)).ToList(), _signalPeriod);
-
-            var histogram = signal.Select((s, i) => new MACDClosesDateTime
-            {
-                Close = macd[i + Math.Max(_longPeriod - 1, 0)].Close - s.Close,
-                Datetime = macd[i + Math.Max(_longPeriod - 1, 0)].Datetime // keep the original date
-            }).ToList();
-            //var histogram = signal.Select((s, i) => macd[i + Math.Max(_longPeriod - 1, 0)] - s).ToList();
-            //var macdPadded = new List<double>();
-            //var signalPadded = new List<double>();
-            //var histogramPadded = new List<double>();
-            var macdPadded = new List<MACDClosesDateTime>();
-            var signalPadded = new List<MACDClosesDateTime>();
-            var histogramPadded = new List<MACDClosesDateTime>();
-
-            for (int i = 0; i < closes.Count; i++)
-            {
-                if (i < Math.Max(_longPeriod - 1, 0))
-                {
-                    var macdClosinesDatetime = new MACDClosesDateTime
-                    {
-                        Close = double.NaN, // or some other value to indicate not enough data
-                        Datetime = closes[i].Datetime // keep the original date
-                    };
-                    //macdPadded.Add(double.NaN);
-                    //signalPadded.Add(double.NaN);
-                    //histogramPadded.Add(double.NaN);
-                    macdPadded.Add(macdClosinesDatetime);
-                    signalPadded.Add(macdClosinesDatetime);
-                    histogramPadded.Add(macdClosinesDatetime);
-                }
-                else if (i < Math.Max(_longPeriod + _signalPeriod - 2, 0))
-                {
-                    macdPadded.Add(macd[i - Math.Max(_longPeriod - 1, 0)]);
-                    var macdClosinesDatetime = new MACDClosesDateTime
-                    {
-                        Close = double.NaN, // or some other value to indicate not enough data
-                        Datetime = closes[i].Datetime // keep the original date
-                    };
-                    //signalPadded.Add(double.NaN);
-                    //histogramPadded.Add(double.NaN);
-                    signalPadded.Add(macdClosinesDatetime);
-                    histogramPadded.Add(macdClosinesDatetime);
-                }
-                else
-                {
-                    macdPadded.Add(macd[i - Math.Max(_longPeriod - 1, 0)]);
-                    signalPadded.Add(signal[i - Math.Max(_longPeriod + _signalPeriod - 2, 0)]);
-                    histogramPadded.Add(histogram[i - Math.Max(_longPeriod + _signalPeriod - 2, 0)]);
-                }
+                _emaValue = currentValue; // Initialize the first EMA with the first data point
+                _isInitialized = true;
             }
-
-            return (macdPadded, signalPadded, histogramPadded);
-        }
-        //private List<double> CalculateEma(List<double> values, int period)
-        private List<MACDClosesDateTime> CalculateEma(List<MACDClosesDateTime> values, int period)
-        {
-            //var ema = new List<double>();
-            var ema = new List<MACDClosesDateTime>();
-            var multiplier = 2.0 / (period + 1);
-
-            for (int i = 0; i < values.Count; i++)
+            else
             {
-                if (i < period - 1)
-                {
-                    var macdClosinesDatetime = new MACDClosesDateTime
-                    {
-                        Close = double.NaN, // or some other value to indicate not enough data
-                        Datetime = values[i].Datetime // keep the original date
-                    };  
-                    //ema.Add(double.NaN); // or some other value to indicate not enough data
-                    ema.Add(macdClosinesDatetime); // or some other value to indicate not enough data
-                }
-                else if (i == period - 1)
-                {
-                    var macdClosinesDatetime = new MACDClosesDateTime
-                    {
-                        Close = values.Select(x => x.Close).ToList().GetRange(0, period).Average(), // or some other value to indicate not enough data
-                        Datetime = values[i].Datetime // keep the original date
-                    };
-                    //ema.Add(values.GetRange(0, period).Average());
-                    ema.Add(macdClosinesDatetime);
-                }
-                else
-                {
-                    var macdClosinesDatetime = new MACDClosesDateTime
-                    {
-                        Close = values.Select(x => x.Close).ToList()[i], // or some other value to indicate not enough data
-                        Datetime = values.Select(x => x.Datetime).ToList()[i] // keep the original date
-                    };
-                    //ema.Add((values[i] * multiplier) + (ema[i - 1] * (1 - multiplier)));
-                    ema.Add(macdClosinesDatetime);
-                }
+                // EMA formula
+                _emaValue = (currentValue - _emaValue) * _multiplier + _emaValue;
             }
-
-            return ema;
+            return _emaValue;
         }
     }
+
+    // MACD Calculator Class
+    public class MacdCalculator
+    {
+        private readonly EmaCalculator _fastEma;
+        private readonly EmaCalculator _slowEma;
+        private readonly EmaCalculator _signalEma;
+
+        public MacdCalculator(int fastPeriod = 12, int slowPeriod = 26, int signalPeriod = 9)
+        {
+            _fastEma = new EmaCalculator(fastPeriod);
+            _slowEma = new EmaCalculator(slowPeriod);
+            _signalEma = new EmaCalculator(signalPeriod);
+        }
+
+        public List<MacdResult> CalculateMacd(List<MACDClosesDateTime> data)
+        {
+            var results = new List<MacdResult>();
+            int dataCount = data.Count;
+            // MACD only becomes valid after enough data points for the slow EMA (26 periods)
+            int requiredDataPoints = _slowEma.Period;
+
+            for (int i = 0; i < dataCount; i++)
+            {
+                var item = data[i];
+                double fastEmaValue = _fastEma.Calculate(item.Price);
+                double slowEmaValue = _slowEma.Calculate(item.Price);
+                double macdLine = fastEmaValue - slowEmaValue;
+
+                // Check if we have enough data points to start calculating the Signal EMA
+                if (i >= requiredDataPoints)
+                {
+                    // Calculate the signal line based on the MACD values generated so far
+                    // Note: The signal EMA internally manages its own initialization/warmup
+                    double signalLine = _signalEma.Calculate(macdLine);
+                    double histogram = macdLine - signalLine;
+
+                    results.Add(new MacdResult
+                    {
+                        Date = item.Datetime,
+                        ClosePrice = item.Price,
+                        MacdLine = macdLine,
+                        SignalLine = signalLine,
+                        Histogram = histogram
+                    });
+                }
+            }
+            return results;
+        }
+    }
+
+    // Example Usage
+    //public class Program
+    //{
+    //    public static void Main()
+    //    {
+    //        // Example financial data (Date, Close Price)
+    //        // NOTE: You need at least 26 data points for standard MACD calculation to begin.
+    //        var stockData = GenerateSampleData(50); // Generates 50 days of sequential data
+
+    //        var macdCalculator = new MacdCalculator();
+    //        List<MacdResult> results = macdCalculator.CalculateMacd(stockData);
+
+    //        Console.WriteLine($"Calculated MACD for {results.Count} data points (out of {stockData.Count} total):");
+    //        foreach (var result in results)
+    //        {
+    //            Console.WriteLine($"Date: {result.Date.ToShortDateString()}, MACD: {result.MacdLine:F2}, Signal: {result.SignalLine:F2}, Hist: {result.Histogram:F2}");
+    //        }
+    //    }
+
+    //    // Helper function to generate sample data for demonstration
+    //    public static List<(DateTime Date, double Price)> GenerateSampleData(int count)
+    //    {
+    //        var data = new List<(DateTime Date, double Price)>();
+    //        double currentPrice = 100.0;
+    //        Random rand = new Random();
+    //        for (int i = 0; i < count; i++)
+    //        {
+    //            data.Add((DateTime.Now.AddDays(i), currentPrice));
+    //            // Simulate price fluctuation slightly
+    //            currentPrice += rand.NextDouble() * 2 - 1;
+    //        }
+    //        return data;
+    //    }
+    //}
 }
