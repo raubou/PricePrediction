@@ -130,13 +130,13 @@ namespace TMD.Services.Service
             decimal? EMA8 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor8) + (SMA8 * (1 - smoothingFactor8)) : 0m;
             decimal? EMA13 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor13) + (SMA13 * (1 - smoothingFactor13)) : 0m;
 
-            var closes = candle90.OrderBy(x => x.datetime)/*.Take(52)*/.Select(y => new MACDClosesDateTime { Price = (double)y.close, Datetime = DateTimeOffset.FromUnixTimeMilliseconds(y.datetime).DateTime }).ToList();
+            var closes = candle90.OrderBy(x => x.datetime)/*.Take(52)*/.Select(y => new MACDClosesDateTime { Price = y.close, Datetime = DateTimeOffset.FromUnixTimeMilliseconds(y.datetime).DateTime }).ToList();
             var macdCalculator = new MacdCalculator();
             List<MacdResult> macdCalculatorResults = macdCalculator.CalculateMacd(closes);
 
-            decimal? MACDLine = (decimal)macdCalculatorResults?.LastOrDefault()?.MacdLine;
-            decimal? MACDSignal = (decimal)macdCalculatorResults?.LastOrDefault()?.SignalLine;
-            decimal? MACDHistogram = (decimal)macdCalculatorResults?.LastOrDefault()?.Histogram;
+            decimal? MACDLine = (macdCalculatorResults?.LastOrDefault()?.MacdLine ?? 0);
+            decimal? MACDSignal = (macdCalculatorResults?.LastOrDefault()?.SignalLine ?? 0);
+            decimal? MACDHistogram = (macdCalculatorResults?.LastOrDefault()?.Histogram ?? 0);
             decimal? MACDLine2 = EMA3 - EMA10;
             decimal? MACDSignal2 = EMA3 - EMA16;
             decimal? MACDHistogram2 = MACDLine2 - MACDSignal2;
@@ -298,13 +298,13 @@ namespace TMD.Services.Service
             decimal? EMA8 = (candle90.Count > 0) ? (Convert.ToDecimal(candle90.OrderByDescending(x => x.StartDate).ToList()[0].Close) * smoothingFactor8) + (SMA8 * (1 - smoothingFactor8)) : 0m;
             decimal? EMA13 = (candle90.Count > 0) ? (Convert.ToDecimal(candle90.OrderByDescending(x => x.StartDate).ToList()[0].Close) * smoothingFactor13) + (SMA13 * (1 - smoothingFactor13)) : 0m;
 
-            var closes = candle90.OrderBy(x => x.StartDate)/*.Take(52)*/.Select(y => new MACDClosesDateTime { Price = Convert.ToDouble(y.Close), Datetime = y.StartDate }).ToList();
+            var closes = candle90.OrderBy(x => x.StartDate)/*.Take(52)*/.Select(y => new MACDClosesDateTime { Price = Convert.ToDecimal(y.Close), Datetime = y.StartDate }).ToList();
             var macdCalculator = new MacdCalculator();
             List<MacdResult> macdCalculatorResults = macdCalculator.CalculateMacd(closes);
 
-            decimal? MACDLine = (decimal)macdCalculatorResults?.LastOrDefault()?.MacdLine;
-            decimal? MACDSignal = (decimal)macdCalculatorResults?.LastOrDefault()?.SignalLine;
-            decimal? MACDHistogram = (decimal)macdCalculatorResults?.LastOrDefault()?.Histogram;
+            decimal? MACDLine = (macdCalculatorResults?.LastOrDefault()?.MacdLine ?? 0);
+            decimal? MACDSignal = (macdCalculatorResults?.LastOrDefault()?.SignalLine ?? 0);
+            decimal? MACDHistogram = (macdCalculatorResults?.LastOrDefault()?.Histogram ?? 0);
             decimal? MACDLine2 = EMA3 - EMA10;
             decimal? MACDSignal2 = EMA3 - EMA16;
             decimal? MACDHistogram2 = MACDLine2 - MACDSignal2;

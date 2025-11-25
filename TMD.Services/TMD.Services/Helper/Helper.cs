@@ -577,7 +577,7 @@ namespace TMD.PricePrediction
                 run = false;
 
             //Thanksgiving Day
-            if (runTime.Month == 11 && runTime.DayOfWeek != DayOfWeek.Thursday && runTime.Day > 24 && runTime.Day <= 30)
+            if (runTime.Month == 11 && runTime.DayOfWeek == DayOfWeek.Thursday && runTime.Day > 24 && runTime.Day <= 30)
                 run = false;
 
             //Christmas

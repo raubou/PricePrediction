@@ -19,29 +19,29 @@ namespace TMD.Services.Service
     public class MacdResult
     {
         public DateTime Date { get; set; }
-        public double ClosePrice { get; set; }
-        public double MacdLine { get; set; }
-        public double SignalLine { get; set; }
-        public double Histogram { get; set; }
+        public decimal ClosePrice { get; set; }
+        public decimal MacdLine { get; set; }
+        public decimal SignalLine { get; set; }
+        public decimal Histogram { get; set; }
     }
 
     // EMA Calculator Helper Class
     public class EmaCalculator
     {
-        private readonly int _period;
-        private readonly double _multiplier;
-        private double _emaValue;
+        private readonly decimal _period;
+        private readonly decimal _multiplier;
+        private decimal _emaValue;
         private bool _isInitialized;
-        public int Period => _period; // Expose the period
+        public decimal Period => _period; // Expose the period
 
         public EmaCalculator(int period)
         {
             _period = period;
-            _multiplier = 2.0 / (_period + 1);
+            _multiplier = 2.0m / (_period + 1);
             _isInitialized = false;
         }
 
-        public double Calculate(double currentValue)
+        public decimal Calculate(decimal currentValue)
         {
             if (!_isInitialized)
             {
@@ -76,22 +76,22 @@ namespace TMD.Services.Service
             var results = new List<MacdResult>();
             int dataCount = data.Count;
             // MACD only becomes valid after enough data points for the slow EMA (26 periods)
-            int requiredDataPoints = _slowEma.Period;
+            decimal requiredDataPoints = _slowEma.Period;
 
             for (int i = 0; i < dataCount; i++)
             {
                 var item = data[i];
-                double fastEmaValue = _fastEma.Calculate(item.Price);
-                double slowEmaValue = _slowEma.Calculate(item.Price);
-                double macdLine = fastEmaValue - slowEmaValue;
+                decimal fastEmaValue = _fastEma.Calculate(item.Price);
+                decimal slowEmaValue = _slowEma.Calculate(item.Price);
+                decimal macdLine = fastEmaValue - slowEmaValue;
 
                 // Check if we have enough data points to start calculating the Signal EMA
                 if (i >= requiredDataPoints)
                 {
                     // Calculate the signal line based on the MACD values generated so far
                     // Note: The signal EMA internally manages its own initialization/warmup
-                    double signalLine = _signalEma.Calculate(macdLine);
-                    double histogram = macdLine - signalLine;
+                    decimal signalLine = _signalEma.Calculate(macdLine);
+                    decimal histogram = macdLine - signalLine;
 
                     results.Add(new MacdResult
                     {

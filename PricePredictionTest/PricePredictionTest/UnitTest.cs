@@ -735,7 +735,7 @@ namespace PricePredictionTest
             List<TMDInvestment.Models.CandleItems> candle90 = JsonSerializer.Deserialize<List<TMDInvestment.Models.CandleItems>>(ser);
             //var closes = new List<double> { 10, 12, 11, 13, 15, 14, 16, 18, 17, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30 };
             //var closes = candle90.OrderBy(x => x.datetime).Take(52).Select(x => Convert.ToDouble(x.close)).ToList();
-            var closes = candle90.OrderBy(x => x.datetime)/*.Take(52)*/.Select(y => new MACDClosesDateTime { Price = (double)y.close, Datetime = DateTimeOffset.FromUnixTimeMilliseconds(y.datetime).DateTime }).ToList();
+            var closes = candle90.OrderBy(x => x.datetime)/*.Take(52)*/.Select(y => new MACDClosesDateTime { Price = y.close, Datetime = DateTimeOffset.FromUnixTimeMilliseconds(y.datetime).DateTime }).ToList();
             //var calculator = new MacdCalculator();
             //var (macd, signal, histogram) = calculator.CalculateMacd(closes);
             var macdCalculator = new MacdCalculator();
