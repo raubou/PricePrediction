@@ -333,68 +333,69 @@ namespace TMD.PricePrediction
             //if (Convert.ToDecimal(results["WMA30"].ToString()) >= Convert.ToDecimal(results["WMA26"].ToString())) { shortCnt++; }
             //if (Convert.ToDecimal(results["WMA30"].ToString()) <= Convert.ToDecimal(results["WMA26"].ToString())) { longCnt++; }
 
-            if (use31016)
-            {
-                //// 3, 10, 16 STRATEGY
-                if (Convert.ToDecimal(results["EMA3"].ToString()) > Convert.ToDecimal(results["EMA10"].ToString()))
-                { longCnt = longCnt + 3; }
-                if (Convert.ToDecimal(results["EMA3"].ToString()) > Convert.ToDecimal(results["EMA16"].ToString()) &&
-                    Convert.ToDecimal(results["EMA10"].ToString()) > Convert.ToDecimal(results["EMA16"].ToString()))
-                { longCnt = longCnt + 3; }
-                if (Convert.ToDecimal(results["SMA3"].ToString()) > Convert.ToDecimal(results["SMA10"].ToString()))
-                { longCnt = longCnt + 3; }
-                if (Convert.ToDecimal(results["SMA3"].ToString()) > Convert.ToDecimal(results["SMA16"].ToString()) &&
-                    Convert.ToDecimal(results["SMA10"].ToString()) > Convert.ToDecimal(results["SMA16"].ToString()))
-                { longCnt = longCnt + 3; }
+            //if (use31016)
+            //{
+            //    //// 3, 10, 16 STRATEGY
+            //    if (Convert.ToDecimal(results["EMA3"].ToString()) > Convert.ToDecimal(results["EMA10"].ToString()))
+            //    { longCnt = longCnt + 3; }
+            //    if (Convert.ToDecimal(results["EMA3"].ToString()) > Convert.ToDecimal(results["EMA16"].ToString()) &&
+            //        Convert.ToDecimal(results["EMA10"].ToString()) > Convert.ToDecimal(results["EMA16"].ToString()))
+            //    { longCnt = longCnt + 3; }
+            //    if (Convert.ToDecimal(results["SMA3"].ToString()) > Convert.ToDecimal(results["SMA10"].ToString()))
+            //    { longCnt = longCnt + 3; }
+            //    if (Convert.ToDecimal(results["SMA3"].ToString()) > Convert.ToDecimal(results["SMA16"].ToString()) &&
+            //        Convert.ToDecimal(results["SMA10"].ToString()) > Convert.ToDecimal(results["SMA16"].ToString()))
+            //    { longCnt = longCnt + 3; }
 
-                if (Convert.ToDecimal(results["EMA3"].ToString()) < Convert.ToDecimal(results["EMA10"].ToString()))
-                { shortCnt = shortCnt + 3; }
-                if (Convert.ToDecimal(results["EMA3"].ToString()) < Convert.ToDecimal(results["EMA16"].ToString()) &&
-                    Convert.ToDecimal(results["EMA10"].ToString()) < Convert.ToDecimal(results["EMA16"].ToString()))
-                { shortCnt = shortCnt + 3; }
-                if (Convert.ToDecimal(results["SMA3"].ToString()) < Convert.ToDecimal(results["SMA10"].ToString()))
-                { shortCnt = shortCnt + 3; }
-                if (Convert.ToDecimal(results["SMA3"].ToString()) < Convert.ToDecimal(results["SMA16"].ToString()) &&
-                    Convert.ToDecimal(results["SMA10"].ToString()) < Convert.ToDecimal(results["SMA16"].ToString()))
-                { shortCnt = shortCnt + 3; }
-            }
-            else
-            {
-                //// 5, 8, 13 STRATEGY
-                if (Convert.ToDecimal(results["EMA5"].ToString()) > Convert.ToDecimal(results["EMA8"].ToString()))
-                { longCnt = longCnt + 3; }
-                if (Convert.ToDecimal(results["EMA8"].ToString()) > Convert.ToDecimal(results["EMA13"].ToString()))
-                { longCnt = longCnt + 3; }
-                //if (Convert.ToDecimal(results["lastPrice"].ToString()) > Convert.ToDecimal(results["EMA5"].ToString()) &&
-                //    Convert.ToDecimal(results["lastPrice"].ToString()) > Convert.ToDecimal(results["EMA8"].ToString()) &&
-                //    Convert.ToDecimal(results["lastPrice"].ToString()) > Convert.ToDecimal(results["EMA13"].ToString()))
-                //{ longCnt = longCnt + 2; }
-                if (Convert.ToDecimal(results["EMA5"].ToString()) < Convert.ToDecimal(results["EMA8"].ToString()))
-                { shortCnt = shortCnt + 3; }
-                if (Convert.ToDecimal(results["EMA8"].ToString()) < Convert.ToDecimal(results["EMA13"].ToString()))
-                { shortCnt = shortCnt + 3; }
-                //if (Convert.ToDecimal(results["lastPrice"].ToString()) < Convert.ToDecimal(results["EMA5"].ToString()) &&
-                //    Convert.ToDecimal(results["lastPrice"].ToString()) < Convert.ToDecimal(results["EMA8"].ToString()) &&
-                //    Convert.ToDecimal(results["lastPrice"].ToString()) < Convert.ToDecimal(results["EMA13"].ToString()))
-                //{ shortCnt = shortCnt + 2; }
+            //    if (Convert.ToDecimal(results["EMA3"].ToString()) < Convert.ToDecimal(results["EMA10"].ToString()))
+            //    { shortCnt = shortCnt + 3; }
+            //    if (Convert.ToDecimal(results["EMA3"].ToString()) < Convert.ToDecimal(results["EMA16"].ToString()) &&
+            //        Convert.ToDecimal(results["EMA10"].ToString()) < Convert.ToDecimal(results["EMA16"].ToString()))
+            //    { shortCnt = shortCnt + 3; }
+            //    if (Convert.ToDecimal(results["SMA3"].ToString()) < Convert.ToDecimal(results["SMA10"].ToString()))
+            //    { shortCnt = shortCnt + 3; }
+            //    if (Convert.ToDecimal(results["SMA3"].ToString()) < Convert.ToDecimal(results["SMA16"].ToString()) &&
+            //        Convert.ToDecimal(results["SMA10"].ToString()) < Convert.ToDecimal(results["SMA16"].ToString()))
+            //    { shortCnt = shortCnt + 3; }
+            //}
+            //else
+            //{
+            //    //// 5, 8, 13 STRATEGY
+            //    if (Convert.ToDecimal(results["EMA5"].ToString()) > Convert.ToDecimal(results["EMA8"].ToString()))
+            //    { longCnt = longCnt + 3; }
+            //    if (Convert.ToDecimal(results["EMA8"].ToString()) > Convert.ToDecimal(results["EMA13"].ToString()))
+            //    { longCnt = longCnt + 3; }
+            //    if (Convert.ToDecimal(results["EMA5"].ToString()) < Convert.ToDecimal(results["EMA8"].ToString()))
+            //    { shortCnt = shortCnt + 3; }
+            //    if (Convert.ToDecimal(results["EMA8"].ToString()) < Convert.ToDecimal(results["EMA13"].ToString()))
+            //    { shortCnt = shortCnt + 3; }
+            //    if (Convert.ToDecimal(results["SMA5"].ToString()) > Convert.ToDecimal(results["SMA8"].ToString()))
+            //    { longCnt = longCnt + 3; }
+            //    if (Convert.ToDecimal(results["SMA8"].ToString()) > Convert.ToDecimal(results["SMA13"].ToString()))
+            //    { longCnt = longCnt + 3; }
+            //    if (Convert.ToDecimal(results["SMA5"].ToString()) < Convert.ToDecimal(results["SMA8"].ToString()))
+            //    { shortCnt = shortCnt + 3; }
+            //    if (Convert.ToDecimal(results["SMA8"].ToString()) < Convert.ToDecimal(results["SMA13"].ToString()))
+            //    { shortCnt = shortCnt + 3; }
+            //}
 
-                if (Convert.ToDecimal(results["SMA5"].ToString()) > Convert.ToDecimal(results["SMA8"].ToString()))
-                { longCnt = longCnt + 3; }
-                if (Convert.ToDecimal(results["SMA8"].ToString()) > Convert.ToDecimal(results["SMA13"].ToString()))
-                { longCnt = longCnt + 3; }
-                //if (Convert.ToDecimal(results["lastPrice"].ToString()) > Convert.ToDecimal(results["SMA5"].ToString()) &&
-                //    Convert.ToDecimal(results["lastPrice"].ToString()) > Convert.ToDecimal(results["SMA8"].ToString()) &&
-                //    Convert.ToDecimal(results["lastPrice"].ToString()) > Convert.ToDecimal(results["SMA13"].ToString()))
-                //{ longCnt = longCnt + 2; }
-                if (Convert.ToDecimal(results["SMA5"].ToString()) < Convert.ToDecimal(results["SMA8"].ToString()))
-                { shortCnt = shortCnt + 3; }
-                if (Convert.ToDecimal(results["SMA8"].ToString()) < Convert.ToDecimal(results["SMA13"].ToString()))
-                { shortCnt = shortCnt + 3; }
-                //if (Convert.ToDecimal(results["lastPrice"].ToString()) < Convert.ToDecimal(results["SMA5"].ToString()) &&
-                //    Convert.ToDecimal(results["lastPrice"].ToString()) < Convert.ToDecimal(results["SMA8"].ToString()) &&
-                //    Convert.ToDecimal(results["lastPrice"].ToString()) < Convert.ToDecimal(results["SMA13"].ToString()))
-                //{ shortCnt = shortCnt + 2; }
-            }
+            //// 9, 12, 26 STRATEGY
+            if (Convert.ToDecimal(results["EMA9"].ToString()) > Convert.ToDecimal(results["EMA12"].ToString()))
+            { longCnt = longCnt + 3; }
+            if (Convert.ToDecimal(results["EMA12"].ToString()) > Convert.ToDecimal(results["EMA26"].ToString()))
+            { longCnt = longCnt + 3; }
+            if (Convert.ToDecimal(results["EMA9"].ToString()) < Convert.ToDecimal(results["EMA12"].ToString()))
+            { shortCnt = shortCnt + 3; }
+            if (Convert.ToDecimal(results["EMA12"].ToString()) < Convert.ToDecimal(results["EMA26"].ToString()))
+            { shortCnt = shortCnt + 3; }
+            if (Convert.ToDecimal(results["SMA9"].ToString()) > Convert.ToDecimal(results["SMA12"].ToString()))
+            { longCnt = longCnt + 3; }
+            if (Convert.ToDecimal(results["SMA12"].ToString()) > Convert.ToDecimal(results["SMA26"].ToString()))
+            { longCnt = longCnt + 3; }
+            if (Convert.ToDecimal(results["SMA9"].ToString()) < Convert.ToDecimal(results["SMA12"].ToString()))
+            { shortCnt = shortCnt + 3; }
+            if (Convert.ToDecimal(results["SMA12"].ToString()) < Convert.ToDecimal(results["SMA26"].ToString()))
+            { shortCnt = shortCnt + 3; }
 
             //if (Convert.ToDecimal(results["WMA9"].ToString()) >= Convert.ToDecimal(results["WMA5"].ToString())) { shortCnt++; }
             //if (Convert.ToDecimal(results["WMA9"].ToString()) <= Convert.ToDecimal(results["WMA5"].ToString())) { longCnt++; }
@@ -577,7 +578,8 @@ namespace TMD.PricePrediction
                 run = false;
 
             //Thanksgiving Day
-            if (runTime.Month == 11 && runTime.DayOfWeek == DayOfWeek.Thursday && runTime.Day > 24 && runTime.Day <= 30)
+            if ((runTime.Month == 11 && runTime.DayOfWeek == DayOfWeek.Thursday && runTime.Day > 24 && runTime.Day <= 30) ||
+                (runTime.Month == 11 && runTime.DayOfWeek == DayOfWeek.Friday && runTime.Day > 24 && runTime.Day <= 30 && runTime.Hour >= 1))
                 run = false;
 
             //Christmas
