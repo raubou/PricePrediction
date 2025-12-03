@@ -7,11 +7,12 @@ using System.Xml.Linq;
 using TMD.Services.Service;
 using System.Text.Json.Serialization;
 using TMD.PricePrediction;
+using Microsoft.AspNetCore.Authorization;
 
 
 namespace TraderGo.Pages
 {
-    //[BindProperties]
+    [Authorize]
     public class AccountInfoModel : PageModelBase
     {
         [BindProperty] public SchwabAccountInfo? AccountInfo { get; set; } = new SchwabAccountInfo();

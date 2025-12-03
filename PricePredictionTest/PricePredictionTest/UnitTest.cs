@@ -2,15 +2,16 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
+using System.Globalization;
+using System.Net.Http;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Xml.Linq;
 using TMD.Services;
+using TMD.Services.Service;
 using TMDInvestments.Context;
 using TMDInvestments.Models;
 using TMDInvestments.Services;
-using TMD.Services.Service;
-using System.Xml.Linq;
-using System.Text.Json.Nodes;
-using System.Globalization;
 
 namespace PricePredictionTest
 {
@@ -28,6 +29,7 @@ namespace PricePredictionTest
         ETradeService ETradeService = null;
         ETradeSettings? _settings3;
         Polygon? _polygon = null;
+        StackCommerceService? stackCommerceService = null;
 
         [TestInitialize]
         public void GetSettings()
@@ -59,6 +61,7 @@ namespace PricePredictionTest
             services = new CoinBaseService(_logger, _settings, _taApiSettings, httpClientFactory);
             SchwabService = new SchwabServices(_logger, _settings2, _taApiSettings, httpClientFactory);
             ETradeService = new ETradeService(_logger, _settings3, httpClientFactory);
+            stackCommerceService = new StackCommerceService(_logger, httpClientFactory);
         }
         [TestMethod]
         public void TestCoinBaseQuote()
@@ -163,11 +166,12 @@ namespace PricePredictionTest
                 "}" +
                 "]" +
             "}";
-        var results = SchwabService.SetOrder(order);
+            var results = SchwabService.SetOrder(order);
             Assert.IsNotNull(results);
         }
         [TestMethod]
-        public void TestSchwabGetOrder() {
+        public void TestSchwabGetOrder()
+        {
             string enterTime = string.Empty;
             DateTime dateTime = DateTime.MinValue;
             string symbol = string.Empty;
@@ -179,9 +183,12 @@ namespace PricePredictionTest
             var results = SchwabService.GetOrders(DateTime.Now.AddDays(-21).ToString("O"), DateTime.Now.ToString("O"));
             IEnumerable<Orders>? orders = System.Text.Json.JsonSerializer.Deserialize<IEnumerable<Orders>>(results);
             //Orders order = orders.Where(x => x?.orderLegCollection[0]?.instrument?.symbol == "CWAN").FirstOrDefault();
-            foreach (var order in orders) {
-                foreach (var orderColl in order.orderLegCollection) {
-                    if (orderColl.instrument.symbol == "CWAN") {
+            foreach (var order in orders)
+            {
+                foreach (var orderColl in order.orderLegCollection)
+                {
+                    if (orderColl.instrument.symbol == "CWAN")
+                    {
                         orderFirst = order;
                     }
                 }
@@ -205,11 +212,11 @@ namespace PricePredictionTest
                     continue;
                 }
 
-                StockTracker? stock = ctx?.StockTracker?.Where(x => x.Symbol == symbol && 
+                StockTracker? stock = ctx?.StockTracker?.Where(x => x.Symbol == symbol &&
                 (x.DatePurchased >= DateTime.Parse(dateTime.ToShortDateString()) && x.DatePurchased <= DateTime.Parse(dateTime.ToShortDateString()).AddDays(1) ||
                 x.DateUpdated >= DateTime.Parse(dateTime.ToShortDateString()) && x.DateUpdated <= DateTime.Parse(dateTime.ToShortDateString()).AddDays(1)) &&
                 x.TradePlatform == (int)Platform.CharlesSchwab).FirstOrDefault();
-                if(stock != null)
+                if (stock != null)
                 {
                     try
                     {
@@ -239,7 +246,7 @@ namespace PricePredictionTest
                     catch (Exception ex)
                     {
 
-                    }                   
+                    }
                 }
 
             }
@@ -268,10 +275,10 @@ namespace PricePredictionTest
             {
                 var publicProduct = PublicProducts.Where(x => x.DisplayName == item.Currency + "-USD").FirstOrDefault();
                 var coin = Cryptos.Where(x => x.Coin == item.Currency + "-USD").FirstOrDefault();
-                if(coin == null)
+                if (coin == null)
                 {
                     var valueofNonTrackedAsset = Math.Round(Convert.ToDecimal(item.AvailableBalance.Value) * Convert.ToDecimal(publicProduct?.Price), 2);
-                    if(valueofNonTrackedAsset > 1)
+                    if (valueofNonTrackedAsset > 1)
                     {
                         //try to sell non track items over a dollar
                         //var orders = services.GetOrders(item.Currency + "-USD").Where(x => x.Side == "BUY").OrderByDescending(y => DateTime.Parse(y.SequenceTimestamp)).ToList();
@@ -283,12 +290,13 @@ namespace PricePredictionTest
                 }
             }
             //checks if there is a tracker not in a wallet with cash
-            foreach (var item in Cryptos) 
+            foreach (var item in Cryptos)
             {
                 var currency = item.Coin.Split('-');
                 var publicProduct = PublicProducts.Where(x => x.DisplayName == item.Coin).FirstOrDefault();
                 var account = Accounts.Where(x => x.Currency == currency[0].ToString().ToUpper().Trim() && (Convert.ToDecimal(x.AvailableBalance.Value) * Convert.ToDecimal(publicProduct?.Price)) > 1).FirstOrDefault();
-                if (account == null) {
+                if (account == null)
+                {
                     //delete the orphan tracked item.
                     //var results = services.GetQuote(item.Coin);
                     var sp = item;
@@ -712,7 +720,7 @@ namespace PricePredictionTest
                 SMA26 = (smaPre26 / FC26);
                 SMA12 = (smaPre12 / FC12);
                 SMA9 = (smaPre9 / FC9);
-                if(Convert.ToDecimal(candle30[1].volume) > 0)
+                if (Convert.ToDecimal(candle30[1].volume) > 0)
                     VWAP30 = (((Convert.ToDecimal(candle30[1].low) + Convert.ToDecimal(candle30[1].high) + Convert.ToDecimal(candle30[1].close)) / 3) * Convert.ToDecimal(candle30[1].volume)) / (Convert.ToDecimal(candle30[1].volume));
                 //EMA = (Today's Value * Multiplier) + Yesterday's EMA *(1 - Multiplier)
                 //You can then use the SMA from the previous day as the first EMA for yesterday.
@@ -751,7 +759,7 @@ namespace PricePredictionTest
         public void GetTaApiIndicators()
         {
             TaAPIService taApiService = new TaAPIService(_logger, _taApiSettings, httpClientFactory);
-            var results = taApiService.GetTechnicalAnalysis("AAPL", "5m","stocks", "stocks");
+            var results = taApiService.GetTechnicalAnalysis("AAPL", "5m", "stocks", "stocks");
             Assert.IsTrue(true);
         }
         //[TestMethod]
@@ -777,7 +785,7 @@ namespace PricePredictionTest
         //    Assert.IsNotNull(quote);
         //}
         [TestMethod]
-        public void GetSchwabQuoteHistory() 
+        public void GetSchwabQuoteHistory()
         {
             var results = SchwabService.GetPriceHistory("NEP", "month", "1", "daily", 1, DateTime.Now.AddDays(-90), DateTime.Now);
             Assert.IsNotNull(results);
@@ -801,7 +809,8 @@ namespace PricePredictionTest
         }
 
         [TestMethod]
-        public void GetETradeQuote() {
+        public void GetETradeQuote()
+        {
             //var results = ETradeService.Quote("VIX");
             //var results2 = ETradeService.Quote("SPX");
             var results3 = ETradeService.Quote("RGC");
@@ -827,7 +836,8 @@ namespace PricePredictionTest
             Assert.IsTrue(true);
         }
         [TestMethod]
-        public void GetOrphanETrades() {
+        public void GetOrphanETrades()
+        {
             XElement results = ETradeService.Portfolio();
             //((XElement)accounts).Elements("Accounts").ToList()[0].Element("Account").Element("accountIdKey").Value;
             var positions = results?.Element("AccountPortfolio")?.Elements("Position").ToList();
@@ -886,7 +896,7 @@ namespace PricePredictionTest
             }
             catch (Exception)
             {
-                
+
             }
             try
             {
@@ -894,7 +904,7 @@ namespace PricePredictionTest
             }
             catch (Exception)
             {
-                
+
             }
             try
             {
@@ -902,8 +912,29 @@ namespace PricePredictionTest
             }
             catch (Exception)
             {
-                
+
             }
+            Assert.IsTrue(true);
+        }
+        [TestMethod]
+        public void GetStackCommerceFeed()
+        {
+            //var httpClient = httpClientFactory.CreateClient();
+            //httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3");
+            
+            XElement result = stackCommerceService.GetFeed();
+            var items = result?.Element("channel")?.Elements("item").ToList();
+            foreach(var item in items)
+            {
+                var title = item?.Element("title")?.Value;
+                var link = item?.Element("link")?.Value;
+                var description = item?.Element("description");
+                var img = description?.Element("img")?.Attribute("src")?.Value;
+                var pubDate = item?.Element("pubDate")?.Value;
+            }
+            //var response = httpClient.GetAsync("https://stackcommerce.com/api/v1/deals/feed").Result;
+            //var content = response.Content.ReadAsStringAsync().Result;
+            //var feedItems = JsonSerializer.Deserialize<XElement>(result);
             Assert.IsTrue(true);
         }
     }

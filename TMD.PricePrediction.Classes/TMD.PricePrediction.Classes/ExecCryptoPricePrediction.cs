@@ -164,9 +164,10 @@ namespace TMD.PricePrediction.Classes
                         continue;
                     }
                     //skip crypto under $1
-                    if (Convert.ToDecimal(product.Price) <= .15m)
+                    decimal? lowestPrice = .5m;
+                        if (Convert.ToDecimal(product.Price) <= lowestPrice)
                     {
-                        helper.Log(_logger, LogLevel.Warning, $"Price of {crypto.Coin} - ({crypto.Name}) ${product.Price} too low below $1, skipping");
+                        helper.Log(_logger, LogLevel.Warning, $"Price of {crypto.Coin} - ({crypto.Name}) ${product.Price} too low below ${lowestPrice}, skipping");
                         rejectPriceCount++;
                         continue;
                     }

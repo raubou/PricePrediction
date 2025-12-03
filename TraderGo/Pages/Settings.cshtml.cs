@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Options;
@@ -8,6 +9,7 @@ using TMDInvestments.Models;
 
 namespace TraderGo.Pages
 {
+    [Authorize]
     public class SettingsModel : PageModelBase
     {
         private readonly ILogger<SettingsModel> _logger;

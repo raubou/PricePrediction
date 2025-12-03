@@ -47,6 +47,29 @@ namespace TMD.Services
             _httpClient.DefaultRequestVersion = HttpVersion.Version20;
             _httpClient.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
         }
+        public HttpClientServices(IHttpClientFactory factory, ILogger logger)
+        {
+            _factory = factory;
+            //_httpClient = (_factory != null) ?_factory.CreateClient() : new HttpClient();
+            if (_factory == null)
+            {
+                var handler = new SocketsHttpHandler
+                {
+                    PooledConnectionLifetime = TimeSpan.FromMinutes(7), // Recreate every 15 minutes
+
+                };
+
+                _httpClient = new HttpClient(handler);
+            }
+            else
+            {
+                _httpClient = _factory.CreateClient();
+            }
+
+            _logger = logger;
+            _httpClient.DefaultRequestVersion = HttpVersion.Version20;
+            _httpClient.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
+        }
         public P? Get(string baseUrl, string url, string authorization, Dictionary<string, object> additionalHeaders)
         {
             _httpClient.BaseAddress = new Uri(baseUrl);
@@ -86,6 +109,48 @@ namespace TMD.Services
         {
             _httpClient.BaseAddress = new Uri(baseUrl);
             var request = GetAuthorization(ref _httpClient, HttpMethod.Get, url, authorization, null, "", "");
+            results = _httpClient
+                .SendAsync(request).Result;
+            //.GetAsync($"{url}").Result;
+            if (results.StatusCode != System.Net.HttpStatusCode.OK)
+            {
+                dynamic error = new ExpandoObject();
+                error.errors = new ExpandoObject();
+                error.errors.StatusCode = results.StatusCode;
+                try
+                {
+                    error.errors.Details = results.Content.ReadFromJsonAsync<dynamic>().Result;
+                    //return default(P);
+                    return error;
+                }
+                catch (Exception)
+                {
+                    error.errors.Details = results.Content.ReadAsStringAsync().Result;
+                    //return default(P);
+                    return error;
+                }
+                error = JsonSerializer.SerializeToElement(error);
+                return error;
+            }
+            try
+            {
+                return XElement.Parse(results.Content.ReadAsStringAsync().Result);
+                //XmlSerializer serializer = new XmlSerializer(typeof(EtradeAccountInfo));
+                //using var stringReader = new StringReader(results.Content.ReadAsStringAsync().Result);
+                //P deserializedObject = (P)serializer.Deserialize(stringReader);
+                //return deserializedObject;
+            }
+            catch (Exception)
+            {
+                //return results.Content.ReadAsStringAsync().Result;
+                return default(P);
+            }
+        }
+        public dynamic Get(string url)
+        {
+            //_httpClient.BaseAddress = new Uri(baseUrl);
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url);
+            //var request = GetAuthorization(ref _httpClient, HttpMethod.Get, url, authorization, null, "", "");
             results = _httpClient
                 .SendAsync(request).Result;
             //.GetAsync($"{url}").Result;

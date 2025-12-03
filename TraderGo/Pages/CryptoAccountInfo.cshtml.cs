@@ -1,5 +1,6 @@
 using Coinbase.AdvancedTrade.Models;
 using Coinbase.AdvancedTrade.Models.Public;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using System.Text.Json.Nodes;
@@ -8,6 +9,7 @@ using TMDInvestments.Models;
 
 namespace TraderGo.Pages
 {
+    [Authorize]
     public class CryptoAccountInfoModel : PageModelBase
     {
         private readonly ILogger<CryptoAccountInfoModel>? _logger;
