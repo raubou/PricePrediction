@@ -215,7 +215,7 @@ namespace TMD.Services
             manager.DeleteAdvertisingQueue();
 
             _log.LogInformation("Loading Rakuten Ads index ");
-            MerchByAppStatusResponse merchants = RakutenService.LoadMerchants(_log, client);
+            MerchByAppStatusResponse merchants = RakutenService.LoadMerchants(_log);
             foreach (MerchantItem merchant in merchants.Items)
             {
                 //foreach (var merchant in merchants.midlist.merchant)
@@ -321,7 +321,7 @@ namespace TMD.Services
             try
             {
                 _log.LogInformation("Loading Rakuten Ads index ");
-                MerchByAppStatusResponse merchants = RakutenService.LoadMerchants(_log, client);
+                MerchByAppStatusResponse merchants = RakutenService.LoadMerchants(_log);
                 foreach (MerchantItem merchant in merchants.Items)
                 {
                     t3[rakIndex] = new Thread(new ThreadStart(() => { rk = new RakutenService(_log, client, _isAzureFunction); rk.GetProducts(merchant, categories, ref rss); }));

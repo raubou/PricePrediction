@@ -31,6 +31,9 @@ namespace TMD.Services
         private CoinbaseClient _coinbaseClient = null!;
         private CoinbasePublicClient _coinbasePublicClient = null!;
         TaAPIService? taAPIService = null;
+        public CoinBaseService() {
+            _coinbasePublicClient = new CoinbasePublicClient();
+        }
         public CoinBaseService(ILogger logger, CoinBaseSettings settings, IHttpClientFactory? factory)
         {
             _logger = logger;
@@ -83,7 +86,8 @@ namespace TMD.Services
         public dynamic GetQuote(string productId)
         {
             //IndicesCalculator indicesCalculator = new IndicesCalculator(_logger, _settings, _factory);
-            IndicesCalculatorV2 indicesCalculator = new IndicesCalculatorV2(_logger, _settings, _factory);
+            //IndicesCalculatorV2 indicesCalculator = new IndicesCalculatorV2(_logger, _settings, _factory);
+            IndicesCalculatorV2 indicesCalculator = new IndicesCalculatorV2(_logger, _settings, _factory, false, true);
             var product = _coinbasePublicClient.Public.GetPublicProductAsync(productId).Result;
             //if(useV2)
                 var results = indicesCalculator.CalculateV2(product);

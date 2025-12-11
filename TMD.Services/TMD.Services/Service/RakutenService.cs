@@ -264,7 +264,8 @@ namespace TMD.Services
             var base64String = Convert.ToBase64String(textBytes);
             headers.Add("Authorization", "Bearer " + base64String);
             //headers.Add("Content-Type", "application/x-www-form-urlencoded");
-            string body = "grant_type=password&username=" + _userId + "&password=" + _password + "&scope=" + _sid;
+            //string body = "grant_type=password&username=" + _userId + "&password=" + _password + "&scope=" + _sid;
+            string body = "grant_type=password&scope=" + _sid;
             HttpRequestMessage request = AuthenicationHelper.GetAuthenicatedRequest(HttpMethod.Post, _baseUrl + "token", headers, "application/x-www-form-urlencoded", body);
             TokenModel result = APIProxy<TokenModel>.Send(request, "", ref error, client);
             return result;
@@ -314,13 +315,13 @@ namespace TMD.Services
             }
         }
 
-        public static MerchByAppStatusResponse LoadMerchants(ILogger _log, HttpClient client)
+        public static MerchByAppStatusResponse LoadMerchants(ILogger _log)
         {
             dynamic error = null;
             MerchByAppStatusResponse merchants = null;
             //Console.WriteLine("Getting Merchants.");
             _log.LogInformation("Getting Merchants.");
-            token = GetToken(client, ref error);
+            token = GetToken(_client, ref error);
             if (token != null)
             {
                 Dictionary<string, string> headers = new Dictionary<string, string>();
@@ -329,7 +330,7 @@ namespace TMD.Services
                 //request = AuthenicationHelper.GetAuthenicatedRequest(HttpMethod.Get, _baseUrl + "v2/advertisers?page=0&limit=100&ships_to=US&deep_links=true&network=1", headers, "application/json", "");
                 request = AuthenicationHelper.GetAuthenicatedRequest(HttpMethod.Get, _baseUrl + "linklocator/1.0/getMerchByAppStatus/approved", headers, "application/json", "");
 
-                merchants = APIProxy<MerchByAppStatusResponse>.Send(request, "application/json", ref error, client);
+                merchants = APIProxy<MerchByAppStatusResponse>.Send(request, "application/json", ref error, _client);
             }
             else
             {

@@ -23,7 +23,7 @@ namespace TMD.Services
         public static Stopwatch timer;
         private static string? _affiliateid = string.Empty;
         private static string? _websiteId = string.Empty;
-        private static string? _baseUrl = string.Empty;
+        //private static string? _baseUrl = string.Empty;
         private static string? _baseGraphUrl = string.Empty;
         private static string? _query = string.Empty;
         private static string? _token = string.Empty;
@@ -53,7 +53,7 @@ namespace TMD.Services
                 connection = configuration.GetSection("ConnectionStrings");
                 if (CommissionJunctionAPI != null)
                 {
-                    _baseUrl = CommissionJunctionAPI.GetSection("baseUrl").Value;
+                    //_baseUrl = CommissionJunctionAPI.GetSection("baseUrl").Value;
                     _baseGraphUrl = CommissionJunctionAPI.GetSection("baseGraphUrl").Value;
                     _token = CommissionJunctionAPI.GetSection("token").Value;
                     _affiliateid = CommissionJunctionAPI.GetSection("affiliateId").Value;
@@ -70,7 +70,7 @@ namespace TMD.Services
             }
             else
             {
-                _baseUrl = Environment.GetEnvironmentVariable("CommissionJunctionBaseUrl");
+                //_baseUrl = Environment.GetEnvironmentVariable("CommissionJunctionBaseUrl");
                 _baseGraphUrl = Environment.GetEnvironmentVariable("CommissionJunctionBaseGraphUrl");
                 _token = Environment.GetEnvironmentVariable("CommissionJunctionToken");
                 _affiliateid = Environment.GetEnvironmentVariable("CommissionJunctionAffiliateId");
@@ -130,55 +130,52 @@ namespace TMD.Services
         //    _client = client;
         //}
 
-        public void GetProductsGraphQL(List<Category> categories)
+        public dynamic GetProductsGraphQL(List<Category> categories)
         {
             timer.Start();
             //GetSettings(client);
             RssModel rss;// = new RssModel() { title = "CJ", source = 4848};
             dynamic results;
+            char quote = '"';
             var request = new GraphQLRequest
             {
-                Query = @"{products(companyId:" + _affiliateid + ",partnerStatus:JOINED,limit:10000){resultList{advertiserId,advertiserName,catalogId,id,title,description,price{amount,currency}linkCode(pid:" + _websiteId +"){clickUrl,imageUrl,html{LinkType:image}}}}}"
+                //Query = @"{products(companyId:" + _affiliateid + ",partnerStatus:JOINED,limit:10000){resultList{advertiserId,advertiserName,catalogId,id,title,description,price{amount,currency}linkCode(pid:" + _websiteId +"){clickUrl,imageUrl,html{LinkType:image}}}}}"
+                Query = @"{products(companyId:" + _affiliateid + ",partnerStatus:JOINED,limit:10000){resultList{advertiserId,advertiserName,catalogId,id,title,description,price{amount,currency}linkCode(pid:" + _websiteId + "){clickUrl }}}}"
+                //Query = @"{products(companyId:" + _affiliateid + ",partnerStatus:JOINED,limit:10000){resultList{advertiserId,advertiserName,catalogId,id,title,description,price{amount,currency}linkCode{clickUrl }}}}"
+                //Query = @"{ products(companyId:" + quote + _affiliateid + quote + ") {resultList { advertiserId, catalogId, id, title, description, price {amount,currency} linkCode(pid: " + quote + _websiteId + quote + ") {clickUrl } } } }"
             };
 
             var graphQLClient = new GraphQLHttpClient(_baseGraphUrl, new NewtonsoftJsonSerializer());
             graphQLClient.HttpClient.DefaultRequestHeaders.Add("Authorization", "bearer " + _token);
             results = graphQLClient.SendQueryAsync<dynamic>(request).Result;
 
-            //Console.WriteLine("Total Products for CJ" + results.Data.products.resultList.Count);
-            _log.LogInformation($"Total Products for CJ {results.Data.products.resultList.Count}");
-            rss = LoadGraphProduct(categories, results.Data, _log);
-            //rss.items.Shuffle<RssModelItems>();
-            //_connect.DeleteBySource("Commision Junction");
-            //Console.WriteLine("Total Commision Junction verified to save: " + rss.items.Count());
-            _log.LogInformation("Total Commision Junction verified to save: " + rss.items.Count());
-            //_connect.Save(rss);
-            //manager.DeleteAdvertisingBySource(null, "Commision Junction");
-            //manager.EditAdvertising(rss);
-            manager.AddBulk("[queue].[Advertising]", rss.items);
-            Thread.Sleep(1000);
+            //_log.LogInformation($"Total Products for CJ {results.Data.products.resultList.Count}");
+            //rss = LoadGraphProduct(categories, results.Data, _log);
+            //_log.LogInformation("Total Commision Junction verified to save: " + rss.items.Count());
+            //manager.AddBulk("[queue].[Advertising]", rss.items);
+            //Thread.Sleep(1000);
             timer.Stop();
             TimeSpan ts = timer.Elapsed;
-            //Console.WriteLine(nameof(CommissionJunctionService) + " Processing Time - " + ts.Hours + ":" + ts.Minutes + ":" + ts.Seconds + ":" + ts.Milliseconds + ":");
             _log.LogInformation(nameof(CommissionJunctionService) + " Processing Time - " + ts.Hours + ":" + ts.Minutes + ":" + ts.Seconds + ":" + ts.Milliseconds + ":");
-        }
-
-        public dynamic GetPromos(ILog _log, ref dynamic error)
-        {
-            HttpRequestMessage request;
-            dynamic results = new ExpandoObject();
-            Dictionary<string, string> headers = new Dictionary<string, string>();
-            string url = _baseUrl + "website-id=" + _websiteId + "&link-type=banner&advertiser-ids=joined&records-per-page=100";
-            headers.Add("Authorization", "Bearer " + _token);
-            request = AuthenicationHelper.GetAuthenicatedRequest(HttpMethod.Get, url, headers, "", "");
-            results = APIProxy<ExpandoObject>.Send(request, "", ref error, _client);
-            if (Errors.HasErrors(error))
-            {
-                return error;
-            }
-            results = LoadProduct(results.doc, _log);
             return results;
         }
+
+        //public dynamic GetPromos(ILog _log, ref dynamic error)
+        //{
+        //    HttpRequestMessage request;
+        //    dynamic results = new ExpandoObject();
+        //    Dictionary<string, string> headers = new Dictionary<string, string>();
+        //    string url = _baseUrl + "website-id=" + _websiteId + "&link-type=banner&advertiser-ids=joined&records-per-page=100";
+        //    headers.Add("Authorization", "Bearer " + _token);
+        //    request = AuthenicationHelper.GetAuthenicatedRequest(HttpMethod.Get, url, headers, "", "");
+        //    results = APIProxy<ExpandoObject>.Send(request, "", ref error, _client);
+        //    if (Errors.HasErrors(error))
+        //    {
+        //        return error;
+        //    }
+        //    results = LoadProduct(results.doc, _log);
+        //    return results;
+        //}
 
         private RssModel LoadProduct(dynamic results, ILog _log)
         {

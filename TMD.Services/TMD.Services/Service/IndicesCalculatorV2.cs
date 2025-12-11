@@ -16,17 +16,34 @@ namespace TMD.Services.Service
         IHttpClientFactory? _factory = null;
         SchwabServices? services;
         CoinBaseService? coinbaseService;
-        public IndicesCalculatorV2(ILogger log, SchwabSettings settings, IHttpClientFactory factory)
+        int fastPeriod = 12; int slowPeriod = 26; int signalPeriod = 9;
+        public IndicesCalculatorV2(ILogger log, SchwabSettings settings, IHttpClientFactory factory, bool use31016 = false, bool use5138 = false)
         {
             _log = log;
             _settings = settings;
-            _factory = factory;            
+            _factory = factory;
+            if (use31016)
+            {
+                fastPeriod = 3; slowPeriod = 10; signalPeriod = 16;
+            }
+            else if (use5138)
+            {
+                fastPeriod = 5; slowPeriod = 13; signalPeriod = 8;
+            }
         }
-        public IndicesCalculatorV2(ILogger log, CoinBaseSettings coinbaseSettings, IHttpClientFactory factory)
+        public IndicesCalculatorV2(ILogger log, CoinBaseSettings coinbaseSettings, IHttpClientFactory factory, bool use31016 = false, bool use5138 = false)
         {
             _log = log;
             _coinbaseSettings = coinbaseSettings;
             _factory = factory;
+            if (use31016)
+            {
+                fastPeriod = 3; slowPeriod = 10; signalPeriod = 16;
+            }
+            else if (use5138)
+            {
+                fastPeriod = 5; slowPeriod = 13; signalPeriod = 8;
+            }
         }
         public dynamic CalculateV2(string symbol, JsonElement quote)
         {
@@ -131,7 +148,7 @@ namespace TMD.Services.Service
             decimal? EMA13 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor13) + (SMA13 * (1 - smoothingFactor13)) : 0m;
 
             var closes = candle90.OrderBy(x => x.datetime)/*.Take(52)*/.Select(y => new MACDClosesDateTime { Price = y.close, Datetime = DateTimeOffset.FromUnixTimeMilliseconds(y.datetime).DateTime }).ToList();
-            var macdCalculator = new MacdCalculator();
+            var macdCalculator = new MacdCalculator(fastPeriod, slowPeriod, signalPeriod);
             List<MacdResult> macdCalculatorResults = macdCalculator.CalculateMacd(closes);
 
             decimal? MACDLine = (macdCalculatorResults?.LastOrDefault()?.MacdLine ?? 0);
@@ -299,7 +316,7 @@ namespace TMD.Services.Service
             decimal? EMA13 = (candle90.Count > 0) ? (Convert.ToDecimal(candle90.OrderByDescending(x => x.StartDate).ToList()[0].Close) * smoothingFactor13) + (SMA13 * (1 - smoothingFactor13)) : 0m;
 
             var closes = candle90.OrderBy(x => x.StartDate)/*.Take(52)*/.Select(y => new MACDClosesDateTime { Price = Convert.ToDecimal(y.Close), Datetime = y.StartDate }).ToList();
-            var macdCalculator = new MacdCalculator();
+            var macdCalculator = new MacdCalculator(fastPeriod, slowPeriod, signalPeriod);
             List<MacdResult> macdCalculatorResults = macdCalculator.CalculateMacd(closes);
 
             decimal? MACDLine = (macdCalculatorResults?.LastOrDefault()?.MacdLine ?? 0);

@@ -12,10 +12,10 @@ namespace TraderGo.Pages
     [Authorize]
     public class CryptoAccountInfoModel : PageModelBase
     {
-        private readonly ILogger<CryptoAccountInfoModel>? _logger;
-        private readonly CoinBaseSettings? _settings;
-        private readonly IHttpClientFactory? _factory;
-        [BindProperty] public CoinBaseService? coinBaseService { get; set; }
+        private readonly ILogger<CryptoAccountInfoModel> _logger;
+        private readonly CoinBaseSettings _settings;
+        private readonly IHttpClientFactory _factory;
+        [BindProperty] public CoinBaseService coinBaseService { get; set; }
         [BindProperty] public List<Account>? Accounts { get; set; }
         [BindProperty] public List<PortfolioBreakdown>? Portfolios { get; set; }
         [BindProperty] public List<PublicProduct>? PublicProducts { get; set; }
@@ -43,6 +43,7 @@ namespace TraderGo.Pages
             var fromData = Request.Form["Currency"];
             var products = coinBaseService.GetProducts();
             var coin = ctx.CryptoTracker.Where(x => x.Coin == fromData + "-USD").FirstOrDefault();
+            coinBaseService = new CoinBaseService(_logger, _settings, _factory);
             var order = coinBaseService.GetOrder((Guid)coin.BuyOrderId);
             JsonObject results = coinBaseService.GetQuote(coin.Coin);
             BuySellCrypto(coin, results, TradeDirection.SELL, Math.Round(Convert.ToDecimal(order.FilledSize), 5), coinBaseService, products, false);
@@ -97,9 +98,9 @@ namespace TraderGo.Pages
             {
                 cryptoTracker.PriceSold = Convert.ToDecimal(results["lastPrice"].ToString());
                 cryptoTracker.SoldRsi = Convert.ToDecimal(results["RSI"].ToString());
-                cryptoTracker.SoldSma200 = Convert.ToDecimal(results["SMA30"].ToString());
-                cryptoTracker.SoldEma200 = Convert.ToDecimal(results["EMA30"].ToString());
-                cryptoTracker.SoldVwap = Convert.ToDecimal(results["VWAP"].ToString());
+                cryptoTracker.SoldSma200 = Convert.ToDecimal(results["SMA26"].ToString());
+                cryptoTracker.SoldEma200 = Convert.ToDecimal(results["EMA26"].ToString());
+                cryptoTracker.SoldVwap = null;// Convert.ToDecimal(results["VWAP"].ToString());
                 cryptoTracker.SoldEma9 = Convert.ToDecimal(results["EMA9"].ToString());
                 cryptoTracker.SoldEma12 = Convert.ToDecimal(results["EMA12"].ToString());
                 cryptoTracker.SoldEma26 = Convert.ToDecimal(results["EMA26"].ToString());
