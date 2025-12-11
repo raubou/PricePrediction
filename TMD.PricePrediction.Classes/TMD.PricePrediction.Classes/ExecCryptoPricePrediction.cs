@@ -279,7 +279,16 @@ namespace TMD.PricePrediction.Classes
                 var st = coin;
                 //var st = ctx.CryptoTracker.Where(x => x.Coin == coin.Coin).FirstOrDefault();
                 helper.Log(_logger, LogLevel.Information, $"Checking {coin.Coin} - ({coin.Name})");
-                JsonObject results = services.GetQuote(coin.Coin);
+                JsonObject results = null;
+                try
+                {
+                    results = services.GetQuote(coin.Coin);
+                }
+                catch (Exception ex)
+                {
+                    helper.Log(_logger, LogLevel.Error, $"Crypto  {coin.Coin} check error {ex.Source} {ex.StackTrace} {ex?.InnerException} {ex.Message}.");
+                    continue;
+                }                
 
                 //just trade
                 helper.Log(_logger, LogLevel.Warning, $"Crypto {coin.Coin} - ({coin.Name}) Time since traded hrs {Math.Abs(Math.Round(((helper.easternTime - coin.DatePurchased.Value).TotalHours - 24), 5))}. Traded Price ${coin.PricePurchased} traded direction {Enum.GetName(typeof(TradeDirection), coin.TradeDirection)} crypto current price ${Convert.ToDecimal(results["lastPrice"].ToString())}");
@@ -645,7 +654,7 @@ namespace TMD.PricePrediction.Classes
                     //crypto.LastPrice = Convert.ToDecimal(results["lastPrice"].ToString());
                     crypto.CurrentBalance = valueofNonTrackedAsset;
                     crypto.DateUpdated = helper.easternTime;
-                    crypto.DatePurchased = item.CreatedAt;
+                    crypto.DatePurchased = item.UpdatedAt;
                     crypto.BuyStatus = (buyOrder.Status ?? "FILLED");
                     ctx.CryptoTracker.Attach(crypto);
                     ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
@@ -665,7 +674,7 @@ namespace TMD.PricePrediction.Classes
                             var lastSell = GetLastOrder(crypto.Coin);
                             buyOrderId = Guid.Parse(lastSell?.OrderId);
                             crypto.BuyOrderId = buyOrderId;
-                            crypto.DatePurchased = item.CreatedAt;
+                            crypto.DatePurchased = item.UpdatedAt;
                             ctx.CryptoTracker.Attach(crypto);
                             ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
                             ctx.SaveChanges();
@@ -673,7 +682,7 @@ namespace TMD.PricePrediction.Classes
                         }
                         //continue; //already in tracker. Update pruchased date
                         else {
-                            crypto.DatePurchased = item.CreatedAt;
+                            crypto.DatePurchased = item.UpdatedAt;
                             ctx.CryptoTracker.Attach(crypto);
                             ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
                             ctx.SaveChanges();
@@ -701,7 +710,7 @@ namespace TMD.PricePrediction.Classes
                         coin.PurchasedEma26 = Convert.ToDecimal(results["EMA26"].ToString());
                         coin.PurchasedMacd = Convert.ToDecimal(results["MACD"].ToString());
                         coin.LastPrice = Convert.ToDecimal(results["lastPrice"].ToString());
-                        coin.DatePurchased = item.CreatedAt; ;
+                        coin.DatePurchased = item.UpdatedAt; ;
                         coin.DateCreated = helper.easternTime;
                         coin.LastUpdatedBy = 1;
                         ctx.CryptoTracker.Add(coin);
