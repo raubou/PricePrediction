@@ -349,6 +349,9 @@ namespace TMD.PricePrediction.Classes
                         case 7:
                             minSubtract = .0000001m;
                             break;
+                        case 8:
+                            minSubtract = .00000001m;
+                            break;
                     }
                     var baseSize = decimal.Round(Convert.ToDecimal(account.AvailableBalance.Value), precision.Length) - minSubtract;
                     output = services.SetOrder(product.DisplayName, coinbaseDirection, baseSize);
@@ -595,47 +598,59 @@ namespace TMD.PricePrediction.Classes
             int lengthAfterDecimal = 0;
             Guid? buyOrderId = null;
             var Accounts = services.GetAccounts()/*.Where(x => x.Currency != "USD")*/.ToList();
+            helper.Log(_logger, LogLevel.Information, $"Getting owned crypto list");
             var PublicProducts = services.GetProducts().OrderBy(x => x.DisplayName).ToList();
             //var Cryptos = ctx.CryptoTracker.Where(x => x.PriceSold == null && x.DateSold == null && x.BuyStatus == "FILLED").ToList();
             //check if there is a wallet with cash not in tracker
             foreach (var item in Accounts)
             {
-                //if (item.Currency == "BTC" || item.Currency == "LTC")
+                helper.Log(_logger, LogLevel.Information, $"Iterating crypto list. Analyzing {item.Currency}");
+                //if (item.Currency.Contains("ETH") /*|| item.Currency == "LTC"*/)
                 //{
                 //    //they do exist
                 //}
                 var publicProduct = PublicProducts.Where(x => x.DisplayName == item.Currency + "-USD").FirstOrDefault();
                 var valueofNonTrackedAsset = Math.Round(Convert.ToDecimal(item.AvailableBalance.Value) * Convert.ToDecimal(publicProduct?.Price), 5);
-                if (valueofNonTrackedAsset <= .80m)
+                if (valueofNonTrackedAsset == .0m)
                 {
+                    helper.Log(_logger, LogLevel.Information, $"{item.Currency} no available balance.");
                     continue;
                 }
+                if (valueofNonTrackedAsset >.0m && valueofNonTrackedAsset <= .80m)
+                {
+                    helper.Log(_logger, LogLevel.Warning, $"{item.Currency} too low.");
+                    continue;
+                }else
                 if (valueofNonTrackedAsset > .80m && valueofNonTrackedAsset <= 1.5m)
                 {
                     decimal baseSize = 0m;
                     var precision = publicProduct?.BaseIncrement.Substring((publicProduct.BaseIncrement.IndexOf(".") + 1), (publicProduct.BaseIncrement.Length - (publicProduct.BaseIncrement.IndexOf(".") + 1)));
                     var currency = publicProduct?.DisplayName.Split('-');
                     var account = services.GetAccounts().Where(x => x.Currency == currency[0]).FirstOrDefault();
-                    if(account?.AvailableBalance.Value.IndexOf(".") <= -1)
+                    if (account?.AvailableBalance.Value.IndexOf(".") <= -1)
                         baseSize = Convert.ToDecimal(account.AvailableBalance.Value);
                     else
                         baseSize = Convert.ToDecimal(account?.AvailableBalance.Value.Substring(0, (account.AvailableBalance.Value.IndexOf(".") + precision.Length)));
-                    if(baseSize <= .0m)
+                    if (baseSize <= .0m)
                         continue;
                     output = services.SetOrder(publicProduct?.DisplayName, Coinbase.AdvancedTrade.Enums.OrderSide.SELL, baseSize);
+                    helper.Log(_logger, LogLevel.Warning, $"{item.Currency} too low.");
                     continue;
-                }
-                if(valueofNonTrackedAsset > 1.5m)
+                }else
+                if (valueofNonTrackedAsset > 1.5m)
                 {
                     coin = ctx.CryptoTracker.Where(x => x.Coin == item.Currency + "-USD" && x.PriceSold == null && x.DateSold == null && (x.BuyStatus.ToLower() == "open" || x.BuyStatus.ToLower() == "pending")).FirstOrDefault();
+                    helper.Log(_logger, LogLevel.Information, $"{item.Currency} meets min amount checking if synced with db.");
                 }
 
                 //var coin = Cryptos.Where(x => x.Coin == item.Currency + "-USD").ToList();
                 if (coin is not null)
                 {
+                    helper.Log(_logger, LogLevel.Information, $"{item.Currency} found in db pending");
                     var crypto = coin; 
                     if(crypto.BuyOrderId == null)
                     {
+                        helper.Log(_logger, LogLevel.Information, $"{item.Currency} BuyOrderId missing. Getting by last order.");
                         //var results = services.GetOrders(crypto.Coin);
                         //var lastSell = results.Where(x => x.Side == "BUY").OrderByDescending(y => Convert.ToDateTime(y.SequenceTimestamp)).FirstOrDefault();
                         var lastSell = GetLastOrder(crypto.Coin);
@@ -644,11 +659,12 @@ namespace TMD.PricePrediction.Classes
                     }
                     else
                     {
+                        helper.Log(_logger, LogLevel.Information, $"{item.Currency} BuyOrderId found.");
                         buyOrderId = crypto.BuyOrderId;
                     }
 
-
-                     var buyOrder = services.GetOrder((Guid)buyOrderId);
+                    helper.Log(_logger, LogLevel.Information, $"{item.Currency} Getting latest order info and updating.");
+                    var buyOrder = services.GetOrder((Guid)buyOrderId);
                     //var results = services.GetQuote(crypto.Coin);
                     crypto.PricePurchased = Convert.ToDecimal(buyOrder.AverageFilledPrice);
                     //crypto.LastPrice = Convert.ToDecimal(results["lastPrice"].ToString());
@@ -660,17 +676,22 @@ namespace TMD.PricePrediction.Classes
                     ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
                     ctx.SaveChanges();
                     ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                    helper.Log(_logger, LogLevel.Information, $"{item.Currency} Updating in db.");
                 }
                 else
                 {
+                    helper.Log(_logger, LogLevel.Information, $"{item.Currency} not found pending. CHecking filled.");
                     coin = ctx.CryptoTracker.Where(x => x.Coin == item.Currency + "-USD" && x.PriceSold == null && x.DateSold == null && x.BuyStatus.ToLower() == "filled").FirstOrDefault();
                     if (coin is not null)
                     {
+                        helper.Log(_logger, LogLevel.Information, $"{item.Currency} found in db filled.");
                         var crypto = coin;
                         if (crypto.BuyOrderId == null)
                         {
+                            helper.Log(_logger, LogLevel.Information, $"{item.Currency} BuyOrderId missing. Getting by last order.");
                             //var results2 = services.GetOrders(crypto.Coin);
                             //var lastSell = results2.Where(x => x.Side == "BUY").OrderByDescending(y => Convert.ToDateTime(y.SequenceTimestamp)).FirstOrDefault();
+                            crypto.CurrentBalance = valueofNonTrackedAsset;
                             var lastSell = GetLastOrder(crypto.Coin);
                             buyOrderId = Guid.Parse(lastSell?.OrderId);
                             crypto.BuyOrderId = buyOrderId;
@@ -682,15 +703,18 @@ namespace TMD.PricePrediction.Classes
                         }
                         //continue; //already in tracker. Update pruchased date
                         else {
+                            crypto.CurrentBalance = valueofNonTrackedAsset;
                             crypto.DatePurchased = item.UpdatedAt;
                             ctx.CryptoTracker.Attach(crypto);
                             ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
                             ctx.SaveChanges();
                             ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
                         }
+                        helper.Log(_logger, LogLevel.Information, $"{item.Currency} Updating in db.");
                     }
                     else
                     {
+                        helper.Log(_logger, LogLevel.Information, $"{item.Currency} Not found pending or filled. Creating new.");
                         //create new crypto tracker
                         coin = new CryptoTracker();
                         var results = services.GetQuote(item.Currency + "-USD");
@@ -715,6 +739,7 @@ namespace TMD.PricePrediction.Classes
                         coin.LastUpdatedBy = 1;
                         ctx.CryptoTracker.Add(coin);
                         ctx.Entry(coin).State = Microsoft.EntityFrameworkCore.EntityState.Added;
+                        helper.Log(_logger, LogLevel.Information, $"{item.Currency} Adding in db.");
                     }
                 }
                 try
@@ -736,7 +761,7 @@ namespace TMD.PricePrediction.Classes
                 var publicProduct = PublicProducts.Where(x => x.DisplayName == crypto.Coin).FirstOrDefault();
                 var valueofNonTrackedAsset = Math.Round(Convert.ToDecimal(account.AvailableBalance.Value) * Convert.ToDecimal(publicProduct?.Price), 5);
                 //if (decimal.TryParse(account?.AvailableBalance.Value, out decimal bal) && bal <= 1.5m)
-                if (valueofNonTrackedAsset <= 1.5m)
+                if (valueofNonTrackedAsset > 0m && valueofNonTrackedAsset <= 1.5m)
                 {
                     var ct = crypto;
                     var results = services.GetQuote(ct.Coin);
