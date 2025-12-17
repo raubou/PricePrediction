@@ -275,7 +275,7 @@ namespace PricePredictionTest
             //var mrpopo = Accounts.Where(x => x.Currency == "BTC").FirstOrDefault();
             var PublicProducts = services.GetProducts().OrderBy(x => x.DisplayName).ToList();
             //var Cryptos = ctx.CryptoTracker.Where(x => x.PriceSold == null && x.Status != "OPEN").ToList();
-            var Cryptos = ctx.CryptoTracker.Where(x => x.PriceSold == null).ToList();
+            var Cryptos = ctx.CryptoTracker2.Where(x => x.PriceSold == null).ToList();
             //check if there is a wallet with cash not in tracker
             foreach (var item in Accounts)
             {
@@ -309,7 +309,7 @@ namespace PricePredictionTest
                     sp.PriceSold = 0;
                     sp.DateSold = DateTime.Now;
                     sp.DateUpdated = DateTime.Now;
-                    ctx.CryptoTracker.Attach(sp);
+                    ctx.CryptoTracker2.Attach(sp);
                     ctx.Entry(sp).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
                     ctx.SaveChanges();
                 }

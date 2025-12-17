@@ -1,18 +1,13 @@
 ﻿using Coinbase.AdvancedTrade.Models;
 using Coinbase.AdvancedTrade.Models.Public;
-using GraphQL.Types;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using TMD.Services;
 using TMD.Services.Service;
-
 using TMDInvestments.Context;
 using TMDInvestments.Models;
 using TMDInvestments.Models.Models;
-using TMDInvestments.Models.Models.Polygon;
-using static MongoDB.Driver.WriteConcern;
-
 
 namespace TMD.PricePrediction.Classes
 {
@@ -307,30 +302,30 @@ namespace TMD.PricePrediction.Classes
                     AnalyiseOwnedCrypto(st, results, products);
             }
         }
-        void QueueCryptotoBuy(CryptoTracker2 cryptoTracker, dynamic order, TradeDirection direction, decimal amount)
+        void QueueCryptotoBuy(/*CryptoTracker2 cryptoTracker,*/ dynamic order, TradeDirection direction, decimal amount)
         {
-            SaveCryptoTracker(cryptoTracker, direction, amount, order, null, "QUEUED", false);
+            SaveCryptoTracker(null, direction, amount, order, null, "QUEUED"/*, false*/);
         }
         void CheckforQueuedCrypto()
         {
             int? longCnt = 0;
             int? shortCnt = 0;
             var queuedCrypto = ctx.CryptoTracker2.Where(x => x.BuyStatus == "QUEUED").ToList();
-            foreach (var crypto in queuedCrypto)
+             foreach (var crypto in queuedCrypto)
             {
                 JsonObject? results = services.GetQuote(crypto.Coin);
                 helper.CalculatePoints(results, false, true, ref shortCnt, ref longCnt);
                 if (longCnt >= settings.CryptoLongCount || shortCnt >= settings.StockShortCount)
                 {
-                    BuySellCrypto(crypto, results,(TradeDirection)crypto.TradeDirection, crypto.Amount ?? 0m, services, products, false, true);
+                    BuySellCrypto(crypto, results,(TradeDirection)crypto.TradeDirection, crypto.Amount ?? 0m, services, products, false/*, true*/);
                 }
                 else
                 {
-                    SaveCryptoTracker(crypto, (TradeDirection)crypto.TradeDirection, crypto.Amount ?? 0m, results, null, "CANCEL", true);
+                    SaveCryptoTracker(crypto, (TradeDirection)crypto.TradeDirection, crypto.Amount ?? 0m, results, null, "CANCEL"/*, true*/);
                 }
             }
         }
-        bool BuySellCrypto(CryptoTracker2 cryptoTracker, dynamic order, TradeDirection direction, decimal amount, CoinBaseService service, List<PublicProduct> publicProducts, bool sellShort, bool IsUpdate)
+        bool BuySellCrypto(CryptoTracker2 cryptoTracker, dynamic order, TradeDirection direction, decimal amount, CoinBaseService service, List<PublicProduct> publicProducts, bool sellShort/*, bool IsUpdate*/)
         {
             string symbol = (order["Symbol"].ToString().Substring((order["Symbol"].ToString().Length - 1), 1) == "C") ? order["Symbol"].ToString().Substring(0, (order["Symbol"].ToString().Length - 1)) : order["Symbol"].ToString();
             PublicProduct? product = publicProducts.Where(x => x.DisplayName == symbol).FirstOrDefault();
@@ -399,12 +394,12 @@ namespace TMD.PricePrediction.Classes
             }
 
             if (output != null && (output.Status.ToLower() == "filled" || output.Status.ToLower() == "open" || output.Status.ToLower() == "pending"))
-                SaveCryptoTracker(cryptoTracker, direction, amount, order, output, null, IsUpdate);
+                SaveCryptoTracker(cryptoTracker, direction, amount, order, output, null/*, IsUpdate*/);
             return true;
         }
-        bool SaveCryptoTracker(CryptoTracker2 cryptoTracker, TradeDirection direction, decimal currentBalance, dynamic results, Coinbase.AdvancedTrade.Models.Order order, string buyStatus, bool isUpdate)
+        bool SaveCryptoTracker(CryptoTracker2 cryptoTracker, TradeDirection direction, decimal currentBalance, dynamic results, Coinbase.AdvancedTrade.Models.Order order, string buyStatus/*, bool isUpdate*/)
         {
-            if (cryptoTracker != null && (direction == TradeDirection.SELL || direction == TradeDirection.BUY_TO_COVER || isUpdate))
+            if (cryptoTracker != null && (direction == TradeDirection.SELL || direction == TradeDirection.BUY_TO_COVER))
             {
                 cryptoTracker.SoldRsi = Convert.ToDecimal(results["RSI"].ToString());
                 cryptoTracker.SoldEma9 = Convert.ToDecimal(results["EMA9"].ToString());
@@ -428,8 +423,7 @@ namespace TMD.PricePrediction.Classes
                 cryptoTracker.SoldMacd = Convert.ToDecimal(results["MACD"].ToString());
                 cryptoTracker.SoldMacdSignal = Convert.ToDecimal(results["MACDSignal"].ToString());
                 cryptoTracker.SoldMacdHistogram = Convert.ToDecimal(results["MACDHistogram"].ToString());
-                cryptoTracker.CurrentBalance = /*(direction == TradeDirection.SELL) ? cryptoTracker.CurrentBalance :*/ currentBalance;
-                cryptoTracker.BuyStatus = (!isUpdate) ? null : buyStatus;
+                cryptoTracker.CurrentBalance = /*(direction == TradeDirection.SELL) ? cryptoTracker.CurrentBalance :*/ currentBalance;                
                 cryptoTracker.SellOrderId = (order != null) ? Guid.Parse(order?.OrderId): null;
                 cryptoTracker.SellStatus = (order != null) ? order.Status: null;
                 cryptoTracker.DateSold = helper.easternTime;
@@ -439,7 +433,8 @@ namespace TMD.PricePrediction.Classes
             }
             else
             {
-                cryptoTracker = new CryptoTracker2();
+                if (cryptoTracker == null)
+                    cryptoTracker = new CryptoTracker2();
                 cryptoTracker.Coin = results["Symbol"].ToString();
                 cryptoTracker.BuyOrderId = (order != null) ? Guid.Parse((order?.OrderId ?? null)): null;
                 cryptoTracker.BuyStatus = (order != null) ? order.Status: buyStatus;
@@ -473,6 +468,7 @@ namespace TMD.PricePrediction.Classes
                 cryptoTracker.DatePurchased = helper.easternTime;
                 cryptoTracker.DateCreated = helper.easternTime;
                 cryptoTracker.LastUpdatedBy = 1;
+                cryptoTracker.BuyStatus = (order != null) ? order.Status:(buyStatus != null) ? buyStatus:null;
                 ctx.CryptoTracker2.Add(cryptoTracker);
                 ctx.Entry(cryptoTracker).State = Microsoft.EntityFrameworkCore.EntityState.Added;
             }
@@ -586,7 +582,7 @@ namespace TMD.PricePrediction.Classes
                         //buy to cover
                         helper.Log(_logger, LogLevel.Information, $"crypto  {crypto.Coin}  - ( {crypto.Name}) has fallen by more then about {Math.Round(percentDiffPricePurchased, 5)}% since price purchased. Selling.");
                         UpdateLastPrice(currentPrice, currentBalance, ref crypto);
-                        BuySellCrypto(crypto, results, TradeDirection.SELL, currentBalance, services, products, false, false);
+                        BuySellCrypto(crypto, results, TradeDirection.SELL, currentBalance, services, products, false/*, false*/);
                     }
                     else
                     {
@@ -604,7 +600,7 @@ namespace TMD.PricePrediction.Classes
                         //sell
                         helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) has fallen by more then about {Math.Round(percentDiffLastPrice, 5)}% since last Price. Selling.");
                         UpdateLastPrice(currentPrice, currentBalance, ref crypto);
-                        BuySellCrypto(crypto, results, TradeDirection.SELL, currentBalance, services, products, false, false);
+                        BuySellCrypto(crypto, results, TradeDirection.SELL, currentBalance, services, products, false/*, false*/);
                     }
                     else
                     {
@@ -644,7 +640,7 @@ namespace TMD.PricePrediction.Classes
                 if (perCrypto >= 5)
                 {
                     //BuySellCrypto(null, result, direction,Math.Round((decimal)perCrypto, 5), services, products, sellShort);
-                    QueueCryptotoBuy(null, result, direction, Math.Round((decimal)perCrypto, 5));
+                    QueueCryptotoBuy(/*null,*/ result, direction, Math.Round((decimal)perCrypto, 5));
                     cryptoCnt++;
                 }
             }
@@ -829,7 +825,7 @@ namespace TMD.PricePrediction.Classes
                 }
 
             }
-            var Cryptos = ctx.CryptoTracker.Where(x => x.PriceSold == null && x.DateSold == null && x.BuyStatus == "FILLED").ToList();
+            var Cryptos = ctx.CryptoTracker2.Where(x => x.PriceSold == null && x.DateSold == null && x.BuyStatus == "FILLED").ToList();
             foreach(var crypto in Cryptos)
             {
                 var currency = crypto.Coin.Split('-');
@@ -846,7 +842,7 @@ namespace TMD.PricePrediction.Classes
                     ct.SellStatus = "FILLED";
                     ct.DateSold = helper?.easternTime;
                     ct.DateUpdated = helper?.easternTime;
-                    ctx.CryptoTracker.Attach(ct);
+                    ctx.CryptoTracker2.Attach(ct);
                     ctx.Entry(ct).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
                     ctx.SaveChanges();
                     ctx.Entry(ct).State = Microsoft.EntityFrameworkCore.EntityState.Detached;

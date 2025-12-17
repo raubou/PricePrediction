@@ -18,7 +18,7 @@ namespace TraderGo.Pages
         IHttpClientFactory? _factory;
         Manager? _mgr;
         //SchwabServices services;
-        [BindProperty] public List<CryptoTracker>? CryptoTracker { get; set; }
+        [BindProperty] public List<CryptoTracker2>? CryptoTracker { get; set; }
         [BindProperty] public int? Total { get; set; }
         public CryptoTrackerModel(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<MailSettings> mailSettings, IHttpClientFactory factory, ILogger<StockTrackerModel> logger, IOptions<SchwabSettings> settings) //: base(connectionSettings, connectionSettings2, mailSettings)
         {
@@ -32,7 +32,7 @@ namespace TraderGo.Pages
         }
         public override IActionResult Execute()
         {
-            CryptoTracker = ctx.CryptoTracker.ToList();
+            CryptoTracker = ctx.CryptoTracker2.ToList();
             Total = CryptoTracker.Count;
             return Page();
         }
