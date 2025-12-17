@@ -26,6 +26,7 @@ namespace TMDInvestments.Context
         public DbSet<Users>? Users { get; set; }
         public DbSet<CryptoList> CryptoList { get; set; }
         public DbSet<CryptoTracker> CryptoTracker { get; set; }
+        public DbSet<CryptoTracker2> CryptoTracker2 { get; set; }
         public DbSet<DayTradeTracker> DayTradeTracker { get; set; }
 
         //protected void OnModelCreatingPartial(ModelBuilder modelBuilder)
