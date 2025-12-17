@@ -469,7 +469,7 @@ namespace TMD.PricePrediction.Classes
                 cryptoTracker.DateCreated = helper.easternTime;
                 cryptoTracker.LastUpdatedBy = 1;
                 cryptoTracker.BuyStatus = (order != null) ? order.Status:(buyStatus != null) ? buyStatus:null;
-                ctx.CryptoTracker2.Add(cryptoTracker);
+                ctx.CryptoTracker2.Attach(cryptoTracker);
                 ctx.Entry(cryptoTracker).State = (cryptoTracker == null) ? Microsoft.EntityFrameworkCore.EntityState.Added: Microsoft.EntityFrameworkCore.EntityState.Modified;
             }
             try
