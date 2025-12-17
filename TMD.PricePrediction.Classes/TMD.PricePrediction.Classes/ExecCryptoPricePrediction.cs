@@ -399,6 +399,7 @@ namespace TMD.PricePrediction.Classes
         }
         bool SaveCryptoTracker(CryptoTracker2 cryptoTracker, TradeDirection direction, decimal currentBalance, dynamic results, Coinbase.AdvancedTrade.Models.Order order, string buyStatus/*, bool isUpdate*/)
         {
+            bool isNew = false;
             if (cryptoTracker != null && (direction == TradeDirection.SELL || direction == TradeDirection.BUY_TO_COVER))
             {
                 cryptoTracker.SoldRsi = Convert.ToDecimal(results["RSI"].ToString());
@@ -434,7 +435,10 @@ namespace TMD.PricePrediction.Classes
             else
             {
                 if (cryptoTracker == null)
+                {
                     cryptoTracker = new CryptoTracker2();
+                    isNew = true;
+                }                    
                 cryptoTracker.Coin = results["Symbol"].ToString();
                 cryptoTracker.BuyOrderId = (order != null) ? Guid.Parse((order?.OrderId ?? null)): null;
                 cryptoTracker.BuyStatus = (order != null) ? order.Status: buyStatus;
@@ -469,8 +473,16 @@ namespace TMD.PricePrediction.Classes
                 cryptoTracker.DateCreated = helper.easternTime;
                 cryptoTracker.LastUpdatedBy = 1;
                 cryptoTracker.BuyStatus = (order != null) ? order.Status:(buyStatus != null) ? buyStatus:null;
-                ctx.CryptoTracker2.Attach(cryptoTracker);
-                ctx.Entry(cryptoTracker).State = (cryptoTracker == null) ? Microsoft.EntityFrameworkCore.EntityState.Added: Microsoft.EntityFrameworkCore.EntityState.Modified;
+                if(isNew) {
+                    ctx.CryptoTracker2.Add(cryptoTracker);
+                    ctx.Entry(cryptoTracker).State = Microsoft.EntityFrameworkCore.EntityState.Added;
+                } else
+                {
+                    ctx.CryptoTracker2.Attach(cryptoTracker);
+                    ctx.Entry(cryptoTracker).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+                }
+                    
+                
             }
             try
             {
