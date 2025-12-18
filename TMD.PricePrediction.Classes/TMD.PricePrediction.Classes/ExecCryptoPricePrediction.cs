@@ -394,7 +394,7 @@ namespace TMD.PricePrediction.Classes
             }
 
             if (output != null && (output.Status.ToLower() == "filled" || output.Status.ToLower() == "open" || output.Status.ToLower() == "pending"))
-                SaveCryptoTracker(cryptoTracker, direction, amount, order, output, null/*, IsUpdate*/);
+                SaveCryptoTracker(cryptoTracker, direction, amount, order, output, (direction == TradeDirection.BUY) ? "FILLED" : null/*, IsUpdate*/);
             return true;
         }
         bool SaveCryptoTracker(CryptoTracker2 cryptoTracker, TradeDirection direction, decimal currentBalance, dynamic results, Coinbase.AdvancedTrade.Models.Order order, string buyStatus/*, bool isUpdate*/)
@@ -672,10 +672,10 @@ namespace TMD.PricePrediction.Classes
             foreach (var item in Accounts)
             {
                 helper.Log(_logger, LogLevel.Information, $"Iterating crypto list. Analyzing {item.Currency}");
-                //if (item.Currency.Contains("ETH") /*|| item.Currency == "LTC"*/)
-                //{
-                //    //they do exist
-                //}
+                if (item.Currency.Contains("ETH") /*|| item.Currency == "LTC"*/)
+                {
+                    //they do exist
+                }
                 var publicProduct = PublicProducts.Where(x => x.DisplayName == item.Currency + "-USD").FirstOrDefault();
                 var valueofNonTrackedAsset = Math.Round(Convert.ToDecimal(item.AvailableBalance.Value) * Convert.ToDecimal(publicProduct?.Price), 5);
                 if (valueofNonTrackedAsset == .0m)
@@ -855,10 +855,18 @@ namespace TMD.PricePrediction.Classes
                     ct.DateSold = helper?.easternTime;
                     ct.DateUpdated = helper?.easternTime;
                     ctx.CryptoTracker2.Attach(ct);
-                    ctx.Entry(ct).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+                    ctx.Entry(ct).State = Microsoft.EntityFrameworkCore.EntityState.Deleted;
                     ctx.SaveChanges();
                     ctx.Entry(ct).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
                 }
+                //else
+                //{
+                //    var ct = crypto;
+                //    ctx.CryptoTracker2.Attach(ct);
+                //    ctx.Entry(ct).State = Microsoft.EntityFrameworkCore.EntityState.Deleted;
+                //    ctx.SaveChanges();
+                //    ctx.Entry(ct).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                //}
             }
         }
         private Fill GetLastOrder(string ProductId)
