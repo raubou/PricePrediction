@@ -533,7 +533,7 @@ namespace TMD.PricePrediction.Classes
             decimal currentPrice = Convert.ToDecimal(results["lastPrice"].ToString());
             //var order = services.GetOrder((Guid)crypto.BuyOrderId);
             var product = products.Where(x => x.DisplayName == crypto.Coin).FirstOrDefault();
-            var account = services?.GetAccounts().Where(x => x.Currency == crypto.Coin.Split(new char[] { '-' })[0]).FirstOrDefault();
+            var account = services?.GetAccounts().Where(x => x.Currency == crypto.Coin.Split(new char[] { '-' })[0] && Convert.ToDecimal(x.AvailableBalance.Value) > 0m).FirstOrDefault();
             var currentBalance = Math.Round(Convert.ToDecimal(account?.AvailableBalance?.Value) * Convert.ToDecimal(product?.Price), 5);
             try
             {
@@ -672,10 +672,10 @@ namespace TMD.PricePrediction.Classes
             foreach (var item in Accounts)
             {
                 helper.Log(_logger, LogLevel.Information, $"Iterating crypto list. Analyzing {item.Currency}");
-                if (item.Currency.Contains("ETH") /*|| item.Currency == "LTC"*/)
-                {
-                    //they do exist
-                }
+                //if (item.Currency.Contains("ETH") /*|| item.Currency == "LTC"*/)
+                //{
+                //    //they do exist
+                //}
                 var publicProduct = PublicProducts.Where(x => x.DisplayName == item.Currency + "-USD").FirstOrDefault();
                 var valueofNonTrackedAsset = Math.Round(Convert.ToDecimal(item.AvailableBalance.Value) * Convert.ToDecimal(publicProduct?.Price), 5);
                 if (valueofNonTrackedAsset == .0m)
@@ -741,8 +741,8 @@ namespace TMD.PricePrediction.Classes
                     crypto.BuyStatus = (buyOrder.Status ?? "FILLED");
                     ctx.CryptoTracker2.Attach(crypto);
                     ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
-                    ctx.SaveChanges();
-                    ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                    //ctx.SaveChanges();
+                    //ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
                     helper.Log(_logger, LogLevel.Information, $"{item.Currency} Updating in db.");
                 }
                 else
@@ -765,8 +765,8 @@ namespace TMD.PricePrediction.Classes
                             crypto.DatePurchased = item.UpdatedAt;
                             ctx.CryptoTracker2.Attach(crypto);
                             ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
-                            ctx.SaveChanges();
-                            ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                            //ctx.SaveChanges();
+                            //ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
                         }
                         //continue; //already in tracker. Update pruchased date
                         else {
@@ -774,8 +774,8 @@ namespace TMD.PricePrediction.Classes
                             crypto.DatePurchased = item.UpdatedAt;
                             ctx.CryptoTracker2.Attach(crypto);
                             ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
-                            ctx.SaveChanges();
-                            ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                            //ctx.SaveChanges();
+                            //ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
                         }
                         helper.Log(_logger, LogLevel.Information, $"{item.Currency} Updating in db.");
                     }

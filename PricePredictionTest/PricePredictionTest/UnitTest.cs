@@ -153,6 +153,13 @@ namespace PricePredictionTest
             Assert.IsNotNull(account);
         }
         [TestMethod]
+        public void TestCoinBaseProducts()
+        {
+            var product = services.GetProducts().Where(x => x.DisplayName == "ETH-USD").ToList();
+            Assert.IsNotNull(product);
+        }
+        
+        [TestMethod]
         public void TestSchwabOrder()
         {
             //string order = "";
