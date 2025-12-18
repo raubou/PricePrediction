@@ -7,7 +7,7 @@
     string bold = string.Empty;
     int cryptoCnt = 1;
     dynamic? results = null;
-    CryptoTracker? coin = null;
+    CryptoTracker2? coin = null;
 }
 <h4 style="color:#006699;">Crypto Accounts</h4>
 <div class="row">
@@ -133,7 +133,7 @@
                         <input type="submit" class="btn btn-success" value="Sell" />
                     </form>
                     </div>
-                <div class="col border border-1">@item.CreatedAt</div>
+                <div class="col border border-1">@item.UpdatedAt</div>
             </div>
             cryptoCnt++;
         }

@@ -20,7 +20,7 @@ namespace TraderGo.Pages
         [BindProperty] public List<PortfolioBreakdown>? Portfolios { get; set; }
         [BindProperty] public List<PublicProduct>? PublicProducts { get; set; }
         [BindProperty] public List<CryptoList> CryptoList { get; set; }
-        [BindProperty] public List<CryptoTracker> CryptoTracker { get; set; }
+        [BindProperty] public List<CryptoTracker2> CryptoTracker { get; set; }
         public CryptoAccountInfoModel(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<MailSettings> mailSettings, IHttpClientFactory factory, ILogger<CryptoAccountInfoModel> logger, IOptions<CoinBaseSettings> settings)// : base(connectionSettings, connectionSettings2, mailSettings)
         {
             _logger = logger;
@@ -35,21 +35,21 @@ namespace TraderGo.Pages
             PublicProducts = coinBaseService.GetProducts().OrderBy(x => x.DisplayName).ToList();
             Portfolios = coinBaseService.GetPortfolios();
             CryptoList = ctx.CryptoList.ToList();
-            CryptoTracker = ctx.CryptoTracker.Where(x => x.PriceSold == null && x.DateSold == null && (x.BuyStatus.ToLower() == "filled" /*|| x.BuyStatus.ToLower() == "open" || x.BuyStatus.ToLower() == "pending"*/)).ToList();
+            CryptoTracker = ctx.CryptoTracker2.Where(x => x.PriceSold == null && x.DateSold == null && (x.BuyStatus.ToLower() == "filled" /*|| x.BuyStatus.ToLower() == "open" || x.BuyStatus.ToLower() == "pending"*/)).ToList();
             return Page();
         }
         public IActionResult OnPost()
         {
             var fromData = Request.Form["Currency"];
             var products = coinBaseService.GetProducts();
-            var coin = ctx.CryptoTracker.Where(x => x.Coin == fromData + "-USD").FirstOrDefault();
+            var coin = ctx.CryptoTracker2.Where(x => x.Coin == fromData + "-USD").FirstOrDefault();
             coinBaseService = new CoinBaseService(_logger, _settings, _factory);
             var order = coinBaseService.GetOrder((Guid)coin.BuyOrderId);
             JsonObject results = coinBaseService.GetQuote(coin.Coin);
             BuySellCrypto(coin, results, TradeDirection.SELL, Math.Round(Convert.ToDecimal(order.FilledSize), 5), coinBaseService, products, false);
             return Execute();
         }
-        bool BuySellCrypto(CryptoTracker cryptoTracker, dynamic order, TradeDirection direction, decimal amount, CoinBaseService service, List<PublicProduct> publicProducts, bool sellShort)
+        bool BuySellCrypto(CryptoTracker2 cryptoTracker, dynamic order, TradeDirection direction, decimal amount, CoinBaseService service, List<PublicProduct> publicProducts, bool sellShort)
         {
             string symbol = (order["Symbol"].ToString().Substring((order["Symbol"].ToString().Length - 1), 1) == "C") ? order["Symbol"].ToString().Substring(0, (order["Symbol"].ToString().Length - 1)) : order["Symbol"].ToString();
             PublicProduct? product = publicProducts.Where(x => x.DisplayName == symbol).FirstOrDefault();
@@ -92,30 +92,44 @@ namespace TraderGo.Pages
                 SaveCryptoTracker(cryptoTracker, direction, (direction == TradeDirection.SELL) ? Convert.ToDecimal(output.TotalValueAfterFees) : amount, order, output);
             return true;
         }
-        bool SaveCryptoTracker(CryptoTracker cryptoTracker, TradeDirection direction, decimal currentBalance, dynamic results, Coinbase.AdvancedTrade.Models.Order order)
+        bool SaveCryptoTracker(CryptoTracker2 cryptoTracker, TradeDirection direction, decimal currentBalance, dynamic results, Coinbase.AdvancedTrade.Models.Order order)
         {
             if (cryptoTracker != null && (direction == TradeDirection.SELL || direction == TradeDirection.BUY_TO_COVER))
             {
                 cryptoTracker.PriceSold = Convert.ToDecimal(results["lastPrice"].ToString());
                 cryptoTracker.SoldRsi = Convert.ToDecimal(results["RSI"].ToString());
-                cryptoTracker.SoldSma200 = Convert.ToDecimal(results["SMA26"].ToString());
-                cryptoTracker.SoldEma200 = Convert.ToDecimal(results["EMA26"].ToString());
-                cryptoTracker.SoldVwap = null;// Convert.ToDecimal(results["VWAP"].ToString());
                 cryptoTracker.SoldEma9 = Convert.ToDecimal(results["EMA9"].ToString());
                 cryptoTracker.SoldEma12 = Convert.ToDecimal(results["EMA12"].ToString());
                 cryptoTracker.SoldEma26 = Convert.ToDecimal(results["EMA26"].ToString());
+                cryptoTracker.SoldEma3 = Convert.ToDecimal(results["EMA3"].ToString());
+                cryptoTracker.SoldEma10 = Convert.ToDecimal(results["EMA10"].ToString());
+                cryptoTracker.SoldEma16 = Convert.ToDecimal(results["EMA16"].ToString());
+                cryptoTracker.SoldEma5 = Convert.ToDecimal(results["EMA5"].ToString());
+                cryptoTracker.SoldEma8 = Convert.ToDecimal(results["EMA8"].ToString());
+                cryptoTracker.SoldEma13 = Convert.ToDecimal(results["EMA13"].ToString());
+                cryptoTracker.SoldSma9 = Convert.ToDecimal(results["SMA9"].ToString());
+                cryptoTracker.SoldSma12 = Convert.ToDecimal(results["SMA12"].ToString());
+                cryptoTracker.SoldSma26 = Convert.ToDecimal(results["SMA26"].ToString());
+                cryptoTracker.SoldSma3 = Convert.ToDecimal(results["SMA3"].ToString());
+                cryptoTracker.SoldSma10 = Convert.ToDecimal(results["SMA10"].ToString());
+                cryptoTracker.SoldSma16 = Convert.ToDecimal(results["SMA16"].ToString());
+                cryptoTracker.SoldSma5 = Convert.ToDecimal(results["SMA5"].ToString());
+                cryptoTracker.SoldSma8 = Convert.ToDecimal(results["SMA8"].ToString());
+                cryptoTracker.SoldSma13 = Convert.ToDecimal(results["SMA13"].ToString());
                 cryptoTracker.SoldMacd = Convert.ToDecimal(results["MACD"].ToString());
+                cryptoTracker.SoldMacdSignal = Convert.ToDecimal(results["MACDSignal"].ToString());
+                cryptoTracker.SoldMacdHistogram = Convert.ToDecimal(results["MACDHistogram"].ToString());
                 cryptoTracker.CurrentBalance = currentBalance;
                 cryptoTracker.SellOrderId = Guid.Parse(order.OrderId);
                 cryptoTracker.SellStatus = order.Status;
                 cryptoTracker.DateSold = DateTime.Now;
                 cryptoTracker.DateUpdated = DateTime.Now;
-                ctx.CryptoTracker.Attach(cryptoTracker);
+                ctx.CryptoTracker2.Attach(cryptoTracker);
                 ctx.Entry(cryptoTracker).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
             }
             else
             {
-                cryptoTracker = new CryptoTracker();
+                cryptoTracker = new CryptoTracker2();
                 cryptoTracker.Coin = results["Symbol"].ToString();
                 cryptoTracker.BuyOrderId = Guid.Parse(order.OrderId);
                 cryptoTracker.BuyStatus = order.Status;
@@ -124,18 +138,32 @@ namespace TraderGo.Pages
                 cryptoTracker.PricePurchased = Convert.ToDecimal(results["lastPrice"].ToString());
                 cryptoTracker.Amount = currentBalance;
                 cryptoTracker.PurchasedRsi = Convert.ToDecimal(results["RSI"].ToString());
-                cryptoTracker.PurchasedSma200 = Convert.ToDecimal(results["SMA30"].ToString());
-                cryptoTracker.PurchasedEma200 = Convert.ToDecimal(results["EMA30"].ToString());
-                cryptoTracker.PurchasedVwap = Convert.ToDecimal(results["VWAP"].ToString());
                 cryptoTracker.PurchasedEma9 = Convert.ToDecimal(results["EMA9"].ToString());
                 cryptoTracker.PurchasedEma12 = Convert.ToDecimal(results["EMA12"].ToString());
                 cryptoTracker.PurchasedEma26 = Convert.ToDecimal(results["EMA26"].ToString());
+                cryptoTracker.PurchasedEma3 = Convert.ToDecimal(results["EMA3"].ToString());
+                cryptoTracker.PurchasedEma10 = Convert.ToDecimal(results["EMA10"].ToString());
+                cryptoTracker.PurchasedEma16 = Convert.ToDecimal(results["EMA16"].ToString());
+                cryptoTracker.PurchasedEma5 = Convert.ToDecimal(results["EMA5"].ToString());
+                cryptoTracker.PurchasedEma8 = Convert.ToDecimal(results["EMA8"].ToString());
+                cryptoTracker.PurchasedEma13 = Convert.ToDecimal(results["EMA13"].ToString());
+                cryptoTracker.PurchasedSma9 = Convert.ToDecimal(results["SMA9"].ToString());
+                cryptoTracker.PurchasedSma12 = Convert.ToDecimal(results["SMA12"].ToString());
+                cryptoTracker.PurchasedSma26 = Convert.ToDecimal(results["SMA26"].ToString());
+                cryptoTracker.PurchasedSma3 = Convert.ToDecimal(results["SMA3"].ToString());
+                cryptoTracker.PurchasedSma10 = Convert.ToDecimal(results["SMA10"].ToString());
+                cryptoTracker.PurchasedSma16 = Convert.ToDecimal(results["SMA16"].ToString());
+                cryptoTracker.PurchasedSma5 = Convert.ToDecimal(results["SMA5"].ToString());
+                cryptoTracker.PurchasedSma8 = Convert.ToDecimal(results["SMA8"].ToString());
+                cryptoTracker.PurchasedSma13 = Convert.ToDecimal(results["SMA13"].ToString());
                 cryptoTracker.PurchasedMacd = Convert.ToDecimal(results["MACD"].ToString());
+                cryptoTracker.PurchasedMacdSignal = Convert.ToDecimal(results["MACDSignal"].ToString());
+                cryptoTracker.PurchasedMacdHistogram = Convert.ToDecimal(results["MACDHistogram"].ToString());
                 cryptoTracker.LastPrice = Convert.ToDecimal(results["lastPrice"].ToString());
                 cryptoTracker.DatePurchased = DateTime.Now;
                 cryptoTracker.DateCreated = DateTime.Now;
                 cryptoTracker.LastUpdatedBy = 1;
-                ctx.CryptoTracker.Add(cryptoTracker);
+                ctx.CryptoTracker2.Add(cryptoTracker);
                 ctx.Entry(cryptoTracker).State = Microsoft.EntityFrameworkCore.EntityState.Added;
             }
             try

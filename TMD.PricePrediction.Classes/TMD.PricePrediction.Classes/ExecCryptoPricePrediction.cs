@@ -22,7 +22,7 @@ namespace TMD.PricePrediction.Classes
         TmdContext? ctx = null;
         List<BuySellCommodity> BuySellCryptoList;
         RulesEngine? settings = null;
-        List<CryptoTracker> cryptoTracker = null;
+        List<CryptoTracker2> cryptoTracker = null;
         List<PublicProduct> products = null;
         Helper? helper = null;
         public ExecCryptoPricePrediction(ILogger logger, CoinBaseSettings settings, IHttpClientFactory httpClientFactory) {
@@ -74,8 +74,12 @@ namespace TMD.PricePrediction.Classes
             List<PortfolioBreakdown> portfolios = services.GetPortfolios();
             helper.Log(_logger, LogLevel.Information, $"Get account info");
 
+            //CHecked for queued crypto adn see if direction is the same
+            helper.Log(_logger, LogLevel.Information, $"Check for queued crypto");
+            CheckforQueuedCrypto(); 
+
             //Get Crypto already in trade being tracked.
-            cryptoTracker = ctx.CryptoTracker.Where(x => x.PriceSold == null && x.DateSold == null && (x.BuyStatus.ToLower() == "filled" /*|| x.BuyStatus.ToLower() == "open" || x.BuyStatus.ToLower() == "pending"*/)).ToList();
+            cryptoTracker = ctx.CryptoTracker2.Where(x => x.PriceSold == null && x.DateSold == null && (x.BuyStatus.ToLower() == "filled" /*|| x.BuyStatus.ToLower() == "open" || x.BuyStatus.ToLower() == "pending"*/)).ToList();
             var cryptoTrackerList = cryptoTracker.Select(y => y.Coin);
             helper.Log(_logger, LogLevel.Information, $"Get exiting Crypto tracker");
 
@@ -95,7 +99,7 @@ namespace TMD.PricePrediction.Classes
                 helper.Log(_logger, LogLevel.Information, $"Get crypto list to trade");
 
                 //Crypto sold/brought to cover in the last 2(4) hrs
-                var CryptoHold24Hr = ctx.CryptoTracker.ToList().Where(x => x.PriceSold != null && x.DateSold != null && Math.Abs((x.DateSold - helper.easternTime).Value.TotalHours) < 24).ToList().Select(y => new { Coin = y.Coin, DateSold = y.DateSold, DateUpdated = y.DateUpdated }).ToList();
+                var CryptoHold24Hr = ctx.CryptoTracker2.ToList().Where(x => x.PriceSold != null && x.DateSold != null && Math.Abs((x.DateSold - helper.easternTime).Value.TotalHours) < 24).ToList().Select(y => new { Coin = y.Coin, DateSold = y.DateSold, DateUpdated = y.DateUpdated }).ToList();
                 //var CryptoHold12Hr = ctx.CryptoTracker.ToList().Where(x => x.PriceSold != null && x.DateSold != null && Math.Abs((x.DateSold - DateTime.Now).Value.TotalHours) < 12).ToList().Select(y => new { Coin = y.Coin, DateSold = y.DateSold, DateUpdated = y.DateUpdated }).ToList();
                 //var CryptoHold2Hr = ctx.CryptoTracker.ToList().Where(x => x.PriceSold != null && x.DateSold != null && Math.Abs((x.DateSold - DateTime.Now).Value.TotalHours) < 2).ToList().Select(y => new { Coin = y.Coin, DateSold = y.DateSold }).ToList();
                 //var CryptoHold2Hr = ctx.CryptoTracker.ToList().Where(x => x.PriceSold != null && x.DateSold != null && Math.Abs((x.DateSold - DateTime.Now).Value.TotalHours) < 2).ToList().Select(y => new { Coin = y.Coin, DateSold = y.DateSold }).ToList();
@@ -269,7 +273,7 @@ namespace TMD.PricePrediction.Classes
         void UpdatePrices()
         {
             //Re-Get crypto already in trade being tracked.
-            cryptoTracker = ctx.CryptoTracker.Where(x => x.PriceSold == null && x.DateSold == null && x.BuyStatus == "Filled").ToList();
+            cryptoTracker = ctx.CryptoTracker2.Where(x => x.PriceSold == null && x.DateSold == null && x.BuyStatus == "Filled").ToList();
             //Loop through current crypto and evaluate
             helper.Log(_logger, LogLevel.Information, $"Checking current brought/shorted crypto");
             foreach (var coin in cryptoTracker)
@@ -298,7 +302,30 @@ namespace TMD.PricePrediction.Classes
                     AnalyiseOwnedCrypto(st, results, products);
             }
         }
-        bool BuySellCrypto(CryptoTracker cryptoTracker, dynamic order, TradeDirection direction, decimal amount, CoinBaseService service, List<PublicProduct> publicProducts, bool sellShort)
+        void QueueCryptotoBuy(/*CryptoTracker2 cryptoTracker,*/ dynamic order, TradeDirection direction, decimal amount)
+        {
+            SaveCryptoTracker(null, direction, amount, order, null, "QUEUED"/*, false*/);
+        }
+        void CheckforQueuedCrypto()
+        {
+            int? longCnt = 0;
+            int? shortCnt = 0;
+            var queuedCrypto = ctx.CryptoTracker2.Where(x => x.BuyStatus == "QUEUED").ToList();
+             foreach (var crypto in queuedCrypto)
+            {
+                JsonObject? results = services.GetQuote(crypto.Coin);
+                helper.CalculatePoints(results, false, true, ref shortCnt, ref longCnt);
+                if (longCnt >= settings.CryptoLongCount || shortCnt >= settings.StockShortCount)
+                {
+                    BuySellCrypto(crypto, results,(TradeDirection)crypto.TradeDirection, crypto.Amount ?? 0m, services, products, false/*, true*/);
+                }
+                else
+                {
+                    SaveCryptoTracker(crypto, (TradeDirection)crypto.TradeDirection, crypto.Amount ?? 0m, results, null, "CANCEL"/*, true*/);
+                }
+            }
+        }
+        bool BuySellCrypto(CryptoTracker2 cryptoTracker, dynamic order, TradeDirection direction, decimal amount, CoinBaseService service, List<PublicProduct> publicProducts, bool sellShort/*, bool IsUpdate*/)
         {
             string symbol = (order["Symbol"].ToString().Substring((order["Symbol"].ToString().Length - 1), 1) == "C") ? order["Symbol"].ToString().Substring(0, (order["Symbol"].ToString().Length - 1)) : order["Symbol"].ToString();
             PublicProduct? product = publicProducts.Where(x => x.DisplayName == symbol).FirstOrDefault();
@@ -367,56 +394,95 @@ namespace TMD.PricePrediction.Classes
             }
 
             if (output != null && (output.Status.ToLower() == "filled" || output.Status.ToLower() == "open" || output.Status.ToLower() == "pending"))
-                SaveCryptoTracker(cryptoTracker, direction, amount, order, output);
-                //SaveCryptoTracker(cryptoTracker, direction, (direction == TradeDirection.SELL) ? Convert.ToDecimal(output.TotalValueAfterFees) : amount, order, output);
+                SaveCryptoTracker(cryptoTracker, direction, amount, order, output, (direction == TradeDirection.BUY) ? "FILLED" : null/*, IsUpdate*/);
             return true;
         }
-        bool SaveCryptoTracker(CryptoTracker cryptoTracker, TradeDirection direction, decimal currentBalance, dynamic results, Coinbase.AdvancedTrade.Models.Order order)
+        bool SaveCryptoTracker(CryptoTracker2 cryptoTracker, TradeDirection direction, decimal currentBalance, dynamic results, Coinbase.AdvancedTrade.Models.Order order, string buyStatus/*, bool isUpdate*/)
         {
+            bool isNew = false;
             if (cryptoTracker != null && (direction == TradeDirection.SELL || direction == TradeDirection.BUY_TO_COVER))
             {
-                cryptoTracker.PriceSold = Convert.ToDecimal(results["lastPrice"].ToString());
-                cryptoTracker.LastPrice = Convert.ToDecimal(results["lastPrice"].ToString());
                 cryptoTracker.SoldRsi = Convert.ToDecimal(results["RSI"].ToString());
-                //cryptoTracker.SoldSma200 = Convert.ToDecimal(results["SMA30"].ToString());
-                //cryptoTracker.SoldEma200 = Convert.ToDecimal(results["EMA30"].ToString());
-                //cryptoTracker.SoldVwap = Convert.ToDecimal(results["VWAP"].ToString());
                 cryptoTracker.SoldEma9 = Convert.ToDecimal(results["EMA9"].ToString());
                 cryptoTracker.SoldEma12 = Convert.ToDecimal(results["EMA12"].ToString());
                 cryptoTracker.SoldEma26 = Convert.ToDecimal(results["EMA26"].ToString());
+                cryptoTracker.SoldEma3 = Convert.ToDecimal(results["EMA3"].ToString());
+                cryptoTracker.SoldEma10 = Convert.ToDecimal(results["EMA10"].ToString());
+                cryptoTracker.SoldEma16 = Convert.ToDecimal(results["EMA16"].ToString());
+                cryptoTracker.SoldEma5 = Convert.ToDecimal(results["EMA5"].ToString());
+                cryptoTracker.SoldEma8 = Convert.ToDecimal(results["EMA8"].ToString());
+                cryptoTracker.SoldEma13 = Convert.ToDecimal(results["EMA13"].ToString());
+                cryptoTracker.SoldSma9 = Convert.ToDecimal(results["SMA9"].ToString());
+                cryptoTracker.SoldSma12 = Convert.ToDecimal(results["SMA12"].ToString());
+                cryptoTracker.SoldSma26 = Convert.ToDecimal(results["SMA26"].ToString());
+                cryptoTracker.SoldSma3 = Convert.ToDecimal(results["SMA3"].ToString());
+                cryptoTracker.SoldSma10 = Convert.ToDecimal(results["SMA10"].ToString());
+                cryptoTracker.SoldSma16 = Convert.ToDecimal(results["SMA16"].ToString());
+                cryptoTracker.SoldSma5 = Convert.ToDecimal(results["SMA5"].ToString());
+                cryptoTracker.SoldSma8 = Convert.ToDecimal(results["SMA8"].ToString());
+                cryptoTracker.SoldSma13 = Convert.ToDecimal(results["SMA13"].ToString());
                 cryptoTracker.SoldMacd = Convert.ToDecimal(results["MACD"].ToString());
-                cryptoTracker.CurrentBalance = /*(direction == TradeDirection.SELL) ? cryptoTracker.CurrentBalance :*/ currentBalance;
-                cryptoTracker.SellOrderId = Guid.Parse(order.OrderId);
-                cryptoTracker.SellStatus = order.Status;
+                cryptoTracker.SoldMacdSignal = Convert.ToDecimal(results["MACDSignal"].ToString());
+                cryptoTracker.SoldMacdHistogram = Convert.ToDecimal(results["MACDHistogram"].ToString());
+                cryptoTracker.CurrentBalance = /*(direction == TradeDirection.SELL) ? cryptoTracker.CurrentBalance :*/ currentBalance;                
+                cryptoTracker.SellOrderId = (order != null) ? Guid.Parse(order?.OrderId): null;
+                cryptoTracker.SellStatus = (order != null) ? order.Status: null;
                 cryptoTracker.DateSold = helper.easternTime;
                 cryptoTracker.DateUpdated = helper.easternTime;
-                ctx.CryptoTracker.Attach(cryptoTracker);
+                ctx.CryptoTracker2.Attach(cryptoTracker);
                 ctx.Entry(cryptoTracker).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
             }
             else
             {
-                cryptoTracker = new CryptoTracker();
+                if (cryptoTracker == null)
+                {
+                    cryptoTracker = new CryptoTracker2();
+                    isNew = true;
+                }                    
                 cryptoTracker.Coin = results["Symbol"].ToString();
-                cryptoTracker.BuyOrderId = Guid.Parse(order.OrderId);
-                cryptoTracker.BuyStatus = order.Status;
+                cryptoTracker.BuyOrderId = (order != null) ? Guid.Parse((order?.OrderId ?? null)): null;
+                cryptoTracker.BuyStatus = (order != null) ? order.Status: buyStatus;
                 cryptoTracker.Name = results["Name"].ToString();
                 cryptoTracker.TradeDirection = (int)direction;
                 cryptoTracker.PricePurchased = Convert.ToDecimal(results["lastPrice"].ToString());
                 cryptoTracker.Amount = currentBalance;
                 cryptoTracker.PurchasedRsi = Convert.ToDecimal(results["RSI"].ToString());
-                //cryptoTracker.PurchasedSma200 = Convert.ToDecimal(results["SMA30"].ToString());
-                //cryptoTracker.PurchasedEma200 = Convert.ToDecimal(results["EMA30"].ToString());
-                //cryptoTracker.PurchasedVwap = Convert.ToDecimal(results["VWAP"].ToString());
                 cryptoTracker.PurchasedEma9 = Convert.ToDecimal(results["EMA9"].ToString());
                 cryptoTracker.PurchasedEma12 = Convert.ToDecimal(results["EMA12"].ToString());
                 cryptoTracker.PurchasedEma26 = Convert.ToDecimal(results["EMA26"].ToString());
+                cryptoTracker.PurchasedEma3 = Convert.ToDecimal(results["EMA3"].ToString());
+                cryptoTracker.PurchasedEma10 = Convert.ToDecimal(results["EMA10"].ToString());
+                cryptoTracker.PurchasedEma16 = Convert.ToDecimal(results["EMA16"].ToString());
+                cryptoTracker.PurchasedEma5 = Convert.ToDecimal(results["EMA5"].ToString());
+                cryptoTracker.PurchasedEma8 = Convert.ToDecimal(results["EMA8"].ToString());
+                cryptoTracker.PurchasedEma13 = Convert.ToDecimal(results["EMA13"].ToString());
+                cryptoTracker.PurchasedSma9 = Convert.ToDecimal(results["SMA9"].ToString());
+                cryptoTracker.PurchasedSma12 = Convert.ToDecimal(results["SMA12"].ToString());
+                cryptoTracker.PurchasedSma26 = Convert.ToDecimal(results["SMA26"].ToString());
+                cryptoTracker.PurchasedSma3 = Convert.ToDecimal(results["SMA3"].ToString());
+                cryptoTracker.PurchasedSma10 = Convert.ToDecimal(results["SMA10"].ToString());
+                cryptoTracker.PurchasedSma16 = Convert.ToDecimal(results["SMA16"].ToString());
+                cryptoTracker.PurchasedSma5 = Convert.ToDecimal(results["SMA5"].ToString());
+                cryptoTracker.PurchasedSma8 = Convert.ToDecimal(results["SMA8"].ToString());
+                cryptoTracker.PurchasedSma13 = Convert.ToDecimal(results["SMA13"].ToString());
                 cryptoTracker.PurchasedMacd = Convert.ToDecimal(results["MACD"].ToString());
+                cryptoTracker.PurchasedMacdSignal = Convert.ToDecimal(results["MACDSignal"].ToString());
+                cryptoTracker.PurchasedMacdHistogram = Convert.ToDecimal(results["MACDHistogram"].ToString());
                 cryptoTracker.LastPrice = Convert.ToDecimal(results["lastPrice"].ToString());
                 cryptoTracker.DatePurchased = helper.easternTime;
                 cryptoTracker.DateCreated = helper.easternTime;
                 cryptoTracker.LastUpdatedBy = 1;
-                ctx.CryptoTracker.Add(cryptoTracker);
-                ctx.Entry(cryptoTracker).State = Microsoft.EntityFrameworkCore.EntityState.Added;
+                cryptoTracker.BuyStatus = (order != null) ? order.Status:(buyStatus != null) ? buyStatus:null;
+                if(isNew) {
+                    ctx.CryptoTracker2.Add(cryptoTracker);
+                    ctx.Entry(cryptoTracker).State = Microsoft.EntityFrameworkCore.EntityState.Added;
+                } else
+                {
+                    ctx.CryptoTracker2.Attach(cryptoTracker);
+                    ctx.Entry(cryptoTracker).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+                }
+                    
+                
             }
             try
             {
@@ -430,7 +496,7 @@ namespace TMD.PricePrediction.Classes
             
             return true;
         }
-        bool UpdateLastPrice(decimal lastPrice, decimal Balance, ref CryptoTracker cryptoTracker)
+        bool UpdateLastPrice(decimal lastPrice, decimal Balance, ref CryptoTracker2 cryptoTracker)
         {
             ctx = new TmdContext();
             if((cryptoTracker.TradeDirection == (int)TradeDirection.BUY && (lastPrice > cryptoTracker.LastPrice && lastPrice > cryptoTracker.PricePurchased)) || cryptoTracker.LastPrice is null)
@@ -457,7 +523,7 @@ namespace TMD.PricePrediction.Classes
             return true;
         }
 
-        void AnalyiseOwnedCrypto(CryptoTracker crypto, JsonObject? results, List<PublicProduct> products)
+        void AnalyiseOwnedCrypto(CryptoTracker2 crypto, JsonObject? results, List<PublicProduct> products)
         {
             //calculate percent difference
             decimal percentDiffPricePurchased = 0m;
@@ -467,7 +533,7 @@ namespace TMD.PricePrediction.Classes
             decimal currentPrice = Convert.ToDecimal(results["lastPrice"].ToString());
             //var order = services.GetOrder((Guid)crypto.BuyOrderId);
             var product = products.Where(x => x.DisplayName == crypto.Coin).FirstOrDefault();
-            var account = services?.GetAccounts().Where(x => x.Currency == crypto.Coin.Split(new char[] { '-' })[0]).FirstOrDefault();
+            var account = services?.GetAccounts().Where(x => x.Currency == crypto.Coin.Split(new char[] { '-' })[0] && Convert.ToDecimal(x.AvailableBalance.Value) > 0m).FirstOrDefault();
             var currentBalance = Math.Round(Convert.ToDecimal(account?.AvailableBalance?.Value) * Convert.ToDecimal(product?.Price), 5);
             try
             {
@@ -528,7 +594,7 @@ namespace TMD.PricePrediction.Classes
                         //buy to cover
                         helper.Log(_logger, LogLevel.Information, $"crypto  {crypto.Coin}  - ( {crypto.Name}) has fallen by more then about {Math.Round(percentDiffPricePurchased, 5)}% since price purchased. Selling.");
                         UpdateLastPrice(currentPrice, currentBalance, ref crypto);
-                        BuySellCrypto(crypto, results, TradeDirection.SELL, currentBalance, services, products, false);
+                        BuySellCrypto(crypto, results, TradeDirection.SELL, currentBalance, services, products, false/*, false*/);
                     }
                     else
                     {
@@ -546,7 +612,7 @@ namespace TMD.PricePrediction.Classes
                         //sell
                         helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) has fallen by more then about {Math.Round(percentDiffLastPrice, 5)}% since last Price. Selling.");
                         UpdateLastPrice(currentPrice, currentBalance, ref crypto);
-                        BuySellCrypto(crypto, results, TradeDirection.SELL, currentBalance, services, products, false);
+                        BuySellCrypto(crypto, results, TradeDirection.SELL, currentBalance, services, products, false/*, false*/);
                     }
                     else
                     {
@@ -564,7 +630,7 @@ namespace TMD.PricePrediction.Classes
             }
         }
        
-        void CalculatePurchaseAmount(decimal? availiabletoTrade, List<PublicProduct> products, List<CryptoTracker> cryptoTracker, ref List<BuySellCommodity> BuySellCryptoList)
+        void CalculatePurchaseAmount(decimal? availiabletoTrade, List<PublicProduct> products, List<CryptoTracker2> cryptoTracker, ref List<BuySellCommodity> BuySellCryptoList)
         {
             if (cryptoTracker.Count() >= settings.MaxNumberofCryptotoBuy)
                 return;
@@ -585,7 +651,8 @@ namespace TMD.PricePrediction.Classes
                 bool sellShort = (direction == TradeDirection.SELL_SHORT) ? true : false;
                 if (perCrypto >= 5)
                 {
-                    BuySellCrypto(null, result, direction,Math.Round((decimal)perCrypto, 5), services, products, sellShort);
+                    //BuySellCrypto(null, result, direction,Math.Round((decimal)perCrypto, 5), services, products, sellShort);
+                    QueueCryptotoBuy(/*null,*/ result, direction, Math.Round((decimal)perCrypto, 5));
                     cryptoCnt++;
                 }
             }
@@ -593,7 +660,7 @@ namespace TMD.PricePrediction.Classes
 
         public void ClearOrphanWallets()
         {
-            CryptoTracker? coin = null;
+            CryptoTracker2? coin = null;
             Order output = null;
             int lengthAfterDecimal = 0;
             Guid? buyOrderId = null;
@@ -639,7 +706,7 @@ namespace TMD.PricePrediction.Classes
                 }else
                 if (valueofNonTrackedAsset > 1.5m)
                 {
-                    coin = ctx.CryptoTracker.Where(x => x.Coin == item.Currency + "-USD" && x.PriceSold == null && x.DateSold == null && (x.BuyStatus.ToLower() == "open" || x.BuyStatus.ToLower() == "pending")).FirstOrDefault();
+                    coin = ctx.CryptoTracker2.Where(x => x.Coin == item.Currency + "-USD" && x.PriceSold == null && x.DateSold == null && (x.BuyStatus.ToLower() == "open" || x.BuyStatus.ToLower() == "pending")).FirstOrDefault();
                     helper.Log(_logger, LogLevel.Information, $"{item.Currency} meets min amount checking if synced with db.");
                 }
 
@@ -672,16 +739,16 @@ namespace TMD.PricePrediction.Classes
                     crypto.DateUpdated = helper.easternTime;
                     crypto.DatePurchased = item.UpdatedAt;
                     crypto.BuyStatus = (buyOrder.Status ?? "FILLED");
-                    ctx.CryptoTracker.Attach(crypto);
+                    ctx.CryptoTracker2.Attach(crypto);
                     ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
-                    ctx.SaveChanges();
-                    ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                    //ctx.SaveChanges();
+                    //ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
                     helper.Log(_logger, LogLevel.Information, $"{item.Currency} Updating in db.");
                 }
                 else
                 {
                     helper.Log(_logger, LogLevel.Information, $"{item.Currency} not found pending. CHecking filled.");
-                    coin = ctx.CryptoTracker.Where(x => x.Coin == item.Currency + "-USD" && x.PriceSold == null && x.DateSold == null && x.BuyStatus.ToLower() == "filled").FirstOrDefault();
+                    coin = ctx.CryptoTracker2.Where(x => x.Coin == item.Currency + "-USD" && x.PriceSold == null && x.DateSold == null && x.BuyStatus.ToLower() == "filled").FirstOrDefault();
                     if (coin is not null)
                     {
                         helper.Log(_logger, LogLevel.Information, $"{item.Currency} found in db filled.");
@@ -696,19 +763,19 @@ namespace TMD.PricePrediction.Classes
                             buyOrderId = Guid.Parse(lastSell?.OrderId);
                             crypto.BuyOrderId = buyOrderId;
                             crypto.DatePurchased = item.UpdatedAt;
-                            ctx.CryptoTracker.Attach(crypto);
+                            ctx.CryptoTracker2.Attach(crypto);
                             ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
-                            ctx.SaveChanges();
-                            ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                            //ctx.SaveChanges();
+                            //ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
                         }
                         //continue; //already in tracker. Update pruchased date
                         else {
                             crypto.CurrentBalance = valueofNonTrackedAsset;
                             crypto.DatePurchased = item.UpdatedAt;
-                            ctx.CryptoTracker.Attach(crypto);
+                            ctx.CryptoTracker2.Attach(crypto);
                             ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
-                            ctx.SaveChanges();
-                            ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                            //ctx.SaveChanges();
+                            //ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
                         }
                         helper.Log(_logger, LogLevel.Information, $"{item.Currency} Updating in db.");
                     }
@@ -716,7 +783,7 @@ namespace TMD.PricePrediction.Classes
                     {
                         helper.Log(_logger, LogLevel.Information, $"{item.Currency} Not found pending or filled. Creating new.");
                         //create new crypto tracker
-                        coin = new CryptoTracker();
+                        coin = new CryptoTracker2();
                         var results = services.GetQuote(item.Currency + "-USD");
                         var lastSell = GetLastOrder(item.Currency + "-USD");
                         buyOrderId = Guid.Parse(lastSell?.OrderId);
@@ -732,12 +799,29 @@ namespace TMD.PricePrediction.Classes
                         coin.PurchasedEma9 = Convert.ToDecimal(results["EMA9"].ToString());
                         coin.PurchasedEma12 = Convert.ToDecimal(results["EMA12"].ToString());
                         coin.PurchasedEma26 = Convert.ToDecimal(results["EMA26"].ToString());
+                        coin.PurchasedEma3 = Convert.ToDecimal(results["EMA3"].ToString());
+                        coin.PurchasedEma10 = Convert.ToDecimal(results["EMA10"].ToString());
+                        coin.PurchasedEma16 = Convert.ToDecimal(results["EMA16"].ToString());
+                        coin.PurchasedEma5 = Convert.ToDecimal(results["EMA5"].ToString());
+                        coin.PurchasedEma8 = Convert.ToDecimal(results["EMA8"].ToString());
+                        coin.PurchasedEma13 = Convert.ToDecimal(results["EMA13"].ToString());
+                        coin.PurchasedSma9 = Convert.ToDecimal(results["SMA9"].ToString());
+                        coin.PurchasedSma12 = Convert.ToDecimal(results["SMA12"].ToString());
+                        coin.PurchasedSma26 = Convert.ToDecimal(results["SMA26"].ToString());
+                        coin.PurchasedSma3 = Convert.ToDecimal(results["SMA3"].ToString());
+                        coin.PurchasedSma10 = Convert.ToDecimal(results["SMA10"].ToString());
+                        coin.PurchasedSma16 = Convert.ToDecimal(results["SMA16"].ToString());
+                        coin.PurchasedSma5 = Convert.ToDecimal(results["SMA5"].ToString());
+                        coin.PurchasedSma8 = Convert.ToDecimal(results["SMA8"].ToString());
+                        coin.PurchasedSma13 = Convert.ToDecimal(results["SMA13"].ToString());
                         coin.PurchasedMacd = Convert.ToDecimal(results["MACD"].ToString());
+                        coin.PurchasedMacdSignal = Convert.ToDecimal(results["MACDSignal"].ToString());
+                        coin.PurchasedMacdHistogram = Convert.ToDecimal(results["MACDHistogram"].ToString());
                         coin.LastPrice = Convert.ToDecimal(results["lastPrice"].ToString());
                         coin.DatePurchased = item.UpdatedAt; ;
                         coin.DateCreated = helper.easternTime;
                         coin.LastUpdatedBy = 1;
-                        ctx.CryptoTracker.Add(coin);
+                        ctx.CryptoTracker2.Add(coin);
                         ctx.Entry(coin).State = Microsoft.EntityFrameworkCore.EntityState.Added;
                         helper.Log(_logger, LogLevel.Information, $"{item.Currency} Adding in db.");
                     }
@@ -753,7 +837,7 @@ namespace TMD.PricePrediction.Classes
                 }
 
             }
-            var Cryptos = ctx.CryptoTracker.Where(x => x.PriceSold == null && x.DateSold == null && x.BuyStatus == "FILLED").ToList();
+            var Cryptos = ctx.CryptoTracker2.Where(x => x.PriceSold == null && x.DateSold == null && x.BuyStatus == "FILLED").ToList();
             foreach(var crypto in Cryptos)
             {
                 var currency = crypto.Coin.Split('-');
@@ -770,11 +854,19 @@ namespace TMD.PricePrediction.Classes
                     ct.SellStatus = "FILLED";
                     ct.DateSold = helper?.easternTime;
                     ct.DateUpdated = helper?.easternTime;
-                    ctx.CryptoTracker.Attach(ct);
-                    ctx.Entry(ct).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+                    ctx.CryptoTracker2.Attach(ct);
+                    ctx.Entry(ct).State = Microsoft.EntityFrameworkCore.EntityState.Deleted;
                     ctx.SaveChanges();
                     ctx.Entry(ct).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
                 }
+                //else
+                //{
+                //    var ct = crypto;
+                //    ctx.CryptoTracker2.Attach(ct);
+                //    ctx.Entry(ct).State = Microsoft.EntityFrameworkCore.EntityState.Deleted;
+                //    ctx.SaveChanges();
+                //    ctx.Entry(ct).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                //}
             }
         }
         private Fill GetLastOrder(string ProductId)
