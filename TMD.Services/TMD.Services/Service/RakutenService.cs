@@ -110,8 +110,8 @@ namespace TMD.Services
                 {
                     _baseUrl = linkShare.GetSection("baseUrl").Value;
                     //_baseToken = linkShare.GetSection("baseToken").Value;
-                    _clientId = Environment.GetEnvironmentVariable("LinkShareClientId");
-                    _clientSecret = Environment.GetEnvironmentVariable("LinkShareClientSecret");
+                    _clientId = linkShare.GetSection("LinkShareClientId").Value;
+                    _clientSecret = linkShare.GetSection("LinkShareClientSecret").Value;
                     _userId = linkShare.GetSection("userId").Value;
                     _password = linkShare.GetSection("password").Value;
                     _sid = linkShare.GetSection("LinkShareSid").Value;
@@ -268,7 +268,7 @@ namespace TMD.Services
             string body = "grant_type=password&scope=" + _sid;
             HttpRequestMessage request = AuthenicationHelper.GetAuthenicatedRequest(HttpMethod.Post, _baseUrl + "token", headers, "application/x-www-form-urlencoded", body);
             TokenModel result = APIProxy<TokenModel>.Send(request, "", ref error, client);
-            return result;
+             return result;
         }
         //private void LoadProduct(RakutenModel products, ILog _log, ref RssModel rss, List<Category> categories, string merchantName)
         private void LoadProduct(RakutenModel products, ILogger _log, ref RssModel rss, List<Category> categories)
