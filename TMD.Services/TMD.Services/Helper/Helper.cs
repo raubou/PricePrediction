@@ -99,37 +99,37 @@ namespace TMD.PricePrediction
             //}
 
             //S&P
-            var sandp = services.GetQuote("$SPX", true, false);
-            var vix = services.GetQuote("$VIX", true, false);
+            //var sandp = services.GetQuote("$SPX", true, false);
+            //var vix = services.GetQuote("$VIX", true, false);
 
-            //DOW JONES
-            var dow = services.GetQuote("$DJI", true, false);
-            var vxd = services.GetQuote("$VXD", true, false);
+            ////DOW JONES
+            //var dow = services.GetQuote("$DJI", true, false);
+            //var vxd = services.GetQuote("$VXD", true, false);
 
-            //NASDAQ
-            var nasdaq = services.GetQuote("$NDX", true, false);
-            var vxn = services.GetQuote("$VXN", true, false);
+            ////NASDAQ
+            //var nasdaq = services.GetQuote("$NDX", true, false);
+            //var vxn = services.GetQuote("$VXN", true, false);
 
-            if (!CheckMarketIndexes(vxn) || !CheckMarketIndexes(vxd) || !CheckMarketIndexes(vix) || !CheckMarketIndexes(sandp) || !CheckMarketIndexes(dow) || !CheckMarketIndexes(nasdaq))
-            {
-                Log(_logger, LogLevel.Error, "Failed to get VIX or S&P or Dow or Nasdaq quote.");
-                return null;
-            }
-            Log(_logger, LogLevel.Information, $"S&P: {sandp["lastPrice"].ToString()}. Dow: {dow["lastPrice"].ToString()}. Nasdaq: {nasdaq["lastPrice"].ToString()}");
+            //if (!CheckMarketIndexes(vxn) || !CheckMarketIndexes(vxd) || !CheckMarketIndexes(vix) || !CheckMarketIndexes(sandp) || !CheckMarketIndexes(dow) || !CheckMarketIndexes(nasdaq))
+            //{
+            //    Log(_logger, LogLevel.Error, "Failed to get VIX or S&P or Dow or Nasdaq quote.");
+            //    return null;
+            //}
+            //Log(_logger, LogLevel.Information, $"S&P: {sandp["lastPrice"].ToString()}. Dow: {dow["lastPrice"].ToString()}. Nasdaq: {nasdaq["lastPrice"].ToString()}");
 
             //Disabling Calculate VIX and S&P points
             //CheckDowNasdaqandSandP(vix, sandp, dow, vxd, nasdaq, vxn, settings?.StockLongCount, settings?.StockShortCount, _logger, ref SandPLong, ref SandPShort, ref DOWLong, ref DOWShort, ref NASDAQLong, ref NASDAQShort);
-            Log(_logger, LogLevel.Information, $"DOW Long: {DOWLong}. S&P Long: {SandPLong}. NASDAQ Long: {NASDAQLong}");
-            Log(_logger, LogLevel.Information, $"DOW Short: {DOWShort}. S&P Short: {SandPShort}. NASDAQ Short: {NASDAQShort}");
+            //Log(_logger, LogLevel.Information, $"DOW Long: {DOWLong}. S&P Long: {SandPLong}. NASDAQ Long: {NASDAQLong}");
+            //Log(_logger, LogLevel.Information, $"DOW Short: {DOWShort}. S&P Short: {SandPShort}. NASDAQ Short: {NASDAQShort}");
 
-            if (SandPLong == 1)
-            {
-                vixsandpLongCnt = 1;
-            }
-            if (SandPShort == 1)
-            {
-                vixsandpShortCnt = 1;
-            }
+            //if (SandPLong == 1)
+            //{
+            //    vixsandpLongCnt = 1;
+            //}
+            //if (SandPShort == 1)
+            //{
+            //    vixsandpShortCnt = 1;
+            //}
             //if (DOWLong > 0 && SandPLong > 0 && NASDAQLong > 0)
             //{
             //    vixsandpLongCnt = 1;
@@ -227,7 +227,7 @@ namespace TMD.PricePrediction
                     }
                     if (Convert.ToDecimal(results["lastPrice"].ToString()) >= rulesEngine.MinStockPrice /*&& !stock.ExcludeFromAutomation*/)
                     {
-                        CalculatePoints(results, false, false, ref shortCnt, ref longCnt);
+                        CalculatePoints(results, false, true, ref shortCnt, ref longCnt);
                     }
                     else
                     {
@@ -472,75 +472,75 @@ namespace TMD.PricePrediction
             System.Threading.Thread.Sleep(150); //Sleep for 150 milliseconds to avoid throttling
         }
 
-        public void CheckDowNasdaqandSandP(JsonObject vix, JsonObject sandp, JsonObject dow, JsonObject vxd, JsonObject nasdaq, JsonObject vxn, int? longMax, int? shortMax, ILogger _logger, ref int? SandPLong, ref int? SandPShort, ref int? DOWLong, ref int? DOWShort, ref int? NASDAQLong, ref int? NASDAQShort)
-        {
-            int? shortCnt = 0;
-            int? longCnt = 0;
-            //int? longTotal = 0;
-            //int? shortTotal = 0;
+        //public void CheckDowNasdaqandSandP(JsonObject vix, JsonObject sandp, JsonObject dow, JsonObject vxd, JsonObject nasdaq, JsonObject vxn, int? longMax, int? shortMax, ILogger _logger, ref int? SandPLong, ref int? SandPShort, ref int? DOWLong, ref int? DOWShort, ref int? NASDAQLong, ref int? NASDAQShort)
+        //{
+        //    int? shortCnt = 0;
+        //    int? longCnt = 0;
+        //    //int? longTotal = 0;
+        //    //int? shortTotal = 0;
 
-            //_logger.LogInformation($"Checking VIX and S&P. VIX at {vix["lastPrice"].ToString()}. S&P at {sandp["lastPrice"].ToString()}.");
+        //    //_logger.LogInformation($"Checking VIX and S&P. VIX at {vix["lastPrice"].ToString()}. S&P at {sandp["lastPrice"].ToString()}.");
 
-            CalculatePoints(vix, false, false, ref shortCnt, ref longCnt);
+        //    CalculatePoints(vix, false, false, ref shortCnt, ref longCnt);
 
-            _logger.LogInformation($"VIX Score. Long score: {longCnt}. Short score {shortCnt}");
+        //    _logger.LogInformation($"VIX Score. Long score: {longCnt}. Short score {shortCnt}");
 
-            //Opposite for VIX
-            if (longCnt >= (longMax)) { SandPShort++; }
-            if (shortCnt >= (shortMax)) { SandPLong++; }
-            shortCnt = 0;
-            longCnt = 0;
+        //    //Opposite for VIX
+        //    if (longCnt >= (longMax)) { SandPShort++; }
+        //    if (shortCnt >= (shortMax)) { SandPLong++; }
+        //    shortCnt = 0;
+        //    longCnt = 0;
 
-            CalculatePoints(sandp, false, false, ref shortCnt, ref longCnt);
+        //    CalculatePoints(sandp, false, false, ref shortCnt, ref longCnt);
 
-            _logger.LogInformation($"S&P Score. Long score: {longCnt}. Short score {shortCnt}");
+        //    _logger.LogInformation($"S&P Score. Long score: {longCnt}. Short score {shortCnt}");
 
-            if (longCnt >= (longMax)) { SandPLong++; }
-            if (shortCnt >= (shortMax)) { SandPShort++; }
-            shortCnt = 0;
-            longCnt = 0;
+        //    if (longCnt >= (longMax)) { SandPLong++; }
+        //    if (shortCnt >= (shortMax)) { SandPShort++; }
+        //    shortCnt = 0;
+        //    longCnt = 0;
 
-            CalculatePoints(vxd, false, false, ref shortCnt, ref longCnt);
+        //    CalculatePoints(vxd, false, false, ref shortCnt, ref longCnt);
 
-            _logger.LogInformation($"VXD Score. Long score: {longCnt}. Short score {shortCnt}");
+        //    _logger.LogInformation($"VXD Score. Long score: {longCnt}. Short score {shortCnt}");
 
-            //Opposite for VXD
-            if (longCnt >= (longMax)) { DOWShort++; }
-            if (shortCnt >= (shortMax)) { DOWLong++; }
-            shortCnt = 0;
-            longCnt = 0;
+        //    //Opposite for VXD
+        //    if (longCnt >= (longMax)) { DOWShort++; }
+        //    if (shortCnt >= (shortMax)) { DOWLong++; }
+        //    shortCnt = 0;
+        //    longCnt = 0;
 
-            CalculatePoints(dow, false, false, ref shortCnt, ref longCnt);
+        //    CalculatePoints(dow, false, false, ref shortCnt, ref longCnt);
 
-            _logger.LogInformation($"DOW Score. Long score: {longCnt}. Short score {shortCnt}");
+        //    _logger.LogInformation($"DOW Score. Long score: {longCnt}. Short score {shortCnt}");
 
-            if (longCnt >= (longMax)) { DOWLong++; }
-            if (shortCnt >= (shortMax)) { DOWShort++; }
-            shortCnt = 0;
-            longCnt = 0;
+        //    if (longCnt >= (longMax)) { DOWLong++; }
+        //    if (shortCnt >= (shortMax)) { DOWShort++; }
+        //    shortCnt = 0;
+        //    longCnt = 0;
 
-            CalculatePoints(vxn, false, false, ref shortCnt, ref longCnt);
+        //    CalculatePoints(vxn, false, false, ref shortCnt, ref longCnt);
 
-            _logger.LogInformation($"VXN Score. Long score: {longCnt}. Short score {shortCnt}");
+        //    _logger.LogInformation($"VXN Score. Long score: {longCnt}. Short score {shortCnt}");
 
-            //Opposite for VXN
-            if (longCnt >= (longMax)) { NASDAQShort++; }
-            if (shortCnt >= (shortMax)) { NASDAQLong++; }
-            shortCnt = 0;
-            longCnt = 0;
+        //    //Opposite for VXN
+        //    if (longCnt >= (longMax)) { NASDAQShort++; }
+        //    if (shortCnt >= (shortMax)) { NASDAQLong++; }
+        //    shortCnt = 0;
+        //    longCnt = 0;
 
-            CalculatePoints(nasdaq, false, false, ref shortCnt, ref longCnt);
+        //    CalculatePoints(nasdaq, false, false, ref shortCnt, ref longCnt);
 
-            _logger.LogInformation($"NASDAQ Score. Long score: {longCnt}. Short score {shortCnt}");
+        //    _logger.LogInformation($"NASDAQ Score. Long score: {longCnt}. Short score {shortCnt}");
 
-            if (longCnt >= (longMax)) { NASDAQLong++; }
-            if (shortCnt >= (shortMax)) { NASDAQShort++; }
+        //    if (longCnt >= (longMax)) { NASDAQLong++; }
+        //    if (shortCnt >= (shortMax)) { NASDAQShort++; }
 
-            //vixsandpLongCnt = (longTotal > 0) ? 1 : 0;
-            //vixsandpShortCnt = (shortTotal > 0) ? 1 : 0;
+        //    //vixsandpLongCnt = (longTotal > 0) ? 1 : 0;
+        //    //vixsandpShortCnt = (shortTotal > 0) ? 1 : 0;
 
-            //_logger.LogInformation($"Score. Long total {vixsandpLongCnt}. Short total {vixsandpShortCnt}.");
-        }
+        //    //_logger.LogInformation($"Score. Long total {vixsandpLongCnt}. Short total {vixsandpShortCnt}.");
+        //}
         public bool IsNotHolidayorWeekend()
         {
             bool run = true;
@@ -1247,31 +1247,31 @@ namespace TMD.PricePrediction
             }
             return true;
         }
-        public bool ReverseStock(StockTracker stock, JsonObject? results, dynamic services)
-        {
-            //reverse stock
-            Log(_logger, LogLevel.Information, $"Attempting Reversing stock {stock.Symbol} - ({stock.Name})");
-            TradeDirection tradeDirection = (TradeDirection)stock.TradeDirection;
-            int? shortCnt = 0; int? longCnt = 0;
-            Log(_logger, LogLevel.Information, $"Checking {stock.Symbol} - ({stock.Name}) Points");
-            CalculatePoints(results, false, false, ref shortCnt, ref longCnt);
-            if ((longCnt) >= (rulesEngine.StockLongCount - 1) && tradeDirection == TradeDirection.SELL_SHORT)
-            {
-                BuySellStock(null, results, TradeDirection.BUY, stock.Quantity, true, services);
-                Log(_logger, LogLevel.Information, $"Reversing stock {stock.Symbol} - ({stock.Name}). Long score: {longCnt}. Short score {shortCnt}.");
-            }
-            else
-            if ((shortCnt >= rulesEngine.StockShortCount - 1) && tradeDirection == TradeDirection.BUY)
-            {
-                BuySellStock(null, results, TradeDirection.SELL_SHORT, stock.Quantity, true, services);
-                Log(_logger, LogLevel.Information, $"Reversing stock {stock.Symbol} - ({stock.Name}). Long score: {longCnt}. Short score {shortCnt}.");
-            }
-            else
-            {
-                Log(_logger, LogLevel.Information, $"Not Reversing stock {stock.Symbol} - ({stock.Name}) as it does not meet the points criteria. Long score: {longCnt}. Short score {shortCnt}.");
-            }
-            return true;
-        }
+        //public bool ReverseStock(StockTracker stock, JsonObject? results, dynamic services)
+        //{
+        //    //reverse stock
+        //    Log(_logger, LogLevel.Information, $"Attempting Reversing stock {stock.Symbol} - ({stock.Name})");
+        //    TradeDirection tradeDirection = (TradeDirection)stock.TradeDirection;
+        //    int? shortCnt = 0; int? longCnt = 0;
+        //    Log(_logger, LogLevel.Information, $"Checking {stock.Symbol} - ({stock.Name}) Points");
+        //    CalculatePoints(results, false, false, ref shortCnt, ref longCnt);
+        //    if ((longCnt) >= (rulesEngine.StockLongCount - 1) && tradeDirection == TradeDirection.SELL_SHORT)
+        //    {
+        //        BuySellStock(null, results, TradeDirection.BUY, stock.Quantity, true, services);
+        //        Log(_logger, LogLevel.Information, $"Reversing stock {stock.Symbol} - ({stock.Name}). Long score: {longCnt}. Short score {shortCnt}.");
+        //    }
+        //    else
+        //    if ((shortCnt >= rulesEngine.StockShortCount - 1) && tradeDirection == TradeDirection.BUY)
+        //    {
+        //        BuySellStock(null, results, TradeDirection.SELL_SHORT, stock.Quantity, true, services);
+        //        Log(_logger, LogLevel.Information, $"Reversing stock {stock.Symbol} - ({stock.Name}). Long score: {longCnt}. Short score {shortCnt}.");
+        //    }
+        //    else
+        //    {
+        //        Log(_logger, LogLevel.Information, $"Not Reversing stock {stock.Symbol} - ({stock.Name}) as it does not meet the points criteria. Long score: {longCnt}. Short score {shortCnt}.");
+        //    }
+        //    return true;
+        //}
         public void Log(ILogger? log, LogLevel logLevel, string message)
         {
             log.Log(logLevel, message);

@@ -60,10 +60,14 @@ namespace TMD.PricePrediction.Classes
             helper.Log(_logger, LogLevel.Information, $"Clearing Ophan wallet or crypto tracker");
             //update order status for filled and cancelled orders
             //CheckOrderStatus();
-            helper.Log(_logger, LogLevel.Information, $"Update order status for filled and cancelled orders");
+            //helper.Log(_logger, LogLevel.Information, $"Update order status for filled and cancelled orders");
 
             //Get Products
             products = services.GetProducts();
+
+            //Unload Aging Stocks
+            helper.Log(_logger, LogLevel.Information, $"Unload aging stock");
+            UnloadAgingStocks();
 
             //Update Prices
             helper.Log(_logger, LogLevel.Information, $"Updating Latest Prices on Tracker");
@@ -268,6 +272,46 @@ namespace TMD.PricePrediction.Classes
             else
             {
                 helper.Log(_logger, LogLevel.Error, $"Cash and margin balance below threshold ${totalAvailiableforLongTrade}");
+            }
+        }
+        public void UnloadAgingStocks()
+        {
+            // Get the TimeZoneInfo object for Eastern Standard Time
+            // The identifier "Eastern Standard Time" is commonly used on Windows systems.
+            // On Linux/macOS, you might need "America/New_York".
+            TimeZoneInfo? easternTimeZone;
+            try
+            {
+                easternTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                // Fallback for non-Windows systems or if the ID is different
+                easternTimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
+            }
+            // Get the current UTC time
+            DateTime utcNow = DateTime.UtcNow;
+
+            // Convert the UTC time to Eastern Time
+            DateTime easternTime = TimeZoneInfo.ConvertTimeFromUtc(utcNow, easternTimeZone);
+
+            var agingcryptos = ctx?.CryptoTracker2?.ToList()?.Where(x => x.PriceSold == null && x.DateSold == null && x.BuyStatus == "FILLED"
+            && Math.Abs((x.DateCreated - easternTime).Value.TotalDays) > 10).ToList();
+            foreach (var crypto in agingcryptos)
+            {
+                var results = services.GetQuote(crypto.Coin);
+                //Platform tradePlatform = (Platform)crypto.TradePlatform;
+                TradeDirection currentTradeDirection = (TradeDirection)Enum.Parse(typeof(TradeDirection), crypto.TradeDirection.ToString(), true);
+                TradeDirection tradeDirection = (currentTradeDirection == TradeDirection.BUY) ? TradeDirection.SELL : TradeDirection.BUY_TO_COVER;
+                //switch (tradePlatform)
+                //{
+                //    case Platform.CharlesSchwab:
+                BuySellCrypto(crypto, results, (TradeDirection)crypto.TradeDirection, crypto.Amount ?? 0m, services, products, false/*, true*/);
+                //        break;
+                //    case Platform.ETrade:
+                //        BuySellStock(stock, results, tradeDirection, stock.Quantity, true, services2);
+                //        break;
+                //}
             }
         }
         void UpdatePrices()
@@ -605,7 +649,7 @@ namespace TMD.PricePrediction.Classes
                 }
                 else
                 //if (currentPrice < lastPrice) // try to kill the loss by selling only if above amount balance
-                if (currentPrice < lastPrice && currentBalance > (crypto.Amount * 1.075m))
+                if (currentPrice < lastPrice && currentBalance > (crypto.Amount * 1.085m))
                 {
                     if (percentDiffLastPrice > settings.StopLossPercentLastPriceCrypto)
                     {
