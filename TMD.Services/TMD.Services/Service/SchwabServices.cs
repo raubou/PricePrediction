@@ -532,7 +532,7 @@ namespace TMDInvestments.Services
             headers = new Dictionary<string, object>();
             headers.Add("accept", "application/json");
             IndicesCalculator indicesCalculator = new IndicesCalculator(_logger, _settings, _polygon, _factory);
-            indicesCalculatorV2 = new IndicesCalculatorV2(_logger, _settings, _factory, false, true);
+            indicesCalculatorV2 = new IndicesCalculatorV2(_logger, _settings, _factory, true, false);
             client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
             try
             {

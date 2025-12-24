@@ -227,7 +227,7 @@ namespace TMD.PricePrediction
                     }
                     if (Convert.ToDecimal(results["lastPrice"].ToString()) >= rulesEngine.MinStockPrice /*&& !stock.ExcludeFromAutomation*/)
                     {
-                        CalculatePoints(results, false, true, ref shortCnt, ref longCnt);
+                        CalculatePoints(results, true, false, ref shortCnt, ref longCnt);
                     }
                     else
                     {
@@ -592,6 +592,10 @@ namespace TMD.PricePrediction
 
             //Christmas
             if (runTime.Month == 12 && runTime.Day == 25)
+                run = false;
+
+            //Christmas eve after 1pm
+            if (runTime.Month == 12 && runTime.Day == 25 && runTime.TimeOfDay >= new TimeSpan(13, 00, 0))
                 run = false;
 
             //After Hours, Saturday and Sunday
