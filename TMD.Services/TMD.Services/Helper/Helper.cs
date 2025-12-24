@@ -595,7 +595,7 @@ namespace TMD.PricePrediction
                 run = false;
 
             //Christmas eve after 1pm
-            if (runTime.Month == 12 && runTime.Day == 25 && runTime.TimeOfDay >= new TimeSpan(13, 00, 0))
+            if (runTime.Month == 12 && runTime.Day == 24 && runTime.TimeOfDay >= new TimeSpan(13, 00, 0))
                 run = false;
 
             //After Hours, Saturday and Sunday
