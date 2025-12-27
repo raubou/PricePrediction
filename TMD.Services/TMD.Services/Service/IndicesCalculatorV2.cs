@@ -16,34 +16,34 @@ namespace TMD.Services.Service
         IHttpClientFactory? _factory = null;
         SchwabServices? services;
         CoinBaseService? coinbaseService;
-        int fastPeriod = 12; int slowPeriod = 26; int signalPeriod = 9;
-        public IndicesCalculatorV2(ILogger log, SchwabSettings settings, IHttpClientFactory factory, bool use31016 = false, bool use5138 = false)
+        //int fastPeriod = 12; int slowPeriod = 26; int signalPeriod = 9;
+        public IndicesCalculatorV2(ILogger log, SchwabSettings settings, IHttpClientFactory factory/*, bool use31016 = false, bool use5138 = false*/)
         {
             _log = log;
             _settings = settings;
             _factory = factory;
-            if (use31016)
-            {
-                fastPeriod = 3; slowPeriod = 10; signalPeriod = 16;
-            }
-            else if (use5138)
-            {
-                fastPeriod = 5; slowPeriod = 13; signalPeriod = 8;
-            }
+            //if (use31016)
+            //{
+            //    fastPeriod = 3; slowPeriod = 10; signalPeriod = 16;
+            //}
+            //else if (use5138)
+            //{
+            //    fastPeriod = 5; slowPeriod = 13; signalPeriod = 8;
+            //}
         }
-        public IndicesCalculatorV2(ILogger log, CoinBaseSettings coinbaseSettings, IHttpClientFactory factory, bool use31016 = false, bool use5138 = false)
+        public IndicesCalculatorV2(ILogger log, CoinBaseSettings coinbaseSettings, IHttpClientFactory factory/*, bool use31016 = false, bool use5138 = false*/)
         {
             _log = log;
             _coinbaseSettings = coinbaseSettings;
             _factory = factory;
-            if (use31016)
-            {
-                fastPeriod = 3; slowPeriod = 10; signalPeriod = 16;
-            }
-            else if (use5138)
-            {
-                fastPeriod = 5; slowPeriod = 13; signalPeriod = 8;
-            }
+            //if (use31016)
+            //{
+            //    fastPeriod = 3; slowPeriod = 10; signalPeriod = 16;
+            //}
+            //else if (use5138)
+            //{
+            //    fastPeriod = 5; slowPeriod = 13; signalPeriod = 8;
+            //}
         }
         public dynamic CalculateV2(string symbol, JsonElement quote)
         {
@@ -148,18 +148,34 @@ namespace TMD.Services.Service
             decimal? EMA13 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor13) + (SMA13 * (1 - smoothingFactor13)) : 0m;
 
             var closes = candle90.OrderBy(x => x.datetime)/*.Take(52)*/.Select(y => new MACDClosesDateTime { Price = y.close, Datetime = DateTimeOffset.FromUnixTimeMilliseconds(y.datetime).DateTime }).ToList();
+
+            int fastPeriod = 12; int slowPeriod = 26; int signalPeriod = 9;
             var macdCalculator = new MacdCalculator(fastPeriod, slowPeriod, signalPeriod);
             List<MacdResult> macdCalculatorResults = macdCalculator.CalculateMacd(closes);
+
+            fastPeriod = 3; slowPeriod = 10; signalPeriod = 16;
+            var macdCalculator2 = new MacdCalculator(fastPeriod, slowPeriod, signalPeriod);
+            List<MacdResult> macdCalculatorResults2 = macdCalculator.CalculateMacd(closes);
+
+            fastPeriod = 5; slowPeriod = 13; signalPeriod = 8;
+            var macdCalculator3 = new MacdCalculator(fastPeriod, slowPeriod, signalPeriod);
+            List<MacdResult> macdCalculatorResults3 = macdCalculator.CalculateMacd(closes);
 
             decimal? MACDLine = (macdCalculatorResults?.LastOrDefault()?.MacdLine ?? 0);
             decimal? MACDSignal = (macdCalculatorResults?.LastOrDefault()?.SignalLine ?? 0);
             decimal? MACDHistogram = (macdCalculatorResults?.LastOrDefault()?.Histogram ?? 0);
-            decimal? MACDLine2 = EMA3 - EMA10;
-            decimal? MACDSignal2 = EMA3 - EMA16;
-            decimal? MACDHistogram2 = MACDLine2 - MACDSignal2;
-            decimal? MACDLine3 = EMA5 - EMA8;
-            decimal? MACDSignal3 = EMA5 - EMA13;
-            decimal? MACDHistogram3 = MACDLine3 - MACDSignal3;
+            decimal? MACDLine2 = (macdCalculatorResults2?.LastOrDefault()?.MacdLine ?? 0);
+            decimal? MACDSignal2 = (macdCalculatorResults2?.LastOrDefault()?.SignalLine ?? 0);
+            decimal? MACDHistogram2 = (macdCalculatorResults2?.LastOrDefault()?.Histogram ?? 0);
+            decimal? MACDLine3 = (macdCalculatorResults3?.LastOrDefault()?.MacdLine ?? 0);
+            decimal? MACDSignal3 = (macdCalculatorResults3?.LastOrDefault()?.SignalLine ?? 0);
+            decimal? MACDHistogram3 = (macdCalculatorResults3?.LastOrDefault()?.Histogram ?? 0);
+            //decimal? MACDLine2 = EMA3 - EMA10;
+            //decimal? MACDSignal2 = EMA3 - EMA16;
+            //decimal? MACDHistogram2 = MACDLine2 - MACDSignal2;
+            //decimal? MACDLine3 = EMA5 - EMA8;
+            //decimal? MACDSignal3 = EMA5 - EMA13;
+            //decimal? MACDHistogram3 = MACDLine3 - MACDSignal3;
 
             List<decimal?> RSIList = candle90.OrderByDescending(x => x.datetime).Take(15).Select(c => (decimal?)c.close).ToList();
             List<decimal?> gains = new List<decimal?>();
@@ -316,18 +332,34 @@ namespace TMD.Services.Service
             decimal? EMA13 = (candle90.Count > 0) ? (Convert.ToDecimal(candle90.OrderByDescending(x => x.StartDate).ToList()[0].Close) * smoothingFactor13) + (SMA13 * (1 - smoothingFactor13)) : 0m;
 
             var closes = candle90.OrderBy(x => x.StartDate)/*.Take(52)*/.Select(y => new MACDClosesDateTime { Price = Convert.ToDecimal(y.Close), Datetime = y.StartDate }).ToList();
+
+            int fastPeriod = 12; int slowPeriod = 26; int signalPeriod = 9;
             var macdCalculator = new MacdCalculator(fastPeriod, slowPeriod, signalPeriod);
             List<MacdResult> macdCalculatorResults = macdCalculator.CalculateMacd(closes);
+
+            fastPeriod = 3; slowPeriod = 10; signalPeriod = 16;
+            var macdCalculator2 = new MacdCalculator(fastPeriod, slowPeriod, signalPeriod);
+            List<MacdResult> macdCalculatorResults2 = macdCalculator.CalculateMacd(closes);
+
+            fastPeriod = 5; slowPeriod = 13; signalPeriod = 8;
+            var macdCalculator3 = new MacdCalculator(fastPeriod, slowPeriod, signalPeriod);
+            List<MacdResult> macdCalculatorResults3 = macdCalculator.CalculateMacd(closes);
 
             decimal? MACDLine = (macdCalculatorResults?.LastOrDefault()?.MacdLine ?? 0);
             decimal? MACDSignal = (macdCalculatorResults?.LastOrDefault()?.SignalLine ?? 0);
             decimal? MACDHistogram = (macdCalculatorResults?.LastOrDefault()?.Histogram ?? 0);
-            decimal? MACDLine2 = EMA3 - EMA10;
-            decimal? MACDSignal2 = EMA3 - EMA16;
-            decimal? MACDHistogram2 = MACDLine2 - MACDSignal2;
-            decimal? MACDLine3 = EMA5 - EMA8;
-            decimal? MACDSignal3 = EMA5 - EMA13;
-            decimal? MACDHistogram3 = MACDLine3 - MACDSignal3;
+            decimal? MACDLine2 = (macdCalculatorResults2?.LastOrDefault()?.MacdLine ?? 0);
+            decimal? MACDSignal2 = (macdCalculatorResults2?.LastOrDefault()?.SignalLine ?? 0);
+            decimal? MACDHistogram2 = (macdCalculatorResults2?.LastOrDefault()?.Histogram ?? 0);
+            decimal? MACDLine3 = (macdCalculatorResults3?.LastOrDefault()?.MacdLine ?? 0);
+            decimal? MACDSignal3 = (macdCalculatorResults3?.LastOrDefault()?.SignalLine ?? 0);
+            decimal? MACDHistogram3 = (macdCalculatorResults3?.LastOrDefault()?.Histogram ?? 0);
+            //decimal? MACDLine2 = EMA3 - EMA10;
+            //decimal? MACDSignal2 = EMA3 - EMA16;
+            //decimal? MACDHistogram2 = MACDLine2 - MACDSignal2;
+            //decimal? MACDLine3 = EMA5 - EMA8;
+            //decimal? MACDSignal3 = EMA5 - EMA13;
+            //decimal? MACDHistogram3 = MACDLine3 - MACDSignal3;
 
             List<decimal?> RSIList = candle90.OrderByDescending(x => x.StartDate).Take(15).Select(c => (decimal?)Convert.ToDecimal(c.Close)).ToList();
             List<decimal?> gains = new List<decimal?>();

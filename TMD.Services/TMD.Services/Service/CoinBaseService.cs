@@ -87,7 +87,7 @@ namespace TMD.Services
         {
             //IndicesCalculator indicesCalculator = new IndicesCalculator(_logger, _settings, _factory);
             //IndicesCalculatorV2 indicesCalculator = new IndicesCalculatorV2(_logger, _settings, _factory);
-            IndicesCalculatorV2 indicesCalculator = new IndicesCalculatorV2(_logger, _settings, _factory, false, true);
+            IndicesCalculatorV2 indicesCalculator = new IndicesCalculatorV2(_logger, _settings, _factory/*, false, true*/);
             var product = _coinbasePublicClient.Public.GetPublicProductAsync(productId).Result;
             //if(useV2)
                 var results = indicesCalculator.CalculateV2(product);

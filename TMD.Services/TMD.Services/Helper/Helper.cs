@@ -227,7 +227,7 @@ namespace TMD.PricePrediction
                     }
                     if (Convert.ToDecimal(results["lastPrice"].ToString()) >= rulesEngine.MinStockPrice /*&& !stock.ExcludeFromAutomation*/)
                     {
-                        CalculatePoints(results, true, false, ref shortCnt, ref longCnt);
+                        CalculatePoints(results, /*true, false,*/ ref shortCnt, ref longCnt);
                     }
                     else
                     {
@@ -281,7 +281,7 @@ namespace TMD.PricePrediction
             }
             return areValid;
         }
-        public void CalculatePoints(JsonObject? results, bool use31016, bool use5138, ref int? shortCnt, ref int? longCnt)
+        public void CalculatePoints(JsonObject? results/**, bool use31016, bool use5138,*/, ref int? shortCnt, ref int? longCnt)
         {
             shortCnt = 0;
             longCnt = 0;
@@ -292,11 +292,11 @@ namespace TMD.PricePrediction
             {
                 if (Convert.ToDecimal(results["RSI"].ToString()) >= 80)
                 {
-                    shortCnt = shortCnt + 2;
+                    shortCnt = shortCnt + 3;
                 }
                 if (Convert.ToDecimal(results["RSI"].ToString()) <= 20)
                 {
-                    longCnt = longCnt + 2;
+                    longCnt = longCnt + 3;
                 }
             }
 
@@ -333,8 +333,8 @@ namespace TMD.PricePrediction
             //if (Convert.ToDecimal(results["WMA30"].ToString()) >= Convert.ToDecimal(results["WMA26"].ToString())) { shortCnt++; }
             //if (Convert.ToDecimal(results["WMA30"].ToString()) <= Convert.ToDecimal(results["WMA26"].ToString())) { longCnt++; }
 
-            if (use31016)
-            {
+            //if (use31016)
+            //{
                 //// 3, 10, 16 STRATEGY
                 if (Convert.ToDecimal(results["EMA3"].ToString()) > Convert.ToDecimal(results["EMA10"].ToString()))
                 { longCnt = longCnt + 3; }
@@ -357,9 +357,9 @@ namespace TMD.PricePrediction
                 if (Convert.ToDecimal(results["SMA3"].ToString()) < Convert.ToDecimal(results["SMA16"].ToString()) &&
                     Convert.ToDecimal(results["SMA10"].ToString()) < Convert.ToDecimal(results["SMA16"].ToString()))
                 { shortCnt = shortCnt + 3; }
-            }
-            else if (use5138)
-            {
+            //}
+            //else if (use5138)
+            //{
                 //// 5, 13, 13 STRATEGY
                 if (Convert.ToDecimal(results["EMA5"].ToString()) > Convert.ToDecimal(results["EMA8"].ToString()))
                 { longCnt = longCnt + 3; }
@@ -381,9 +381,9 @@ namespace TMD.PricePrediction
                 if (Convert.ToDecimal(results["SMA5"].ToString()) < Convert.ToDecimal(results["SMA13"].ToString()) &&
                     Convert.ToDecimal(results["SMA8"].ToString()) < Convert.ToDecimal(results["SMA13"].ToString()))
                 { shortCnt = shortCnt + 3; }
-            }
-            else
-            {
+            //}
+            //else
+            //{
                 //// 9, 12, 26 STRATEGY
                 if (Convert.ToDecimal(results["EMA9"].ToString()) > Convert.ToDecimal(results["EMA12"].ToString()))
                 { longCnt = longCnt + 3; }
@@ -401,7 +401,7 @@ namespace TMD.PricePrediction
                 { shortCnt = shortCnt + 3; }
                 if (Convert.ToDecimal(results["SMA12"].ToString()) < Convert.ToDecimal(results["SMA26"].ToString()))
                 { shortCnt = shortCnt + 3; }
-            }
+            //}
 
 
 
@@ -435,13 +435,29 @@ namespace TMD.PricePrediction
             ////{
             //if (!MACDFocus)
             //{
-            if (Convert.ToDecimal(results["MACD"].ToString()) >= Convert.ToDecimal(results["MACDSignal"].ToString()) && (Convert.ToDecimal(results["MACDSignal"].ToString()) < 0 && Convert.ToDecimal(results["MACD"].ToString()) > 0))
+            if (Convert.ToDecimal(results["MACD"].ToString()) > Convert.ToDecimal(results["MACDSignal"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) < 0 &&*/ Convert.ToDecimal(results["MACDHistogram"].ToString()) > 0))
             {
-                longCnt = longCnt + 8;
+                longCnt = longCnt + 3;
             }
-            if (Convert.ToDecimal(results["MACD"].ToString()) <= Convert.ToDecimal(results["MACDSignal"].ToString()) && (Convert.ToDecimal(results["MACDSignal"].ToString()) > 0 && Convert.ToDecimal(results["MACD"].ToString()) < 0))
+            if (Convert.ToDecimal(results["MACD"].ToString()) < Convert.ToDecimal(results["MACDSignal"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) > 0 &&*/ Convert.ToDecimal(results["MACDHistogram"].ToString()) < 0))
             {
-                shortCnt = shortCnt + 8;
+                shortCnt = shortCnt + 3;
+            }
+            if (Convert.ToDecimal(results["MACD2"].ToString()) > Convert.ToDecimal(results["MACDSignal2"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) < 0 &&*/ Convert.ToDecimal(results["MACDHistogram2"].ToString()) > 0))
+            {
+                longCnt = longCnt + 3;
+            }
+            if (Convert.ToDecimal(results["MACD2"].ToString()) < Convert.ToDecimal(results["MACDSignal2"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) > 0 &&*/ Convert.ToDecimal(results["MACDHistogram2"].ToString()) < 0))
+            {
+                shortCnt = shortCnt + 3;
+            }
+            if (Convert.ToDecimal(results["MACD3"].ToString()) > Convert.ToDecimal(results["MACDSignal3"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) < 0 &&*/ Convert.ToDecimal(results["MACDHistogram3"].ToString()) > 0))
+            {
+                longCnt = longCnt + 3;
+            }
+            if (Convert.ToDecimal(results["MACD3"].ToString()) < Convert.ToDecimal(results["MACDSignal3"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) > 0 &&*/ Convert.ToDecimal(results["MACDHistogram3"].ToString()) < 0))
+            {
+                shortCnt = shortCnt + 3;
             }
             //}
             //else
