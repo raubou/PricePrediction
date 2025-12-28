@@ -5,9 +5,11 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Xml.Linq;
 using TMD.Services.Service;
+using TMDInvestment.Models;
 using TMDInvestments.Context;
 using TMDInvestments.Models;
 using TMDInvestments.Models.Models;
+using TMDInvestments.Models.Models.Polygon;
 using TMDInvestments.Services;
 
 namespace TMD.PricePrediction
@@ -138,8 +140,65 @@ namespace TMD.PricePrediction
             //{
             //    vixsandpShortCnt = 1;
             //}
+            Log(_logger, LogLevel.Information, $"Getting movers from Schwab");
+            StockTracker stockTrackerInd = null;
+            var movers = services.GetMovers();
+            foreach(var mover in movers)
+            {
+                shortCnt = 0;
+                longCnt = 0;
+                if(mover == null || string.IsNullOrEmpty(mover["Symbol"].ToString()))
+                    continue;
+                try
+                {
+                    stockTrackerInd = stockTracker.Where(x => x.Symbol == mover["Symbol"].ToString() && x.PriceSold == null && x.DateSold == null && x.Status == "Filled").FirstOrDefault();
+                }
+                catch (Exception ex)
+                {
+                    Log(_logger, LogLevel.Error, $"Error in retrieving quote {ex.Message.ToString()} - {ex.StackTrace.ToString()}");
+                    continue;
+                }
 
-                foreach (var stock in stockList)
+                if (stockTrackerInd == null)
+                {
+                    _logger.LogInformation($"Checking {mover["Symbol"].ToString()} - ({mover["Symbol"].ToString()})");
+                    if (Convert.ToDecimal(mover["volume"].ToString()) < 40000)
+                    {
+                        Log(_logger, LogLevel.Information, $"Not buying/selling short {mover["Symbol"].ToString()} - ({mover["Symbol"].ToString()}). Volume fall below min of 40000");
+                        continue;
+                    }
+                    if (Convert.ToDecimal(mover["lastPrice"].ToString()) >= rulesEngine.MinStockPrice && Convert.ToDecimal(mover["lastPrice"].ToString()) <= 50m)
+                    {
+                        CalculatePoints(mover, /*true, false,*/ ref shortCnt, ref longCnt);
+                    }
+                    else
+                    {
+                        Log(_logger, LogLevel.Information, $"Not buying/selling short {mover["Symbol"].ToString()} - ({mover["Symbol"].ToString()}). Stock fall above or below min stock price or is excluded");
+                        continue;
+                    }
+
+                    Log(_logger, LogLevel.Information, $"{mover["Symbol"].ToString()} - ({mover["Name"].ToString()}) Score. Long score: {longCnt}. Short score {shortCnt}");
+
+                    if ((longCnt + vixsandpLongCnt) >= rulesEngine.StockLongCount)
+                    {
+                        Log(_logger, LogLevel.Information, $"Adding {mover["Symbol"].ToString()} - ({mover["Name"].ToString()}) to potential long list.");
+                        BuySellStockList.Add(new BuySellCommodity((longCnt + vixsandpLongCnt), TradeDirection.BUY, mover));
+                        stockCnt++;
+                    }
+                    else
+                    if ((shortCnt + vixsandpShortCnt) >= rulesEngine.StockShortCount && (bool)rulesEngine.ShortEnabled)
+                    {
+                        Log(_logger, LogLevel.Information, $"Adding {mover["Symbol"].ToString()} - ({mover["Name"].ToString()}) to potential short list.");
+                        BuySellStockList.Add(new BuySellCommodity((shortCnt + vixsandpShortCnt), TradeDirection.SELL_SHORT, mover));
+                        stockCnt++;
+                    }
+                    else
+                    {
+                        Log(_logger, LogLevel.Information, $"Not buying/selling short {mover["Symbol"].ToString()} - ({mover["Name"].ToString()}). Long score: {longCnt}. Short score {shortCnt}");
+                    }
+                }
+            }
+            foreach (var stock in stockList)
                 {
                     shortCnt = 0;
                     longCnt = 0;
@@ -232,6 +291,7 @@ namespace TMD.PricePrediction
                     else
                     {
                         Log(_logger, LogLevel.Information, $"Not buying/selling short {results["Symbol"].ToString()} - ({results["Symbol"].ToString()}). Stock fall below min stock price or is excluded");
+                        continue;
                     }
 
                     Log(_logger, LogLevel.Information, $"{stock.Symbol} - ({stock.Name}) Score. Long score: {longCnt}. Short score {shortCnt}");

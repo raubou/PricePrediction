@@ -162,6 +162,11 @@ namespace PricePredictionTest
         }
 
         [TestMethod]
+        public void TestGetMovers()
+        {
+            var results = SchwabService.GetMovers();
+            Assert.IsNotNull(results);
+        }
         public void TestSchwabOrder()
         {
             //string order = "";

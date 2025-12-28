@@ -101,30 +101,36 @@ namespace TMDInvestments.Services
         }
         //https://api.schwabapi.com/marketdata/v1/movers/%24DJI?sort=PERCENT_CHANGE_UP&frequency=0
         
-        public dynamic GetMovers(string market)
+        public JsonObject[] GetMovers()
         {
-            dynamic results = null;
+            int cnt = 0;
+            JsonElement result;// = null;
+            JsonObject[] results = new JsonObject[1];
             var markets = new List<string>(){ "$DJI", "$COMPX", "$SPX","NYSE", "NASDAQ"};
             bool success = false;
+            indicesCalculatorV2 = new IndicesCalculatorV2(_logger, _settings, _factory/*, true, false*/);
         Retry:
             headers = new Dictionary<string, object>();
             headers.Add("accept", "application/json");
-            client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
-            //foreach (var item in markets)
+
+            foreach (var item in markets)
             {
+                client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
                 try
                 {
                     //results = client.Get("marketdata/v1/movers/" + market + "?sort=PERCENT_CHANGE_UP&frequency=0", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
-                    results = client.Get("marketdata/v1/movers/" + market, $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
+                    //results = client.Get("marketdata/v1/movers/" + market, $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
+                    result = client.Get("marketdata/v1/movers/" + item, $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
                 }
                 catch (Exception ex) //Call may error on onget call being called twice
                 {
                     client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
                     //results = client.Get("marketdata/v1/movers/" + market + "?sort=PERCENT_CHANGE_UP&frequency=0", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
-                    results = client.Get("marketdata/v1/movers/" + market, $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
-                    return results;
+                    //result = client.Get("marketdata/v1/movers/" + market, $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
+                    result = client.Get("marketdata/v1/movers/" + item, $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
+                    //return results;
                 }
-                if (results.ValueKind == JsonValueKind.Object && results.TryGetProperty("errors", out JsonElement value))
+                if (result.ValueKind == JsonValueKind.Object && result.TryGetProperty("errors", out JsonElement value))
                 {
                     //if (fetchRetry == 3)
                     //{
@@ -136,6 +142,19 @@ namespace TMDInvestments.Services
                     _token = ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
                     goto Retry;
                 }
+                //cnt = 0;
+                int movers = result.GetProperty("screeners").GetArrayLength() + results.Length;
+                System.Array.Resize(ref results, movers);   
+                foreach (var mover in result.GetProperty("screeners").EnumerateArray())
+                {
+                    results[cnt] = new JsonObject();
+                    results[cnt] = indicesCalculatorV2.CalculateV2(mover.GetProperty("symbol").ToString(), mover);
+                    //results[cnt].Add("Symbol", mover.GetProperty("symbol").ToString());
+                    //results[cnt].Add("Name", mover.GetProperty("description").ToString());
+                    //results[cnt].Add("lastPrice", mover.GetProperty("lastPrice").ToString());
+                    cnt++;
+                }
+                
             }
             return results;
         }

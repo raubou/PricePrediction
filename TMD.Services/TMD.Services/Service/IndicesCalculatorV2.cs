@@ -73,8 +73,17 @@ namespace TMD.Services.Service
                 }
                 catch (Exception ex2)
                 {
-                    _log.LogError($"{ex2.Message}", ex2);
-                    return null;
+                    try
+                    {
+                        currentPrice = Convert.ToDecimal(quote.GetProperty("lastPrice").ToString());
+                        totalVolume = Convert.ToDecimal(quote.GetProperty("totalVolume").ToString());
+                        exchange = "movers";
+                    }
+                    catch (Exception ex3) 
+                    {
+                        _log.LogError($"{ex3.Message}", ex2);
+                        return null;
+                    }
                 }
             }
 
@@ -227,8 +236,16 @@ namespace TMD.Services.Service
                 }
                 catch (Exception ex2)
                 {
-                    _log.LogError($"{ex2.Message}", ex2);
-                    return null;
+                    try
+                    {
+                        output.Add("Name", quote.GetProperty("description").ToString());
+                    }
+                    catch (Exception ex3)
+                    { 
+
+                        _log.LogError($"{ex3.Message}", ex2);
+                        return null;
+                    }
                 }
             }
             var resultsJson = JsonSerializer.Deserialize<JsonNode>(JsonSerializer.Serialize(quote));
