@@ -30,6 +30,7 @@ namespace PricePredictionTest
         ETradeSettings? _settings3;
         Polygon? _polygon = null;
         StackCommerceService? stackCommerceService = null;
+        RakutenService? rakutenService = null;
 
         [TestInitialize]
         public void GetSettings()
@@ -62,6 +63,7 @@ namespace PricePredictionTest
             SchwabService = new SchwabServices(_logger, _settings2, _taApiSettings, httpClientFactory);
             ETradeService = new ETradeService(_logger, _settings3, httpClientFactory);
             stackCommerceService = new StackCommerceService(_logger, httpClientFactory);
+            //rakutenService = new RakutenService();
         }
         [TestMethod]
         public void TestCoinBaseQuote()
@@ -153,6 +155,18 @@ namespace PricePredictionTest
             Assert.IsNotNull(account);
         }
         [TestMethod]
+        public void TestCoinBaseProducts()
+        {
+            var product = services.GetProducts().Where(x => x.DisplayName == "ETH-USD").ToList();
+            Assert.IsNotNull(product);
+        }
+
+        [TestMethod]
+        public void TestGetMovers()
+        {
+            var results = SchwabService.GetMovers();
+            Assert.IsNotNull(results);
+        }
         public void TestSchwabOrder()
         {
             //string order = "";
@@ -927,10 +941,10 @@ namespace PricePredictionTest
         {
             //var httpClient = httpClientFactory.CreateClient();
             //httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3");
-            
+
             XElement result = stackCommerceService.GetFeed();
             var items = result?.Element("channel")?.Elements("item").ToList();
-            foreach(var item in items)
+            foreach (var item in items)
             {
                 var title = item?.Element("title")?.Value;
                 var link = item?.Element("link")?.Value;
@@ -941,6 +955,12 @@ namespace PricePredictionTest
             //var response = httpClient.GetAsync("https://stackcommerce.com/api/v1/deals/feed").Result;
             //var content = response.Content.ReadAsStringAsync().Result;
             //var feedItems = JsonSerializer.Deserialize<XElement>(result);
+            Assert.IsTrue(true);
+        }
+        [TestMethod]
+        public void RakutenLoadMerchants()
+        {
+            var merchants = RakutenService.LoadMerchants(_logger);
             Assert.IsTrue(true);
         }
     }

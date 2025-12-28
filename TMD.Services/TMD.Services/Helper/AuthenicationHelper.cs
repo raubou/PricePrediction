@@ -28,10 +28,10 @@ namespace TMD.Services
             {
                 request.Headers.Add(item.Key, item.Value);
             }
-            if (string.IsNullOrEmpty(contentType))
-                request.Content = new StringContent(body, Encoding.UTF8);
-            else
-                request.Content = new StringContent(body, Encoding.UTF8, contentType);
+            if (!string.IsNullOrEmpty(contentType))
+            //    request.Content = new StringContent(body, Encoding.UTF8);
+            //else
+                request.Content = new StringContent(body, new System.Net.Http.Headers.MediaTypeHeaderValue(contentType));
             return request;
         }
         public void AddToken(AccessTokenInfo results, TokenType tokenType)
