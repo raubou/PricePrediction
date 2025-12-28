@@ -235,7 +235,7 @@ namespace TMD.PricePrediction.Classes
                     //    helper.Log(_logger, LogLevel.Information, $"Not buying/selling short {results["Symbol"].ToString()} - ({results["Symbol"].ToString()}). Volume fall below min of 50000");
                     //    continue;
                     //}
-                    helper.CalculatePoints(results, false, true, ref shortCnt, ref longCnt);
+                    helper.CalculatePoints(results, /*false, true,*/ ref shortCnt, ref longCnt);
 
                     //_logger.LogInformation($"{crypto.Coin} - ({crypto.Name}) Score. Long score: {longCnt}. Short score {shortCnt}");
                     helper.Log(_logger, LogLevel.Information, $"{crypto.Coin} - ({crypto.Name}) Score. Long score: {longCnt}. Short score {shortCnt}");
@@ -358,7 +358,7 @@ namespace TMD.PricePrediction.Classes
              foreach (var crypto in queuedCrypto)
             {
                 JsonObject? results = services.GetQuote(crypto.Coin);
-                helper.CalculatePoints(results, false, true, ref shortCnt, ref longCnt);
+                helper.CalculatePoints(results, /*false, true,*/ ref shortCnt, ref longCnt);
                 if (longCnt >= settings.CryptoLongCount || shortCnt >= settings.StockShortCount)
                 {
                     BuySellCrypto(crypto, results,(TradeDirection)crypto.TradeDirection, crypto.Amount ?? 0m, services, products, false/*, true*/);
@@ -649,7 +649,7 @@ namespace TMD.PricePrediction.Classes
                 }
                 else
                 //if (currentPrice < lastPrice) // try to kill the loss by selling only if above amount balance
-                if (currentPrice < lastPrice && currentBalance > (crypto.Amount * 1.085m))
+                if (currentPrice < lastPrice && currentBalance > (crypto.Amount * 1.08m))
                 {
                     if (percentDiffLastPrice > settings.StopLossPercentLastPriceCrypto)
                     {

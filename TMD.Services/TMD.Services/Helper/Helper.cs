@@ -5,9 +5,11 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Xml.Linq;
 using TMD.Services.Service;
+using TMDInvestment.Models;
 using TMDInvestments.Context;
 using TMDInvestments.Models;
 using TMDInvestments.Models.Models;
+using TMDInvestments.Models.Models.Polygon;
 using TMDInvestments.Services;
 
 namespace TMD.PricePrediction
@@ -138,8 +140,65 @@ namespace TMD.PricePrediction
             //{
             //    vixsandpShortCnt = 1;
             //}
+            Log(_logger, LogLevel.Information, $"Getting movers from Schwab");
+            StockTracker stockTrackerInd = null;
+            var movers = services.GetMovers();
+            foreach(var mover in movers)
+            {
+                shortCnt = 0;
+                longCnt = 0;
+                if(mover == null || string.IsNullOrEmpty(mover["Symbol"].ToString()))
+                    continue;
+                try
+                {
+                    stockTrackerInd = stockTracker.Where(x => x.Symbol == mover["Symbol"].ToString() && x.PriceSold == null && x.DateSold == null && x.Status == "Filled").FirstOrDefault();
+                }
+                catch (Exception ex)
+                {
+                    Log(_logger, LogLevel.Error, $"Error in retrieving quote {ex.Message.ToString()} - {ex.StackTrace.ToString()}");
+                    continue;
+                }
 
-                foreach (var stock in stockList)
+                if (stockTrackerInd == null)
+                {
+                    _logger.LogInformation($"Checking {mover["Symbol"].ToString()} - ({mover["Symbol"].ToString()})");
+                    if (Convert.ToDecimal(mover["volume"].ToString()) < 40000)
+                    {
+                        Log(_logger, LogLevel.Information, $"Not buying/selling short {mover["Symbol"].ToString()} - ({mover["Symbol"].ToString()}). Volume fall below min of 40000");
+                        continue;
+                    }
+                    if (Convert.ToDecimal(mover["lastPrice"].ToString()) >= rulesEngine.MinStockPrice && Convert.ToDecimal(mover["lastPrice"].ToString()) <= 50m)
+                    {
+                        CalculatePoints(mover, /*true, false,*/ ref shortCnt, ref longCnt);
+                    }
+                    else
+                    {
+                        Log(_logger, LogLevel.Information, $"Not buying/selling short {mover["Symbol"].ToString()} - ({mover["Symbol"].ToString()}). Stock fall above or below min stock price or is excluded");
+                        continue;
+                    }
+
+                    Log(_logger, LogLevel.Information, $"{mover["Symbol"].ToString()} - ({mover["Name"].ToString()}) Score. Long score: {longCnt}. Short score {shortCnt}");
+
+                    if ((longCnt + vixsandpLongCnt) >= rulesEngine.StockLongCount)
+                    {
+                        Log(_logger, LogLevel.Information, $"Adding {mover["Symbol"].ToString()} - ({mover["Name"].ToString()}) to potential long list.");
+                        BuySellStockList.Add(new BuySellCommodity((longCnt + vixsandpLongCnt), TradeDirection.BUY, mover));
+                        stockCnt++;
+                    }
+                    else
+                    if ((shortCnt + vixsandpShortCnt) >= rulesEngine.StockShortCount && (bool)rulesEngine.ShortEnabled)
+                    {
+                        Log(_logger, LogLevel.Information, $"Adding {mover["Symbol"].ToString()} - ({mover["Name"].ToString()}) to potential short list.");
+                        BuySellStockList.Add(new BuySellCommodity((shortCnt + vixsandpShortCnt), TradeDirection.SELL_SHORT, mover));
+                        stockCnt++;
+                    }
+                    else
+                    {
+                        Log(_logger, LogLevel.Information, $"Not buying/selling short {mover["Symbol"].ToString()} - ({mover["Name"].ToString()}). Long score: {longCnt}. Short score {shortCnt}");
+                    }
+                }
+            }
+            foreach (var stock in stockList)
                 {
                     shortCnt = 0;
                     longCnt = 0;
@@ -227,11 +286,12 @@ namespace TMD.PricePrediction
                     }
                     if (Convert.ToDecimal(results["lastPrice"].ToString()) >= rulesEngine.MinStockPrice /*&& !stock.ExcludeFromAutomation*/)
                     {
-                        CalculatePoints(results, true, false, ref shortCnt, ref longCnt);
+                        CalculatePoints(results, /*true, false,*/ ref shortCnt, ref longCnt);
                     }
                     else
                     {
                         Log(_logger, LogLevel.Information, $"Not buying/selling short {results["Symbol"].ToString()} - ({results["Symbol"].ToString()}). Stock fall below min stock price or is excluded");
+                        continue;
                     }
 
                     Log(_logger, LogLevel.Information, $"{stock.Symbol} - ({stock.Name}) Score. Long score: {longCnt}. Short score {shortCnt}");
@@ -281,7 +341,7 @@ namespace TMD.PricePrediction
             }
             return areValid;
         }
-        public void CalculatePoints(JsonObject? results, bool use31016, bool use5138, ref int? shortCnt, ref int? longCnt)
+        public void CalculatePoints(JsonObject? results/**, bool use31016, bool use5138,*/, ref int? shortCnt, ref int? longCnt)
         {
             shortCnt = 0;
             longCnt = 0;
@@ -292,11 +352,11 @@ namespace TMD.PricePrediction
             {
                 if (Convert.ToDecimal(results["RSI"].ToString()) >= 80)
                 {
-                    shortCnt = shortCnt + 2;
+                    shortCnt = shortCnt + 3;
                 }
                 if (Convert.ToDecimal(results["RSI"].ToString()) <= 20)
                 {
-                    longCnt = longCnt + 2;
+                    longCnt = longCnt + 3;
                 }
             }
 
@@ -333,8 +393,8 @@ namespace TMD.PricePrediction
             //if (Convert.ToDecimal(results["WMA30"].ToString()) >= Convert.ToDecimal(results["WMA26"].ToString())) { shortCnt++; }
             //if (Convert.ToDecimal(results["WMA30"].ToString()) <= Convert.ToDecimal(results["WMA26"].ToString())) { longCnt++; }
 
-            if (use31016)
-            {
+            //if (use31016)
+            //{
                 //// 3, 10, 16 STRATEGY
                 if (Convert.ToDecimal(results["EMA3"].ToString()) > Convert.ToDecimal(results["EMA10"].ToString()))
                 { longCnt = longCnt + 3; }
@@ -357,9 +417,9 @@ namespace TMD.PricePrediction
                 if (Convert.ToDecimal(results["SMA3"].ToString()) < Convert.ToDecimal(results["SMA16"].ToString()) &&
                     Convert.ToDecimal(results["SMA10"].ToString()) < Convert.ToDecimal(results["SMA16"].ToString()))
                 { shortCnt = shortCnt + 3; }
-            }
-            else if (use5138)
-            {
+            //}
+            //else if (use5138)
+            //{
                 //// 5, 13, 13 STRATEGY
                 if (Convert.ToDecimal(results["EMA5"].ToString()) > Convert.ToDecimal(results["EMA8"].ToString()))
                 { longCnt = longCnt + 3; }
@@ -381,9 +441,9 @@ namespace TMD.PricePrediction
                 if (Convert.ToDecimal(results["SMA5"].ToString()) < Convert.ToDecimal(results["SMA13"].ToString()) &&
                     Convert.ToDecimal(results["SMA8"].ToString()) < Convert.ToDecimal(results["SMA13"].ToString()))
                 { shortCnt = shortCnt + 3; }
-            }
-            else
-            {
+            //}
+            //else
+            //{
                 //// 9, 12, 26 STRATEGY
                 if (Convert.ToDecimal(results["EMA9"].ToString()) > Convert.ToDecimal(results["EMA12"].ToString()))
                 { longCnt = longCnt + 3; }
@@ -401,7 +461,7 @@ namespace TMD.PricePrediction
                 { shortCnt = shortCnt + 3; }
                 if (Convert.ToDecimal(results["SMA12"].ToString()) < Convert.ToDecimal(results["SMA26"].ToString()))
                 { shortCnt = shortCnt + 3; }
-            }
+            //}
 
 
 
@@ -435,13 +495,29 @@ namespace TMD.PricePrediction
             ////{
             //if (!MACDFocus)
             //{
-            if (Convert.ToDecimal(results["MACD"].ToString()) >= Convert.ToDecimal(results["MACDSignal"].ToString()) && (Convert.ToDecimal(results["MACDSignal"].ToString()) < 0 && Convert.ToDecimal(results["MACD"].ToString()) > 0))
+            if (Convert.ToDecimal(results["MACD"].ToString()) > Convert.ToDecimal(results["MACDSignal"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) < 0 &&*/ Convert.ToDecimal(results["MACDHistogram"].ToString()) > 0))
             {
-                longCnt = longCnt + 8;
+                longCnt = longCnt + 3;
             }
-            if (Convert.ToDecimal(results["MACD"].ToString()) <= Convert.ToDecimal(results["MACDSignal"].ToString()) && (Convert.ToDecimal(results["MACDSignal"].ToString()) > 0 && Convert.ToDecimal(results["MACD"].ToString()) < 0))
+            if (Convert.ToDecimal(results["MACD"].ToString()) < Convert.ToDecimal(results["MACDSignal"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) > 0 &&*/ Convert.ToDecimal(results["MACDHistogram"].ToString()) < 0))
             {
-                shortCnt = shortCnt + 8;
+                shortCnt = shortCnt + 3;
+            }
+            if (Convert.ToDecimal(results["MACD2"].ToString()) > Convert.ToDecimal(results["MACDSignal2"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) < 0 &&*/ Convert.ToDecimal(results["MACDHistogram2"].ToString()) > 0))
+            {
+                longCnt = longCnt + 3;
+            }
+            if (Convert.ToDecimal(results["MACD2"].ToString()) < Convert.ToDecimal(results["MACDSignal2"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) > 0 &&*/ Convert.ToDecimal(results["MACDHistogram2"].ToString()) < 0))
+            {
+                shortCnt = shortCnt + 3;
+            }
+            if (Convert.ToDecimal(results["MACD3"].ToString()) > Convert.ToDecimal(results["MACDSignal3"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) < 0 &&*/ Convert.ToDecimal(results["MACDHistogram3"].ToString()) > 0))
+            {
+                longCnt = longCnt + 3;
+            }
+            if (Convert.ToDecimal(results["MACD3"].ToString()) < Convert.ToDecimal(results["MACDSignal3"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) > 0 &&*/ Convert.ToDecimal(results["MACDHistogram3"].ToString()) < 0))
+            {
+                shortCnt = shortCnt + 3;
             }
             //}
             //else
