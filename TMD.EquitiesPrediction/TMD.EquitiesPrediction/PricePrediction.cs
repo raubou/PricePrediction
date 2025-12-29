@@ -69,11 +69,11 @@ class PricePrediction
                 //if (helper.IsNotHolidayorWeekend())
                 //{
                     //helper.UnloadAgingStocks();
-                    //helper.CheckSchwabOrderStatus(ref totalAvailiableforLongTradeSchwab);
+                    ///helper.CheckSchwabOrderStatus(ref totalAvailiableforLongTradeSchwab);
                     //helper.CheckETradeOrderStatus(ref totalAvailiableforLongTradeETrade);
 
                     //if (totalAvailiableforLongTradeSchwab > 100 || totalAvailiableforLongTradeETrade > 100)
-                        BuySellStockList = helper.GetQuoteList();
+                        //BuySellStockList = helper.GetQuoteList();
 
                     //if (totalAvailiableforLongTradeSchwab > 100)
                         //exec1.Exec(totalAvailiableforLongTradeSchwab, ref BuySellStockList);

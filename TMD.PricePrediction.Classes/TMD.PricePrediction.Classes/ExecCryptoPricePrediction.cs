@@ -78,7 +78,7 @@ namespace TMD.PricePrediction.Classes
             List<PortfolioBreakdown> portfolios = services.GetPortfolios();
             helper.Log(_logger, LogLevel.Information, $"Get account info");
 
-            //CHecked for queued crypto adn see if direction is the same
+            //Checked for queued crypto adn see if direction is the same
             helper.Log(_logger, LogLevel.Information, $"Check for queued crypto");
             CheckforQueuedCrypto(); 
 
@@ -359,7 +359,7 @@ namespace TMD.PricePrediction.Classes
             {
                 JsonObject? results = services.GetQuote(crypto.Coin);
                 helper.CalculatePoints(results, /*false, true,*/ ref shortCnt, ref longCnt);
-                if (longCnt >= settings.CryptoLongCount || shortCnt >= settings.StockShortCount)
+                if (longCnt >= settings.CryptoLongCount || shortCnt >= settings.CryptoLongCount)
                 {
                     BuySellCrypto(crypto, results,(TradeDirection)crypto.TradeDirection, crypto.Amount ?? 0m, services, products, false/*, true*/);
                 }
@@ -441,7 +441,7 @@ namespace TMD.PricePrediction.Classes
                 SaveCryptoTracker(cryptoTracker, direction, amount, order, output, (direction == TradeDirection.BUY) ? "FILLED" : null/*, IsUpdate*/);
             return true;
         }
-        bool SaveCryptoTracker(CryptoTracker2 cryptoTracker, TradeDirection direction, decimal currentBalance, dynamic results, Coinbase.AdvancedTrade.Models.Order order, string buyStatus/*, bool isUpdate*/)
+        bool SaveCryptoTracker(CryptoTracker2 cryptoTracker, TradeDirection direction, decimal currentBalance, dynamic results, Coinbase.AdvancedTrade.Models.Order order, string buyStatus)
         {
             bool isNew = false;
             if (cryptoTracker != null && (direction == TradeDirection.SELL || direction == TradeDirection.BUY_TO_COVER))
@@ -485,7 +485,7 @@ namespace TMD.PricePrediction.Classes
                 }                    
                 cryptoTracker.Coin = results["Symbol"].ToString();
                 cryptoTracker.BuyOrderId = (order != null) ? Guid.Parse((order?.OrderId ?? null)): null;
-                cryptoTracker.BuyStatus = (order != null) ? order.Status: buyStatus;
+                //cryptoTracker.BuyStatus = (order != null) ? order.Status: buyStatus;
                 cryptoTracker.Name = results["Name"].ToString();
                 cryptoTracker.TradeDirection = (int)direction;
                 cryptoTracker.PricePurchased = Convert.ToDecimal(results["lastPrice"].ToString());

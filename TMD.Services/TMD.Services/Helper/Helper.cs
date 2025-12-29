@@ -78,7 +78,7 @@ namespace TMD.PricePrediction
             rulesEngine = ctx.RulesEngine.FirstOrDefault();
 
             //Get stock already in trade being tracked.
-            var stockTracker = ctx.StockTracker.Where(x => x.PriceSold == null && x.DateSold == null && x.Status == "Filled"/* && x.TradePlatform == (int)Platform.CharlesSchwab*/).ToList();
+            var stockTracker = ctx.StockTracker2.Where(x => x.PriceSold == null && x.DateSold == null && x.Status == "Filled"/* && x.TradePlatform == (int)Platform.CharlesSchwab*/).ToList();
             var stockTrackerList = stockTracker.Select(y => y.Symbol);
             Log(_logger, LogLevel.Information, $"Get exiting stock tracker");
 
@@ -88,9 +88,9 @@ namespace TMD.PricePrediction
 
             //stock sold/brought to cover in the last 24 hrs
             DateTime? minDate = DateTime.MinValue;
-            var StockHold24Hr = /*new List<StockTracker>();//*/ ctx.StockTracker.ToList().Where(x => x.PriceSold != null && x.DateSold != null && Math.Abs((x.DateSold - easternTime).Value.TotalHours) < 24).ToList().Select(y => new { Symbol = y.Symbol, DateSold = y.DateSold, DateUpdated = y.DateUpdated }).ToList();
+            var StockHold24Hr = ctx.StockTracker2.ToList().Where(x => x.PriceSold != null && x.DateSold != null && Math.Abs((x.DateSold - easternTime).Value.TotalHours) < 24).ToList().Select(y => new { Symbol = y.Symbol, DateSold = y.DateSold, DateUpdated = y.DateUpdated }).ToList();
             //Include cancelled item for a 24h hold
-            StockHold24Hr.AddRange(ctx.StockTracker.ToList().Where(x => x.Status == "Cancelled" && Math.Abs((x.DateUpdated - easternTime).Value.TotalHours) < 24).ToList().Select(y => new { Symbol = y.Symbol, DateSold = y.DateSold ?? minDate, DateUpdated = y.DateUpdated }).ToList());
+            StockHold24Hr.AddRange(ctx.StockTracker2.ToList().Where(x => x.Status == "Cancelled" && Math.Abs((x.DateUpdated - easternTime).Value.TotalHours) < 24).ToList().Select(y => new { Symbol = y.Symbol, DateSold = y.DateSold ?? minDate, DateUpdated = y.DateUpdated }).ToList());
 
             ///Test blank out to test stock quote list count
             //if (stockTracker.Where(x => x.TradePlatform == (int)Platform.CharlesSchwab).Count() >= (settings.MaxNumberofStockstoBuy / 2) &&
@@ -141,7 +141,7 @@ namespace TMD.PricePrediction
             //    vixsandpShortCnt = 1;
             //}
             Log(_logger, LogLevel.Information, $"Getting movers from Schwab");
-            StockTracker stockTrackerInd = null;
+            StockTracker2 stockTrackerInd = null;
             var movers = services.GetMovers();
             foreach(var mover in movers)
             {
@@ -742,28 +742,48 @@ namespace TMD.PricePrediction
             return order;
         }
 
-        public bool SaveStockTracker(StockTracker stockTracker, Platform tradePlatform, TradeDirection direction, int qty, bool IsReversed, dynamic results, string status, ILogger _logger, ref TmdContext ctx)
+        public bool SaveStockTracker(StockTracker2 stockTracker, Platform tradePlatform, TradeDirection direction, int qty, bool IsReversed, dynamic results, string status, ILogger _logger)
         {
+            bool isNew = false;
             if (stockTracker != null && (direction == TradeDirection.SELL || direction == TradeDirection.BUY_TO_COVER))
             {
                 stockTracker.PriceSold = Convert.ToDecimal(results["lastPrice"].ToString());
                 stockTracker.SoldRsi = Convert.ToDecimal(results["RSI"].ToString());
-                //stockTracker.SoldSma200 = Convert.ToDecimal(results["SMA30"].ToString());
-                //stockTracker.SoldEma200 = Convert.ToDecimal(results["EMA30"].ToString());
-                //stockTracker.SoldVwap = Convert.ToDecimal(results["VWAP"].ToString());
                 stockTracker.SoldEma9 = Convert.ToDecimal(results["EMA9"].ToString());
                 stockTracker.SoldEma12 = Convert.ToDecimal(results["EMA12"].ToString());
                 stockTracker.SoldEma26 = Convert.ToDecimal(results["EMA26"].ToString());
+                stockTracker.SoldEma3 = Convert.ToDecimal(results["EMA3"].ToString());
+                stockTracker.SoldEma10 = Convert.ToDecimal(results["EMA10"].ToString());
+                stockTracker.SoldEma16 = Convert.ToDecimal(results["EMA16"].ToString());
+                stockTracker.SoldEma5 = Convert.ToDecimal(results["EMA5"].ToString());
+                stockTracker.SoldEma8 = Convert.ToDecimal(results["EMA8"].ToString());
+                stockTracker.SoldEma13 = Convert.ToDecimal(results["EMA13"].ToString());
+                stockTracker.SoldSma9 = Convert.ToDecimal(results["SMA9"].ToString());
+                stockTracker.SoldSma12 = Convert.ToDecimal(results["SMA12"].ToString());
+                stockTracker.SoldSma26 = Convert.ToDecimal(results["SMA26"].ToString());
+                stockTracker.SoldSma3 = Convert.ToDecimal(results["SMA3"].ToString());
+                stockTracker.SoldSma10 = Convert.ToDecimal(results["SMA10"].ToString());
+                stockTracker.SoldSma16 = Convert.ToDecimal(results["SMA16"].ToString());
+                stockTracker.SoldSma5 = Convert.ToDecimal(results["SMA5"].ToString());
+                stockTracker.SoldSma8 = Convert.ToDecimal(results["SMA8"].ToString());
+                stockTracker.SoldSma13 = Convert.ToDecimal(results["SMA13"].ToString());
                 stockTracker.SoldMacd = Convert.ToDecimal(results["MACD"].ToString());
+                stockTracker.SoldMacdSignal = Convert.ToDecimal(results["MACDSignal"].ToString());
+                stockTracker.SoldMacdHistogram = Convert.ToDecimal(results["MACDHistogram"].ToString());
                 stockTracker.DateSold = easternTime;
                 stockTracker.DateUpdated = easternTime;
                 stockTracker.Status = "FILLED";// status;
-                ctx.StockTracker.Attach(stockTracker);
+                ctx.StockTracker2.Attach(stockTracker);
                 ctx.Entry(stockTracker).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
             }
             else
             {
-                stockTracker = new StockTracker();
+                if (stockTracker == null)
+                {
+                    stockTracker = new StockTracker2();
+                    isNew = true;
+                }
+                stockTracker = new StockTracker2();
                 stockTracker.Symbol = results["Symbol"].ToString();
                 stockTracker.Name = results["Name"].ToString();
                 stockTracker.TradeDirection = (int)direction;
@@ -772,21 +792,45 @@ namespace TMD.PricePrediction
                 stockTracker.IsReversed = IsReversed;
                 stockTracker.Quantity = qty;
                 stockTracker.PurchasedRsi = Convert.ToDecimal(results["RSI"].ToString());
-                //stockTracker.PurchasedSma200 = Convert.ToDecimal(results["SMA30"].ToString());
-                //stockTracker.PurchasedEma200 = Convert.ToDecimal(results["EMA30"].ToString());
-                //stockTracker.PurchasedVwap = Convert.ToDecimal(results["VWAP"].ToString());
                 stockTracker.PurchasedEma9 = Convert.ToDecimal(results["EMA9"].ToString());
                 stockTracker.PurchasedEma12 = Convert.ToDecimal(results["EMA12"].ToString());
                 stockTracker.PurchasedEma26 = Convert.ToDecimal(results["EMA26"].ToString());
+                stockTracker.PurchasedEma3 = Convert.ToDecimal(results["EMA3"].ToString());
+                stockTracker.PurchasedEma10 = Convert.ToDecimal(results["EMA10"].ToString());
+                stockTracker.PurchasedEma16 = Convert.ToDecimal(results["EMA16"].ToString());
+                stockTracker.PurchasedEma5 = Convert.ToDecimal(results["EMA5"].ToString());
+                stockTracker.PurchasedEma8 = Convert.ToDecimal(results["EMA8"].ToString());
+                stockTracker.PurchasedEma13 = Convert.ToDecimal(results["EMA13"].ToString());
+                stockTracker.PurchasedSma9 = Convert.ToDecimal(results["SMA9"].ToString());
+                stockTracker.PurchasedSma12 = Convert.ToDecimal(results["SMA12"].ToString());
+                stockTracker.PurchasedSma26 = Convert.ToDecimal(results["SMA26"].ToString());
+                stockTracker.PurchasedSma3 = Convert.ToDecimal(results["SMA3"].ToString());
+                stockTracker.PurchasedSma10 = Convert.ToDecimal(results["SMA10"].ToString());
+                stockTracker.PurchasedSma16 = Convert.ToDecimal(results["SMA16"].ToString());
+                stockTracker.PurchasedSma5 = Convert.ToDecimal(results["SMA5"].ToString());
+                stockTracker.PurchasedSma8 = Convert.ToDecimal(results["SMA8"].ToString());
+                stockTracker.PurchasedSma13 = Convert.ToDecimal(results["SMA13"].ToString());
                 stockTracker.PurchasedMacd = Convert.ToDecimal(results["MACD"].ToString());
+                stockTracker.PurchasedMacdSignal = Convert.ToDecimal(results["MACDSignal"].ToString());
+                stockTracker.PurchasedMacdHistogram = Convert.ToDecimal(results["MACDHistogram"].ToString());
                 stockTracker.LastPrice = Convert.ToDecimal(results["lastPrice"].ToString());
                 stockTracker.DatePurchased = easternTime;
                 stockTracker.DateCreated = easternTime;
                 stockTracker.LastUpdatedBy = 1;
                 stockTracker.Status = status;
                 stockTracker.IsReversed = false;
-                ctx.StockTracker.Add(stockTracker);
+                ctx.StockTracker2.Add(stockTracker);
                 ctx.Entry(stockTracker).State = Microsoft.EntityFrameworkCore.EntityState.Added;
+                if (isNew)
+                {
+                    ctx.StockTracker2.Add(stockTracker);
+                    ctx.Entry(stockTracker).State = Microsoft.EntityFrameworkCore.EntityState.Added;
+                }
+                else
+                {
+                    ctx.StockTracker2.Attach(stockTracker);
+                    ctx.Entry(stockTracker).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+                }
             }
             try
             {
@@ -803,7 +847,7 @@ namespace TMD.PricePrediction
         {
             Log(_logger, LogLevel.Information, $"Check Schwab Order Status");
             //decimal totalAvailiableforLongTrade = 0m;
-            StockTracker? stockTracker = null;
+            StockTracker2? stockTracker = null;
             int qty = 0;
             decimal price = 0m;
             TradeDirection direction;
@@ -874,7 +918,7 @@ namespace TMD.PricePrediction
 
                 //check to see if more than one entry for the same stock, then delete duplicates
                 stockTracker = null;
-                var stockTrackerList = ctx.StockTracker.Where(x => x.PriceSold == null && x.DateSold == null
+                var stockTrackerList = ctx.StockTracker2.Where(x => x.PriceSold == null && x.DateSold == null
                         && x.TradePlatform == (int)Platform.CharlesSchwab && /*(x.Status != "Cancelled" && x.Status != "Filled")*/
                         x.Status.Trim() == "FILLED"
                         /*&& (x.DateCreated >= easternTime.AddDays(-1) && x.DateCreated <= easternTime.AddDays(1))*/
@@ -888,7 +932,7 @@ namespace TMD.PricePrediction
                     {
                         try
                         {
-                            ctx.StockTracker.Attach(rem);
+                            ctx.StockTracker2.Attach(rem);
                             ctx.Entry(rem).State = Microsoft.EntityFrameworkCore.EntityState.Deleted;
                             ctx.SaveChanges();
                             ctx.Entry(rem).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
@@ -906,7 +950,7 @@ namespace TMD.PricePrediction
 
                 if (stockTracker == null)
                 {
-                    stockTracker = ctx.StockTracker.Where(x => x.PriceSold == null && x.DateSold == null
+                    stockTracker = ctx.StockTracker2.Where(x => x.PriceSold == null && x.DateSold == null
                     && x.TradePlatform == (int)Platform.CharlesSchwab && /*(x.Status != "Cancelled" && x.Status != "Filled")*/
                     x.Status.Trim() == "{\"$id\":\"1\",\"status\":\"Created\"}"
                     && (x.DateCreated >= easternTime.AddDays(-1) && x.DateCreated <= easternTime.AddDays(1))
@@ -916,18 +960,36 @@ namespace TMD.PricePrediction
 
                 if (stockTracker == null)
                 {
-                    stockTracker = new StockTracker();
+                    stockTracker = new StockTracker2();
                     stockTracker.Symbol = sym;
                     stockTracker.Name = desc;
-                    stockTracker.PurchasedRsi = Convert.ToDecimal(quote?["RSI"]?.ToString());
-                    stockTracker.PurchasedEma9 = Convert.ToDecimal(quote?["EMA9"]?.ToString());
-                    stockTracker.PurchasedEma12 = Convert.ToDecimal(quote?["EMA12"]?.ToString());
-                    stockTracker.PurchasedEma26 = Convert.ToDecimal(quote?["EMA26"]?.ToString());
-                    stockTracker.PurchasedMacd = Convert.ToDecimal(quote?["MACD"]?.ToString());
+                    stockTracker.PurchasedRsi = Convert.ToDecimal(quote?["RSI"].ToString());
+                    stockTracker.PurchasedEma9 = Convert.ToDecimal(quote?["EMA9"].ToString());
+                    stockTracker.PurchasedEma12 = Convert.ToDecimal(quote?["EMA12"].ToString());
+                    stockTracker.PurchasedEma26 = Convert.ToDecimal(quote?["EMA26"].ToString());
+                    stockTracker.PurchasedEma3 = Convert.ToDecimal(quote?["EMA3"].ToString());
+                    stockTracker.PurchasedEma10 = Convert.ToDecimal(quote?["EMA10"].ToString());
+                    stockTracker.PurchasedEma16 = Convert.ToDecimal(quote?["EMA16"].ToString());
+                    stockTracker.PurchasedEma5 = Convert.ToDecimal(quote?["EMA5"].ToString());
+                    stockTracker.PurchasedEma8 = Convert.ToDecimal(quote?["EMA8"].ToString());
+                    stockTracker.PurchasedEma13 = Convert.ToDecimal(quote?["EMA13"].ToString());
+                    stockTracker.PurchasedSma9 = Convert.ToDecimal(quote?["SMA9"].ToString());
+                    stockTracker.PurchasedSma12 = Convert.ToDecimal(quote?["SMA12"].ToString());
+                    stockTracker.PurchasedSma26 = Convert.ToDecimal(quote?["SMA26"].ToString());
+                    stockTracker.PurchasedSma3 = Convert.ToDecimal(quote?["SMA3"].ToString());
+                    stockTracker.PurchasedSma10 = Convert.ToDecimal(quote?["SMA10"].ToString());
+                    stockTracker.PurchasedSma16 = Convert.ToDecimal(quote?["SMA16"].ToString());
+                    stockTracker.PurchasedSma5 = Convert.ToDecimal(quote?["SMA5"].ToString());
+                    stockTracker.PurchasedSma8 = Convert.ToDecimal(quote?["SMA8"].ToString());
+                    stockTracker.PurchasedSma13 = Convert.ToDecimal(quote?["SMA13"].ToString());
+                    stockTracker.PurchasedMacd = Convert.ToDecimal(quote?["MACD"].ToString());
+                    stockTracker.PurchasedMacdSignal = Convert.ToDecimal(quote?["MACDSignal"].ToString());
+                    stockTracker.PurchasedMacdHistogram = Convert.ToDecimal(quote?["MACDHistogram"].ToString());
                     stockTracker.DatePurchased = easternTime;
                     stockTracker.DateCreated = easternTime;
                     stockTracker.Status = "FILLED";
                     stockTracker.LastUpdatedBy = 1;
+                    stockTracker.IsReversed = false;
                 }
                 var sp = stockTracker;
                 price = Convert.ToDecimal(item.GetProperty("averagePrice").ToString());
@@ -944,7 +1006,7 @@ namespace TMD.PricePrediction
 
                 if (stockTracker == null)
                 {
-                    stockTracker = ctx.StockTracker.Where(x => x.PriceSold == null && x.DateSold == null
+                    stockTracker = ctx.StockTracker2.Where(x => x.PriceSold == null && x.DateSold == null
                     && x.TradePlatform == (int)Platform.ETrade && /*(x.Status != "Cancelled" && x.Status != "Filled")*/
                     x.Status.Trim() == "Success"
                     && (x.DateCreated >= easternTime.AddDays(-1) && x.DateCreated <= easternTime.AddDays(1))
@@ -968,7 +1030,7 @@ namespace TMD.PricePrediction
                     sp.PricePurchased = price;
                     sp.Quantity = qty;
                     sp.DateUpdated = easternTime;
-                    ctx.StockTracker.Attach(sp);
+                    ctx.StockTracker2.Attach(sp);
                     ctx.Entry(sp).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
                     ctx.SaveChanges();
                     ctx.Entry(sp).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
@@ -988,7 +1050,7 @@ namespace TMD.PricePrediction
                 }
             }
 
-            var stockTrkList = ctx.StockTracker.Where(x => x.PriceSold == null && x.DateSold == null
+            var stockTrkList = ctx.StockTracker2.Where(x => x.PriceSold == null && x.DateSold == null
                         && x.TradePlatform == (int)Platform.CharlesSchwab && 
                         x.Status.Trim() == "FILLED"
                         ).ToList();
@@ -1001,7 +1063,7 @@ namespace TMD.PricePrediction
                 var pos = securitiesAccount.GetProperty("positions").EnumerateArray().Where(x => x.GetProperty("instrument").GetProperty("symbol").ToString() == stk.Symbol).FirstOrDefault();
                 if (!(pos is JsonElement) || pos.ValueKind == JsonValueKind.Undefined)
                 {
-                    ctx.StockTracker.Attach(stk);
+                    ctx.StockTracker2.Attach(stk);
                     ctx.Entry(stk).State = Microsoft.EntityFrameworkCore.EntityState.Deleted;
                     try
                     {
@@ -1018,7 +1080,7 @@ namespace TMD.PricePrediction
         public void CheckETradeOrderStatus(ref decimal totalAvailiableforLongTrade)
         {
             Log(_logger, LogLevel.Information, $"Check ETrade Order Status");
-            StockTracker? stockTracker = null;
+            StockTracker2? stockTracker = null;
             int qty = 0;
             decimal price = 0m;
             TradeDirection direction;
@@ -1093,7 +1155,7 @@ namespace TMD.PricePrediction
 
                 //check to see if more than one entry for the same stock, then delete duplicates
                 stockTracker = null;
-                var stockTrackerList = ctx.StockTracker.Where(x => x.PriceSold == null && x.DateSold == null
+                var stockTrackerList = ctx.StockTracker2.Where(x => x.PriceSold == null && x.DateSold == null
                         && x.TradePlatform == (int)Platform.ETrade && /*(x.Status != "Cancelled" && x.Status != "Filled")*/
                         x.Status.Trim() == "FILLED"
                         /*&& (x.DateCreated >= easternTime.AddDays(-1) && x.DateCreated <= easternTime.AddDays(1))*/
@@ -1107,7 +1169,7 @@ namespace TMD.PricePrediction
                     {
                         try
                         {
-                            ctx.StockTracker.Attach(rem);
+                            ctx.StockTracker2.Attach(rem);
                             ctx.Entry(rem).State = Microsoft.EntityFrameworkCore.EntityState.Deleted;
                             ctx.SaveChanges();
                             ctx.Entry(rem).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
@@ -1125,7 +1187,7 @@ namespace TMD.PricePrediction
 
                 if (stockTracker == null)
                 {
-                    stockTracker = ctx.StockTracker.Where(x => x.PriceSold == null && x.DateSold == null
+                    stockTracker = ctx.StockTracker2.Where(x => x.PriceSold == null && x.DateSold == null
                     && x.TradePlatform == (int)Platform.ETrade && /*(x.Status != "Cancelled" && x.Status != "Filled")*/
                     x.Status.Trim() == "Success"
                     && (x.DateCreated >= easternTime.AddDays(-1) && x.DateCreated <= easternTime.AddDays(1))
@@ -1137,18 +1199,36 @@ namespace TMD.PricePrediction
                 {
                     try
                     {
-                        stockTracker = new StockTracker();
+                        stockTracker = new StockTracker2();
                         stockTracker.Symbol = sym;
                         stockTracker.Name = desc;
-                        stockTracker.PurchasedRsi = Convert.ToDecimal(quote?["RSI"]?.ToString());
-                        stockTracker.PurchasedEma9 = Convert.ToDecimal(quote?["EMA9"]?.ToString());
-                        stockTracker.PurchasedEma12 = Convert.ToDecimal(quote?["EMA12"]?.ToString());
-                        stockTracker.PurchasedEma26 = Convert.ToDecimal(quote?["EMA26"]?.ToString());
-                        stockTracker.PurchasedMacd = Convert.ToDecimal(quote?["MACD"]?.ToString());
+                        stockTracker.PurchasedRsi = Convert.ToDecimal(quote?["RSI"].ToString());
+                        stockTracker.PurchasedEma9 = Convert.ToDecimal(quote?["EMA9"].ToString());
+                        stockTracker.PurchasedEma12 = Convert.ToDecimal(quote?["EMA12"].ToString());
+                        stockTracker.PurchasedEma26 = Convert.ToDecimal(quote?["EMA26"].ToString());
+                        stockTracker.PurchasedEma3 = Convert.ToDecimal(quote?["EMA3"].ToString());
+                        stockTracker.PurchasedEma10 = Convert.ToDecimal(quote?["EMA10"].ToString());
+                        stockTracker.PurchasedEma16 = Convert.ToDecimal(quote?["EMA16"].ToString());
+                        stockTracker.PurchasedEma5 = Convert.ToDecimal(quote?["EMA5"].ToString());
+                        stockTracker.PurchasedEma8 = Convert.ToDecimal(quote?["EMA8"].ToString());
+                        stockTracker.PurchasedEma13 = Convert.ToDecimal(quote?["EMA13"].ToString());
+                        stockTracker.PurchasedSma9 = Convert.ToDecimal(quote?["SMA9"].ToString());
+                        stockTracker.PurchasedSma12 = Convert.ToDecimal(quote?["SMA12"].ToString());
+                        stockTracker.PurchasedSma26 = Convert.ToDecimal(quote?["SMA26"].ToString());
+                        stockTracker.PurchasedSma3 = Convert.ToDecimal(quote?["SMA3"].ToString());
+                        stockTracker.PurchasedSma10 = Convert.ToDecimal(quote?["SMA10"].ToString());
+                        stockTracker.PurchasedSma16 = Convert.ToDecimal(quote?["SMA16"].ToString());
+                        stockTracker.PurchasedSma5 = Convert.ToDecimal(quote?["SMA5"].ToString());
+                        stockTracker.PurchasedSma8 = Convert.ToDecimal(quote?["SMA8"].ToString());
+                        stockTracker.PurchasedSma13 = Convert.ToDecimal(quote?["SMA13"].ToString());
+                        stockTracker.PurchasedMacd = Convert.ToDecimal(quote?["MACD"].ToString());
+                        stockTracker.PurchasedMacdSignal = Convert.ToDecimal(quote?["MACDSignal"].ToString());
+                        stockTracker.PurchasedMacdHistogram = Convert.ToDecimal(quote?["MACDHistogram"].ToString());
                         stockTracker.DatePurchased = easternTime;
                         stockTracker.DateCreated = easternTime;
                         stockTracker.Status = "FILLED";
                         stockTracker.LastUpdatedBy = 1;
+                        stockTracker.IsReversed = false;
                     }
                     catch (Exception)
                     {
@@ -1179,7 +1259,7 @@ namespace TMD.PricePrediction
                     sp.PricePurchased = price;
                     sp.Quantity = qty;
                     sp.DateUpdated = easternTime;
-                    ctx.StockTracker.Attach(sp);
+                    ctx.StockTracker2.Attach(sp);
                     ctx.Entry(sp).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
                     ctx.SaveChanges();
                     ctx.Entry(sp).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
@@ -1198,7 +1278,7 @@ namespace TMD.PricePrediction
                     }
                 }
             }
-            var stockTrkList = ctx.StockTracker.Where(x => x.PriceSold == null && x.DateSold == null
+            var stockTrkList = ctx.StockTracker2.Where(x => x.PriceSold == null && x.DateSold == null
             && x.TradePlatform == (int)Platform.ETrade &&
             x.Status.Trim() == "FILLED"
             ).ToList();
@@ -1211,7 +1291,7 @@ namespace TMD.PricePrediction
                 var pos = positions.Where(x => x.Element("Product")?.Element("symbol")?.Value.ToString() == stk.Symbol).FirstOrDefault();
                 if (pos is null)
                 {
-                    ctx.StockTracker.Attach(stk);
+                    ctx.StockTracker2.Attach(stk);
                     ctx.Entry(stk).State = Microsoft.EntityFrameworkCore.EntityState.Deleted;
                     try
                     {
@@ -1248,7 +1328,7 @@ namespace TMD.PricePrediction
         }
         public void UnloadAgingStocks()
         {
-            var agingStock = ctx?.StockTracker?.ToList()?.Where(x => x.PriceSold == null && x.DateSold == null && x.Status == "FILLED"
+            var agingStock = ctx?.StockTracker2?.ToList()?.Where(x => x.PriceSold == null && x.DateSold == null && x.Status == "FILLED"
             && Math.Abs((x.DateCreated - easternTime).Value.TotalDays) > 5).ToList();
             foreach (var stock in agingStock)
             {
@@ -1267,10 +1347,42 @@ namespace TMD.PricePrediction
                 }
             }
         }
-        bool BuySellStock(StockTracker stocktracker, dynamic order, TradeDirection direction, int qty, bool IsReversed, SchwabServices service)
+        public void CalculatePurchaseAmount(decimal? availiabletoTrade, ref List<BuySellCommodity> BuySellStockList, RulesEngine settings, Platform platform)
+        {
+            //var stockTracker = ctx?.StockTracker?.Where(x => x.PriceSold == null && x.DateSold == null && x.Status.Trim() == "Filled" && x.TradePlatform == (int)Platform.ETrade).ToList();
+            var stockTracker = ctx?.StockTracker2?.Where(x => x.PriceSold == null && x.DateSold == null && x.Status.Trim() == "Filled" && x.TradePlatform == (int)platform).ToList();
+            if (stockTracker?.Count() >= (settings?.MaxNumberofStockstoBuy / 2))
+                return;
+            int stockCnt = 0;
+            //decimal? perStockSet = (BuySellStockList.Count() < (settings.MaxNumberofStockstoBuy - BuySellStockList.Count())) ? availiabletoTrade / BuySellStockList.Count() : availiabletoTrade / (settings.MaxNumberofStockstoBuy - stockTracker.Count());//(availiabletoTrade / BuySellStockList.Count) > (availiabletoTrade * (settings.MaxPercentofAvailBalancePerOrder / 100)) ? (availiabletoTrade * (settings.MaxPercentofAvailBalancePerOrder / 100)) : (availiabletoTrade / BuySellStockList.Count);
+            if ((int)(settings.MaxNumberofStockstoBuy / 2) - stockTracker.Count() < 1)
+                return;
+            decimal? perStockSet = availiabletoTrade / Math.Abs((int)(settings.MaxNumberofStockstoBuy / 2) - stockTracker.Count());
+            var stockList = new List<BuySellCommodity>(BuySellStockList);
+            foreach (var item in stockList)
+            {
+                if ((stockTracker.Count() + stockCnt) >= settings.MaxNumberofStockstoBuy)
+                    break;
+                //var result = item.Key;
+                //var direction = item.Value;
+                var result = item.Results;
+                var direction = item.Direction;
+                var lastPrice = Convert.ToDecimal(result?["lastPrice"]?.ToString());
+                //var qty = Convert.ToInt32(perStockSet / lastPrice);
+                var qty = Math.Abs((Convert.ToInt32(perStockSet / lastPrice) > settings.MaxNumberofSharesPerStock) ? (int)settings.MaxNumberofSharesPerStock : Convert.ToInt32(perStockSet / lastPrice));
+                if (qty >= 2 && lastPrice >= 5m)
+                {
+                    //BuySellStock(null, result, direction, qty, false, services);
+                    QueueStocktoBuy(result, platform, direction, qty);
+                    stockCnt++;
+                    BuySellStockList.Remove(item);
+                }
+            }
+        }
+        public bool BuySellStock(StockTracker2 stocktracker, dynamic order, TradeDirection direction, int qty, bool IsReversed, SchwabServices service)
         {
             //return false;
-            string? jsonOrder = CreateTradeObject(order, direction, qty);
+            string jsonOrder = CreateTradeObject(order, direction, qty);
             dynamic results = service.SetOrder(jsonOrder);
             //if direction is buy or sell short, stocktracker will be null.
             try
@@ -1282,21 +1394,21 @@ namespace TMD.PricePrediction
                 string output = System.Text.Json.JsonSerializer.Serialize(results, options);
                 if (output.Contains("message"))
                 {
-                    //helper.Log(_logger, LogLevel.Error, $"stock trade failed {order["Symbol"].ToString()} {output}");
+                    Log(_logger, LogLevel.Error, $"stock trade failed {order["Symbol"].ToString()} {output}");
                 }
                 else
                 {
-                    //helper.Log(_logger, LogLevel.Information, $"stock trade results {output}");
-                    SaveStockTracker(stocktracker, Platform.CharlesSchwab, direction, qty, IsReversed, order, output, _logger, ref ctx);
+                    Log(_logger, LogLevel.Information, $"stock trade results {output}");
+                    SaveStockTracker(stocktracker, Platform.CharlesSchwab, direction, qty, IsReversed, order, output, _logger/*, ref ctx*/);
                 }
             }
             catch (Exception ex)
             {
-                //helper.Log(_logger, LogLevel.Error, $"Error in buying stock - {ex.Message}");
+                Log(_logger, LogLevel.Error, $"Error in buying stock - {ex.Message}");
             }
             return true;
         }
-        bool BuySellStock(StockTracker stocktracker, dynamic order, TradeDirection direction, int qty, bool IsReversed, ETradeService service)
+        public bool BuySellStock(StockTracker2 stocktracker, dynamic order, TradeDirection direction, int qty, bool IsReversed, ETradeService service)
         {
             //return true;
             qty = Math.Abs(qty);
@@ -1313,19 +1425,51 @@ namespace TMD.PricePrediction
                 string output = System.Text.Json.JsonSerializer.Serialize(results, options);
                 if (output.Contains("errors"))
                 {
-                    //helper.Log(_logger, LogLevel.Error, $"Stock trade failed {order["Symbol"].ToString()} {output}");
+                    Log(_logger, LogLevel.Error, $"Stock trade failed {order["Symbol"].ToString()} {output}");
                     return false;
                 }
-                //helper.Log(_logger, LogLevel.Information, $"Stock trade results {order["Symbol"].ToString()} Success");
+                Log(_logger, LogLevel.Information, $"Stock trade results {order["Symbol"].ToString()} Success");
                 //SaveStockTracker(stocktracker, direction, qty, order, "Success");
-                SaveStockTracker(stocktracker, Platform.ETrade, direction, qty, IsReversed, order, "Success", _logger, ref ctx);
+                SaveStockTracker(stocktracker, Platform.ETrade, direction, qty, IsReversed, order, "Success", _logger/*, ref ctx*/);
                 return true;
             }
             catch (Exception ex)
             {
-                //helper.Log(_logger, LogLevel.Error, $"Error in buying stock - {ex.Message}");
+                Log(_logger, LogLevel.Error, $"Error in buying stock - {ex.Message}");
             }
             return true;
+        }
+        void QueueStocktoBuy(dynamic order, Platform platform, TradeDirection direction, int qty)
+        {
+            SaveStockTracker(null, platform, direction, qty, false, order, "QUEUED" , _logger);
+        }
+        public void CheckforQueuedStock(RulesEngine settings, Platform platform)
+        {
+            int? longCnt = 0;
+            int? shortCnt = 0;
+            var queuedStock = ctx.StockTracker2.Where(x => x.Status == "QUEUED" && x.TradePlatform == (int)platform).ToList();
+            foreach (var stock in queuedStock)
+            {
+                dynamic? results = services.GetQuote(stock.Symbol);
+                CalculatePoints(results, /*false, true,*/ ref shortCnt, ref longCnt);
+                if (longCnt >= settings.StockLongCount || shortCnt >= settings.StockShortCount)
+                {
+                    switch(platform)
+                    {
+                        case Platform.CharlesSchwab:
+                            BuySellStock(stock, results, (TradeDirection)stock.TradeDirection, stock.Quantity, false, services/*, true*/);
+                            break;
+                        case Platform.ETrade:
+                            BuySellStock(stock, results, (TradeDirection)stock.TradeDirection, stock.Quantity, false, services2/*, true*/);
+                            break;
+                    }
+                    //BuySellStock(stock, results, (TradeDirection)stock.TradeDirection, stock.Quantity, false, services/*, true*/);
+                }
+                else
+                {
+                    SaveStockTracker(stock, platform, (TradeDirection)stock.TradeDirection, stock.Quantity, false, results, "CANCEL", _logger);
+                }
+            }
         }
         //public bool ReverseStock(StockTracker stock, JsonObject? results, dynamic services)
         //{
@@ -1356,6 +1500,13 @@ namespace TMD.PricePrediction
         {
             log.Log(logLevel, message);
             log.Log(LogLevel.Information, Environment.NewLine);
+        }
+        ~Helper()
+        {
+            ctx?.Dispose();
+            ctx = null;
+            services = null;
+            services2 = null;
         }
     }
 }
