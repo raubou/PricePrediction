@@ -783,7 +783,7 @@ namespace TMD.PricePrediction
                     stockTracker = new StockTracker2();
                     isNew = true;
                 }
-                stockTracker = new StockTracker2();
+                //stockTracker = new StockTracker2();
                 stockTracker.Symbol = results["Symbol"].ToString();
                 stockTracker.Name = results["Name"].ToString();
                 stockTracker.TradeDirection = (int)direction;
