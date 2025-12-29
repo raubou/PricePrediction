@@ -48,7 +48,7 @@ namespace TraderGo.Pages
             GainersandLosers = _traderGoService.GetGainersandLosers();
             //Movers = services.GetMovers("$SPX");
             TmdContext ctx = new TmdContext();
-            var stockTracker = ctx.StockTracker.ToList();
+            var stockTracker = ctx.StockTracker2.ToList();
             return null;
         }
     }

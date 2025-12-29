@@ -78,11 +78,15 @@ namespace TMD.PricePrediction.Classes
             helper.Log(_logger, LogLevel.Information, $"Updating Latest Prices on Tracker");
             UpdatePrices();
 
+            //Checked for queued crypto adn see if direction is the same
+            helper.Log(_logger, LogLevel.Information, $"Check for queued stock");
+            helper.CheckforQueuedStock(settings, Platform.CharlesSchwab);
+
             if (totalAvailiableforLongTrade > 100 && (bool)settings.SchwabAnalysisTradeEnabled)
             {
                 if (BuySellStockList.Count > 0)
                 {
-                    var stockTrackerBuy = ctx?.StockTracker?.Where(x => x.PriceSold == null && x.DateSold == null && x.Status == "Filled" && x.TradePlatform == (int)Platform.CharlesSchwab).ToList();
+                    var stockTrackerBuy = ctx?.StockTracker2?.Where(x => x.PriceSold == null && x.DateSold == null && x.Status == "Filled" && x.TradePlatform == (int)Platform.CharlesSchwab).ToList();
                     var numOfNeededStock = (int)((settings.MaxNumberofStockstoBuy / 2) - stockTrackerBuy.Count);
                     if (numOfNeededStock > 0)
                     {
@@ -94,7 +98,7 @@ namespace TMD.PricePrediction.Classes
                         List<BuySellCommodity> BuySellStockListTotal = new List<BuySellCommodity>();
                         BuySellStockListTotal.AddRange(BuySellStockListLong);
                         BuySellStockListTotal.AddRange(BuySellStockListShort);
-                        CalculatePurchaseAmount(totalAvailiableforLongTrade, ref BuySellStockListTotal);
+                        helper.CalculatePurchaseAmount(totalAvailiableforLongTrade, ref BuySellStockListTotal, settings, Platform.CharlesSchwab);
                         BuySellStockList = BuySellStockListTotal;
                     }
                 }
@@ -109,7 +113,7 @@ namespace TMD.PricePrediction.Classes
         void UpdatePrices()
         {
             dynamic results = null;
-            var stockTracker = ctx.StockTracker.Where(x => x.PriceSold == null && x.DateSold == null && x.Status == "Filled" && x.TradePlatform == (int)Platform.CharlesSchwab).ToList();
+            var stockTracker = ctx.StockTracker2.Where(x => x.PriceSold == null && x.DateSold == null && x.Status == "Filled" && x.TradePlatform == (int)Platform.CharlesSchwab).ToList();
             //Loop through current stock and evaluate
             helper.Log(_logger, LogLevel.Information, $"Checking current brought/shorted stock");
             foreach (var stock in stockTracker)
@@ -182,35 +186,35 @@ namespace TMD.PricePrediction.Classes
                 }
             }
         }
-        bool BuySellStock(StockTracker stocktracker, dynamic order, TradeDirection direction, int qty, bool IsReversed, SchwabServices service)
-        {
-            //return false;
-            string jsonOrder = helper.CreateTradeObject(order, direction, qty);
-            dynamic results = service.SetOrder(jsonOrder);
-            //if direction is buy or sell short, stocktracker will be null.
-            try
-            {
-                var options = new JsonSerializerOptions
-                {
-                    ReferenceHandler = ReferenceHandler.Preserve
-                };
-                string output = System.Text.Json.JsonSerializer.Serialize(results, options);
-                if (output.Contains("message"))
-                {
-                    helper.Log(_logger, LogLevel.Error, $"stock trade failed {order["Symbol"].ToString()} {output}");
-                }
-                else
-                {
-                    helper.Log(_logger, LogLevel.Information, $"stock trade results {output}");
-                    helper.SaveStockTracker(stocktracker, Platform.CharlesSchwab, direction, qty, IsReversed, order, output, _logger, ref ctx);
-                }
-            }
-            catch (Exception ex)
-            {
-                helper.Log(_logger, LogLevel.Error, $"Error in buying stock - {ex.Message}");
-            }
-            return true;
-        }
+        //bool BuySellStock(StockTracker stocktracker, dynamic order, TradeDirection direction, int qty, bool IsReversed, SchwabServices service)
+        //{
+        //    //return false;
+        //    string jsonOrder = helper.CreateTradeObject(order, direction, qty);
+        //    dynamic results = service.SetOrder(jsonOrder);
+        //    //if direction is buy or sell short, stocktracker will be null.
+        //    try
+        //    {
+        //        var options = new JsonSerializerOptions
+        //        {
+        //            ReferenceHandler = ReferenceHandler.Preserve
+        //        };
+        //        string output = System.Text.Json.JsonSerializer.Serialize(results, options);
+        //        if (output.Contains("message"))
+        //        {
+        //            helper.Log(_logger, LogLevel.Error, $"stock trade failed {order["Symbol"].ToString()} {output}");
+        //        }
+        //        else
+        //        {
+        //            helper.Log(_logger, LogLevel.Information, $"stock trade results {output}");
+        //            helper.SaveStockTracker(stocktracker, Platform.CharlesSchwab, direction, qty, IsReversed, order, output, _logger, ref ctx);
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        helper.Log(_logger, LogLevel.Error, $"Error in buying stock - {ex.Message}");
+        //    }
+        //    return true;
+        //}
         //bool ReverseStock(StockTracker stock, JsonObject? results)
         //{
         //    //reverse stock
@@ -236,7 +240,7 @@ namespace TMD.PricePrediction.Classes
         //    }
         //    return true;
         //}
-        bool UpdateLastPrice(decimal lastPrice, ref StockTracker stockTracker)
+        bool UpdateLastPrice(decimal lastPrice, ref StockTracker2 stockTracker)
         {
             ctx = new TmdContext();
             if ((stockTracker.TradeDirection == (int)TradeDirection.BUY && (lastPrice > stockTracker.LastPrice && lastPrice > stockTracker.PricePurchased)) || stockTracker.LastPrice is null)
@@ -262,7 +266,7 @@ namespace TMD.PricePrediction.Classes
             return true;
         }
 
-        void AnalyiseOwnedStock(StockTracker stock, JsonObject? results)
+        void AnalyiseOwnedStock(StockTracker2 stock, JsonObject? results)
         {
             //calculate percent difference
             decimal percentDiffPricePurchased = 0m;
@@ -290,7 +294,7 @@ namespace TMD.PricePrediction.Classes
                         //buy to cover
                         helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentDiffPricePurchased, 4)}% since price purchased. Buying to cover.");
                         UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
-                        BuySellStock(stock, results, TradeDirection.BUY_TO_COVER, stock.Quantity, false, services);
+                        helper.BuySellStock(stock, results, TradeDirection.BUY_TO_COVER, stock.Quantity, false, services);
                         //Attempt to reverse stock
                         //if (stock.IsReversed != null && !(bool)stock.IsReversed)
                         //    ReverseStock(stock, results);
@@ -310,7 +314,7 @@ namespace TMD.PricePrediction.Classes
                         //buy to cover
                         helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentDiffLastPrice, 4)}% since last price. Buying to cover.");
                         UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
-                        BuySellStock(stock, results, TradeDirection.BUY_TO_COVER, stock.Quantity, false, services);
+                        helper.BuySellStock(stock, results, TradeDirection.BUY_TO_COVER, stock.Quantity, false, services);
                     }
                     else
                     {
@@ -336,7 +340,7 @@ namespace TMD.PricePrediction.Classes
                         //buy to cover
                         helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentDiffPricePurchased, 4)}% since price purchased. Buying to cover.");
                         UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
-                        BuySellStock(stock, results, TradeDirection.SELL, stock.Quantity, false, services);
+                        helper.BuySellStock(stock, results, TradeDirection.SELL, stock.Quantity, false, services);
                         //Attempt to reverse stock
                         //if (stock.IsReversed != null && !(bool)stock.IsReversed)
                         //    ReverseStock(stock, results);
@@ -356,7 +360,7 @@ namespace TMD.PricePrediction.Classes
                         //sell
                         helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentDiffLastPrice, 4)}% since last price. Buying to cover.");
                         UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
-                        BuySellStock(stock, results, TradeDirection.SELL, stock.Quantity, false, services);
+                        helper.BuySellStock(stock, results, TradeDirection.SELL, stock.Quantity, false, services);
                     }
                     else
                     {
@@ -373,36 +377,36 @@ namespace TMD.PricePrediction.Classes
                 }
             }
         }
-        void CalculatePurchaseAmount(decimal? availiabletoTrade, ref List<BuySellCommodity> BuySellStockList)
-        {
-            var stockTracker = ctx?.StockTracker?.Where(x => x.PriceSold == null && x.DateSold == null && x.Status == "Filled" && x.TradePlatform == (int)Platform.CharlesSchwab).ToList();
-            if (stockTracker?.Count() >= (settings?.MaxNumberofStockstoBuy / 2))
-                return;
-            int stockCnt = 0;
-            //decimal? perStockSet = (BuySellStockList.Count() < (settings.MaxNumberofStockstoBuy - BuySellStockList.Count())) ? availiabletoTrade / BuySellStockList.Count() : availiabletoTrade / (settings.MaxNumberofStockstoBuy - stockTracker.Count());//(availiabletoTrade / BuySellStockList.Count) > (availiabletoTrade * (settings.MaxPercentofAvailBalancePerOrder / 100)) ? (availiabletoTrade * (settings.MaxPercentofAvailBalancePerOrder / 100)) : (availiabletoTrade / BuySellStockList.Count);
-            if ((int)(settings.MaxNumberofStockstoBuy / 2) - stockTracker.Count() < 1)
-                return;
-            decimal? perStockSet = availiabletoTrade / Math.Abs((int)(settings.MaxNumberofStockstoBuy / 2) - stockTracker.Count());
-            var stockList = new List<BuySellCommodity>(BuySellStockList);
-            foreach (var item in stockList) 
-            {
-                if ((stockTracker.Count() + stockCnt) >= settings.MaxNumberofStockstoBuy)
-                    break;
-                //var result = item.Key;
-                //var direction = item.Value;
-                var result = item.Results;
-                var direction = item.Direction;
-                var lastPrice = Convert.ToDecimal(result?["lastPrice"]?.ToString());
-                //var qty = Convert.ToInt32(perStockSet / lastPrice);
-                var qty = (Convert.ToInt32(perStockSet / lastPrice) > settings.MaxNumberofSharesPerStock) ? (int)settings.MaxNumberofSharesPerStock : Convert.ToInt32(perStockSet / lastPrice);
-                if (qty >= 2 && lastPrice >= 5m)
-                {
-                    BuySellStock(null, result, direction, qty, false, services);
-                    stockCnt++;
-                    BuySellStockList.Remove(item);
-                }
-            }
-        }
+        //void CalculatePurchaseAmount(decimal? availiabletoTrade, ref List<BuySellCommodity> BuySellStockList)
+        //{
+        //    var stockTracker = ctx?.StockTracker?.Where(x => x.PriceSold == null && x.DateSold == null && x.Status == "Filled" && x.TradePlatform == (int)Platform.CharlesSchwab).ToList();
+        //    if (stockTracker?.Count() >= (settings?.MaxNumberofStockstoBuy / 2))
+        //        return;
+        //    int stockCnt = 0;
+        //    //decimal? perStockSet = (BuySellStockList.Count() < (settings.MaxNumberofStockstoBuy - BuySellStockList.Count())) ? availiabletoTrade / BuySellStockList.Count() : availiabletoTrade / (settings.MaxNumberofStockstoBuy - stockTracker.Count());//(availiabletoTrade / BuySellStockList.Count) > (availiabletoTrade * (settings.MaxPercentofAvailBalancePerOrder / 100)) ? (availiabletoTrade * (settings.MaxPercentofAvailBalancePerOrder / 100)) : (availiabletoTrade / BuySellStockList.Count);
+        //    if ((int)(settings.MaxNumberofStockstoBuy / 2) - stockTracker.Count() < 1)
+        //        return;
+        //    decimal? perStockSet = availiabletoTrade / Math.Abs((int)(settings.MaxNumberofStockstoBuy / 2) - stockTracker.Count());
+        //    var stockList = new List<BuySellCommodity>(BuySellStockList);
+        //    foreach (var item in stockList) 
+        //    {
+        //        if ((stockTracker.Count() + stockCnt) >= settings.MaxNumberofStockstoBuy)
+        //            break;
+        //        //var result = item.Key;
+        //        //var direction = item.Value;
+        //        var result = item.Results;
+        //        var direction = item.Direction;
+        //        var lastPrice = Convert.ToDecimal(result?["lastPrice"]?.ToString());
+        //        //var qty = Convert.ToInt32(perStockSet / lastPrice);
+        //        var qty = (Convert.ToInt32(perStockSet / lastPrice) > settings.MaxNumberofSharesPerStock) ? (int)settings.MaxNumberofSharesPerStock : Convert.ToInt32(perStockSet / lastPrice);
+        //        if (qty >= 2 && lastPrice >= 5m)
+        //        {
+        //            helper.BuySellStock(null, result, direction, qty, false, services);
+        //            stockCnt++;
+        //            BuySellStockList.Remove(item);
+        //        }
+        //    }
+        //}
         ~ExecStockPricePredictionSchwab()
         {
             ctx?.Dispose();

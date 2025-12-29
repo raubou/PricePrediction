@@ -20,7 +20,7 @@ namespace TraderGo.Pages
         //[BindProperty] public JsonElement? Orders { get; set; }
         [BindProperty] public string? clientSecret { get; set; }
         //[BindProperty] public List<Token>? tokens { get; set; }
-        [BindProperty] public List<StockTracker>? StockTracker { get; set; }
+        [BindProperty] public List<StockTracker2>? StockTracker { get; set; }
         int retryCnt = 0;
         bool tokenRefreshed = false;
         private readonly ILogger<AccountInfoModel>? _logger;
@@ -68,7 +68,7 @@ namespace TraderGo.Pages
             //{
 
             //}
-            StockTracker = ctx?.StockTracker.Where(x => x.PriceSold == null && x.DateSold == null && (x.Status.ToLower() == "filled")).ToList();
+            StockTracker = ctx?.StockTracker2.Where(x => x.PriceSold == null && x.DateSold == null && (x.Status.ToLower() == "filled")).ToList();
             return Page();
         }
         public IActionResult OnPost()
@@ -78,7 +78,7 @@ namespace TraderGo.Pages
             Platform tradePlatform = (Platform)platform;
             //var platform = Request.Form["platform"];
             //var products = coinBaseService.GetProducts();
-            var stock = ctx.StockTracker.Where(x => x.PriceSold == null && x.DateSold == null && x.Status == "FILLED" && x.Symbol == symbol && x.TradePlatform == (int)tradePlatform).FirstOrDefault();
+            var stock = ctx.StockTracker2.Where(x => x.PriceSold == null && x.DateSold == null && x.Status == "FILLED" && x.Symbol == symbol && x.TradePlatform == (int)tradePlatform).FirstOrDefault();
             //var order = coinBaseService.GetOrder((Guid)coin.BuyOrderId);
             var results = services.GetQuote(symbol);
             TradeDirection currentTradeDirection = (TradeDirection)Enum.Parse(typeof(TradeDirection), stock.TradeDirection.ToString(), true);
@@ -95,7 +95,7 @@ namespace TraderGo.Pages
 
             return Execute();
         }
-        bool BuySellStock(StockTracker stocktracker, dynamic order, TradeDirection direction, int qty, bool IsReversed, SchwabServices service)
+        bool BuySellStock(StockTracker2 stocktracker, dynamic order, TradeDirection direction, int qty, bool IsReversed, SchwabServices service)
         {
             //return false;
             string? jsonOrder = helper?.CreateTradeObject(order, direction, qty);
@@ -115,7 +115,7 @@ namespace TraderGo.Pages
                 else
                 {
                     //helper.Log(_logger, LogLevel.Information, $"stock trade results {output}");
-                    helper.SaveStockTracker(stocktracker, Platform.CharlesSchwab, direction, qty, IsReversed, order, output, _logger, ref ctx);
+                    helper.SaveStockTracker(stocktracker, Platform.CharlesSchwab, direction, qty, IsReversed, order, output, _logger/*, ref ctx*/);
                 }
             }
             catch (Exception ex)
@@ -124,7 +124,7 @@ namespace TraderGo.Pages
             }
             return true;
         }
-        bool BuySellStock(StockTracker stocktracker, dynamic order, TradeDirection direction, int qty, bool IsReversed, ETradeService service)
+        bool BuySellStock(StockTracker2 stocktracker, dynamic order, TradeDirection direction, int qty, bool IsReversed, ETradeService service)
         {
             //return true;
             qty = Math.Abs(qty);
@@ -146,7 +146,7 @@ namespace TraderGo.Pages
                 }
                 //helper.Log(_logger, LogLevel.Information, $"Stock trade results {order["Symbol"].ToString()} Success");
                 //SaveStockTracker(stocktracker, direction, qty, order, "Success");
-                helper.SaveStockTracker(stocktracker, Platform.ETrade, direction, qty, IsReversed, order, "Success", _logger, ref ctx);
+                helper.SaveStockTracker(stocktracker, Platform.ETrade, direction, qty, IsReversed, order, "Success", _logger/*, ref ctx*/);
                 return true;
             }
             catch (Exception ex)

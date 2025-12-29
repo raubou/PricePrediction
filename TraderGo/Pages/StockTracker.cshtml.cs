@@ -19,7 +19,7 @@ namespace TraderGo.Pages
         IHttpClientFactory _factory;
         Manager _mgr;
         SchwabServices services;
-        [BindProperty] public List<StockTracker?> StockTracker {  get; set; } 
+        [BindProperty] public List<StockTracker2?> StockTracker {  get; set; } 
         [BindProperty] public int Total { get; set; }
         public StockTrackerModel(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<MailSettings> mailSettings, IHttpClientFactory factory, ILogger<StockTrackerModel> logger, IOptions<SchwabSettings> settings) //: base(connectionSettings, connectionSettings2, mailSettings)
         {
@@ -33,7 +33,7 @@ namespace TraderGo.Pages
         }
         public override IActionResult Execute()
         {
-            StockTracker = ctx.StockTracker.Where(x => x.Status == "Filled" && x.PriceSold == null).OrderByDescending(x => x.DateCreated).ToList();
+            StockTracker = ctx.StockTracker2.Where(x => x.Status == "Filled" && x.PriceSold == null).OrderByDescending(x => x.DateCreated).ToList();
             Total = StockTracker.Count;
             return Page();
         }

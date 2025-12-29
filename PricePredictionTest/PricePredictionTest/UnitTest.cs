@@ -232,7 +232,7 @@ namespace PricePredictionTest
                     continue;
                 }
 
-                StockTracker? stock = ctx?.StockTracker?.Where(x => x.Symbol == symbol &&
+                StockTracker2? stock = ctx?.StockTracker2?.Where(x => x.Symbol == symbol &&
                 (x.DatePurchased >= DateTime.Parse(dateTime.ToShortDateString()) && x.DatePurchased <= DateTime.Parse(dateTime.ToShortDateString()).AddDays(1) ||
                 x.DateUpdated >= DateTime.Parse(dateTime.ToShortDateString()) && x.DateUpdated <= DateTime.Parse(dateTime.ToShortDateString()).AddDays(1)) &&
                 x.TradePlatform == (int)Platform.CharlesSchwab).FirstOrDefault();
@@ -874,11 +874,11 @@ namespace PricePredictionTest
                 var qty = Convert.ToInt32(position?.Element("quantity").Value);
                 if (pricePaid > 0 && lastPrice > 1)
                 {
-                    var stockTracker = ctx?.StockTracker?.Where(x => x.PriceSold == null && x.DateSold == null && x.TradePlatform == (int)Platform.ETrade && x.Status != "Cancelled" && x.Symbol == symbol.ToUpper()).FirstOrDefault();
+                    var stockTracker = ctx?.StockTracker2?.Where(x => x.PriceSold == null && x.DateSold == null && x.TradePlatform == (int)Platform.ETrade && x.Status != "Cancelled" && x.Symbol == symbol.ToUpper()).FirstOrDefault();
                     if (stockTracker == null)
                     {
                         var quote = ETradeService.Quote(symbol);
-                        stockTracker = new StockTracker();
+                        stockTracker = new StockTracker2();
                         stockTracker.Symbol = quote["Symbol"].ToString();
                         stockTracker.Name = quote["Name"].ToString();
                         stockTracker.TradeDirection = (qty > 0) ? (int)TradeDirection.BUY : (int)TradeDirection.SELL_SHORT;//(int)direction;
@@ -886,8 +886,8 @@ namespace PricePredictionTest
                         stockTracker.PricePurchased = Convert.ToDecimal(quote["lastPrice"].ToString());
                         stockTracker.Quantity = qty;
                         stockTracker.PurchasedRsi = Convert.ToDecimal(quote["RSI"].ToString());
-                        stockTracker.PurchasedSma200 = Convert.ToDecimal(quote["SMA30"].ToString());
-                        stockTracker.PurchasedEma200 = Convert.ToDecimal(quote["EMA30"].ToString());
+                        //stockTracker.PurchasedSma200 = Convert.ToDecimal(quote["SMA30"].ToString());
+                        //stockTracker.PurchasedEma200 = Convert.ToDecimal(quote["EMA30"].ToString());
                         stockTracker.PurchasedVwap = Convert.ToDecimal(quote["VWAP"].ToString());
                         stockTracker.PurchasedEma9 = Convert.ToDecimal(quote["EMA9"].ToString());
                         stockTracker.PurchasedEma12 = Convert.ToDecimal(quote["EMA12"].ToString());
@@ -897,7 +897,7 @@ namespace PricePredictionTest
                         stockTracker.DateCreated = DateTime.Now;
                         stockTracker.LastUpdatedBy = 1;
                         stockTracker.Status = "Filled";
-                        ctx.StockTracker.Add(stockTracker);
+                        ctx.StockTracker2.Add(stockTracker);
                         ctx.Entry(stockTracker).State = Microsoft.EntityFrameworkCore.EntityState.Added;
                         ctx.SaveChanges();
                         ctx.Entry(stockTracker).State = Microsoft.EntityFrameworkCore.EntityState.Detached;

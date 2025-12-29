@@ -17,7 +17,8 @@ namespace TMDInvestments.Context
             
         }
         public DbSet<RulesEngine>? RulesEngine { get; set; }
-        public DbSet<StockTracker>? StockTracker { get; set; }
+        //public DbSet<StockTracker>? StockTracker { get; set; }
+        public DbSet<StockTracker2>? StockTracker2 { get; set; }
         public DbSet<StockList>? StockList { get; set; }
         public DbSet<Earning>? Earning { get; set; }
         public DbSet<IPO>? IPO { get; set; }
