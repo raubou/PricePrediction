@@ -375,7 +375,7 @@ namespace TMD.PricePrediction.Classes
             PublicProduct? product = publicProducts.Where(x => x.DisplayName == symbol).FirstOrDefault();
             string precision = product.BaseIncrement.Substring((product.BaseIncrement.IndexOf(".") + 1), (product.BaseIncrement.Length - (product.BaseIncrement.IndexOf(".") + 1)));
             string[] currency = product.DisplayName.Split('-');
-            var account = services.GetAccounts().Where(x => x.Currency == currency[0]).FirstOrDefault();
+            var account = services.GetAccounts().Where(x => x.Currency == currency[0] && Convert.ToDecimal(x.AvailableBalance.Value) > 0m).FirstOrDefault();
             decimal minSubtract = 0m;
             //var valueofNonTrackedAsset = Math.Round(Convert.ToDecimal(account.AvailableBalance.Value) * Convert.ToDecimal(product?.Price), 2
             //var valueofNonTrackedAsset = Math.Round(Convert.ToDecimal(account.AvailableBalance.Value) * Convert.ToDecimal(product?.Price), 2);
@@ -422,6 +422,9 @@ namespace TMD.PricePrediction.Classes
                             break;
                         case 8:
                             minSubtract = .00000001m;
+                            break;
+                        case 9:
+                            minSubtract = .000000001m;
                             break;
                     }
                     var baseSize = decimal.Round(Convert.ToDecimal(account.AvailableBalance.Value), precision.Length) - minSubtract;
@@ -903,14 +906,6 @@ namespace TMD.PricePrediction.Classes
                     ctx.SaveChanges();
                     ctx.Entry(ct).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
                 }
-                //else
-                //{
-                //    var ct = crypto;
-                //    ctx.CryptoTracker2.Attach(ct);
-                //    ctx.Entry(ct).State = Microsoft.EntityFrameworkCore.EntityState.Deleted;
-                //    ctx.SaveChanges();
-                //    ctx.Entry(ct).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
-                //}
             }
         }
         private Fill GetLastOrder(string ProductId)
