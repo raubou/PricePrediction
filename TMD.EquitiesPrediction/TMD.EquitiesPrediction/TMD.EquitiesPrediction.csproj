@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <!--<GenerateProgramFile>false</GenerateProgramFile>-->
-    <Version>2.6.5.8</Version>
+    <Version>2.6.5.9</Version>
   </PropertyGroup>
 
   <ItemGroup>

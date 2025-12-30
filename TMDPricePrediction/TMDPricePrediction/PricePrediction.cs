@@ -71,10 +71,10 @@ namespace TMDPricePrediction
                     if (totalAvailiableforLongTradeSchwab > 100 || totalAvailiableforLongTradeETrade > 100)
                         BuySellStockList = helper.GetQuoteList();
 
-                    if (totalAvailiableforLongTradeSchwab > 100)
+                    //if (totalAvailiableforLongTradeSchwab > 100)
                         exec1.Exec(totalAvailiableforLongTradeSchwab, ref BuySellStockList);
-                    else
-                        _logger.LogInformation($"Not enough buying power in Schwab account to make a trade. ${totalAvailiableforLongTradeSchwab}");
+                    //else
+                    //    _logger.LogInformation($"Not enough buying power in Schwab account to make a trade. ${totalAvailiableforLongTradeSchwab}");
                 }
                 else
                 {
@@ -88,10 +88,10 @@ namespace TMDPricePrediction
             }
             try
             {
-                if (totalAvailiableforLongTradeETrade > 100)
+                //if (totalAvailiableforLongTradeETrade > 100)
                     exec3.Exec(totalAvailiableforLongTradeETrade, ref BuySellStockList);
-                else
-                    _logger.LogInformation($"Not enough buying power in ETrade account to make a trade. ${totalAvailiableforLongTradeETrade}");
+                //else
+                //    _logger.LogInformation($"Not enough buying power in ETrade account to make a trade. ${totalAvailiableforLongTradeETrade}");
             }
             catch (Exception ex)
             {
@@ -117,99 +117,6 @@ namespace TMDPricePrediction
                 _logger.LogInformation($"Next timer schedule at: {myTimer.ScheduleStatus.Next}");
             }
         }
-        //public void ExecEtrade(List<BuySellCommodity>? BuySellStockList)
-        //{
-        //    int authRetry = 0;
-        //accountAuthRetry:
-        //    //Get Account Info
-        //    XElement account = null;
-        //    try
-        //    {
-        //        account = services.Account();
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        if (authRetry < 3)
-        //        {
-        //            helper.Log(_logger, LogLevel.Error, "Authenication from ETrade failed. Retrying");
-        //            authRetry++;
-        //            goto accountAuthRetry;
-        //        }
-        //        else
-        //        {
-        //            helper.Log(_logger, LogLevel.Error, $"Authenication from schwab failed {authRetry} Retries. Exiting");
-        //            return;
-        //        }
-        //    }
-
-        //    helper.Log(_logger, LogLevel.Information, $"Get account info for ETrade");
-
-        //    XElement securitiesAccount = null;
-        //    try
-        //    {
-        //        securitiesAccount = account.Element("Computed");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        if (authRetry < 3)
-        //        {
-        //            helper.Log(_logger, LogLevel.Error, "Authenication from ETrade failed. Retrying");
-        //            authRetry++;
-        //            goto accountAuthRetry;
-        //        }
-        //        else
-        //        {
-        //            helper.Log(_logger, LogLevel.Error, $"Authenication from schwab failed {authRetry} Retries. Exiting");
-        //            return;
-        //        }
-        //    }
-
-        //    decimal cash = Convert.ToDecimal(securitiesAccount.Element("cashBuyingPower").Value.ToString());
-        //    decimal margin = Convert.ToDecimal(securitiesAccount.Element("marginBuyingPower").Value.ToString());
-        //    //totalAvailiableforLongTrade = Math.Round((cash + margin), 2);
-        //    totalAvailiableforLongTrade = Math.Round((cash + margin) * .9m, 2);
-        //    //totalAvailiableforLongTrade = 200m;
-
-        //    helper.Log(_logger, LogLevel.Information, $"Cash Balance ${cash}. Margin Balance ${margin}. Total Availiable ${totalAvailiableforLongTrade}");
-
-        //    if (helper.IsNotHolidayorWeekend())
-        //        Run(BuySellStockList);
-        //    else
-        //        helper.Log(_logger, LogLevel.Warning, "Time is outside of trading window.");
-        //}
-        //public void ExecSchwab(List<BuySellCommodity>? BuySellStockList)
-        //{
-        //    JsonElement account = new JsonElement();
-        //    services.GetAccountInfo(ref account);
-        //    //_logger.LogInformation($"Get account info for Charles Schwab");
-        //    helper.Log(_logger, LogLevel.Information, $"Get account info for Charles Schwab");
-
-        //    JsonElement securitiesAccount = new JsonElement();
-        //    JsonElement initialBalances = new JsonElement();
-        //    try
-        //    {
-        //        securitiesAccount = account.GetProperty("securitiesAccount");
-        //        initialBalances = securitiesAccount.GetProperty("initialBalances");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        helper.Log(_logger, LogLevel.Error, $"Authenication from schwab failed {3} Retries. Exiting");
-        //        return;
-
-        //    }
-
-        //    decimal cash = Convert.ToDecimal(initialBalances.GetProperty("cashBalance").ToString());
-        //    decimal margin = Convert.ToDecimal(initialBalances.GetProperty("margin").ToString());
-        //    totalAvailiableforLongTrade = Math.Round((cash + margin) * .9m, 2);
-        //    //totalAvailiableforLongTrade = 0m;
-
-        //    helper.Log(_logger, LogLevel.Information, $"Cash Balance ${cash}. Margin Balance ${margin}. Total Availiable ${totalAvailiableforLongTrade}");
-
-        //    if (helper.IsNotHolidayorWeekend())
-        //        Run(BuySellStockList);
-        //    else
-        //        helper.Log(_logger, LogLevel.Warning, "Time is outside of trading window.");
-        //}
         public class Versioning
         {
             public string GetAssemblyVersion()
