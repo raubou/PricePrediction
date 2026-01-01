@@ -348,17 +348,17 @@ namespace TMD.PricePrediction
 
             //if (!useOneHourRSI)
             //{
-            if (Convert.ToDecimal(results["RSI"].ToString()) > 0)
-            {
-                if (Convert.ToDecimal(results["RSI"].ToString()) >= 80)
-                {
-                    shortCnt = shortCnt + 3;
-                }
-                if (Convert.ToDecimal(results["RSI"].ToString()) <= 20)
-                {
-                    longCnt = longCnt + 3;
-                }
-            }
+            //if (Convert.ToDecimal(results["RSI"].ToString()) > 0)
+            //{
+            //    if (Convert.ToDecimal(results["RSI"].ToString()) >= 80)
+            //    {
+            //        shortCnt = shortCnt + 3;
+            //    }
+            //    if (Convert.ToDecimal(results["RSI"].ToString()) <= 20)
+            //    {
+            //        longCnt = longCnt + 3;
+            //    }
+            //}
 
             //}
             //else
@@ -395,72 +395,72 @@ namespace TMD.PricePrediction
 
             //if (use31016)
             //{
-                //// 3, 10, 16 STRATEGY
-                if (Convert.ToDecimal(results["EMA3"].ToString()) > Convert.ToDecimal(results["EMA10"].ToString()))
-                { longCnt = longCnt + 3; }
-                if (Convert.ToDecimal(results["EMA3"].ToString()) > Convert.ToDecimal(results["EMA16"].ToString()) &&
-                    Convert.ToDecimal(results["EMA10"].ToString()) > Convert.ToDecimal(results["EMA16"].ToString()))
-                { longCnt = longCnt + 3; }
-                if (Convert.ToDecimal(results["SMA3"].ToString()) > Convert.ToDecimal(results["SMA10"].ToString()))
-                { longCnt = longCnt + 3; }
-                if (Convert.ToDecimal(results["SMA3"].ToString()) > Convert.ToDecimal(results["SMA16"].ToString()) &&
-                    Convert.ToDecimal(results["SMA10"].ToString()) > Convert.ToDecimal(results["SMA16"].ToString()))
-                { longCnt = longCnt + 3; }
+            //// 3, 10, 16 STRATEGY
+            //    if (Convert.ToDecimal(results["EMA3"].ToString()) > Convert.ToDecimal(results["EMA10"].ToString()))
+            //    { longCnt = longCnt + 3; }
+            //    if (Convert.ToDecimal(results["EMA3"].ToString()) > Convert.ToDecimal(results["EMA16"].ToString()) &&
+            //        Convert.ToDecimal(results["EMA10"].ToString()) > Convert.ToDecimal(results["EMA16"].ToString()))
+            //    { longCnt = longCnt + 3; }
+            //    if (Convert.ToDecimal(results["SMA3"].ToString()) > Convert.ToDecimal(results["SMA10"].ToString()))
+            //    { longCnt = longCnt + 3; }
+            //    if (Convert.ToDecimal(results["SMA3"].ToString()) > Convert.ToDecimal(results["SMA16"].ToString()) &&
+            //        Convert.ToDecimal(results["SMA10"].ToString()) > Convert.ToDecimal(results["SMA16"].ToString()))
+            //    { longCnt = longCnt + 3; }
 
-                if (Convert.ToDecimal(results["EMA3"].ToString()) < Convert.ToDecimal(results["EMA10"].ToString()))
-                { shortCnt = shortCnt + 3; }
-                if (Convert.ToDecimal(results["EMA3"].ToString()) < Convert.ToDecimal(results["EMA16"].ToString()) &&
-                    Convert.ToDecimal(results["EMA10"].ToString()) < Convert.ToDecimal(results["EMA16"].ToString()))
-                { shortCnt = shortCnt + 3; }
-                if (Convert.ToDecimal(results["SMA3"].ToString()) < Convert.ToDecimal(results["SMA10"].ToString()))
-                { shortCnt = shortCnt + 3; }
-                if (Convert.ToDecimal(results["SMA3"].ToString()) < Convert.ToDecimal(results["SMA16"].ToString()) &&
-                    Convert.ToDecimal(results["SMA10"].ToString()) < Convert.ToDecimal(results["SMA16"].ToString()))
-                { shortCnt = shortCnt + 3; }
-            //}
-            //else if (use5138)
-            //{
-                //// 5, 13, 13 STRATEGY
-                if (Convert.ToDecimal(results["EMA5"].ToString()) > Convert.ToDecimal(results["EMA8"].ToString()))
-                { longCnt = longCnt + 3; }
-                if (Convert.ToDecimal(results["EMA5"].ToString()) > Convert.ToDecimal(results["EMA13"].ToString()) &&
-                    Convert.ToDecimal(results["EMA8"].ToString()) > Convert.ToDecimal(results["EMA13"].ToString()))
-                { longCnt = longCnt + 3; }
-                if (Convert.ToDecimal(results["EMA5"].ToString()) < Convert.ToDecimal(results["EMA8"].ToString()))
-                { shortCnt = shortCnt + 3; }
-                if (Convert.ToDecimal(results["EMA5"].ToString()) < Convert.ToDecimal(results["EMA13"].ToString()) &&
-                    Convert.ToDecimal(results["EMA8"].ToString()) < Convert.ToDecimal(results["EMA13"].ToString()))
-                { shortCnt = shortCnt + 3; }
-                if (Convert.ToDecimal(results["SMA5"].ToString()) > Convert.ToDecimal(results["SMA8"].ToString()))
-                { longCnt = longCnt + 3; }
-                if (Convert.ToDecimal(results["SMA5"].ToString()) > Convert.ToDecimal(results["SMA13"].ToString())  &&
-                    Convert.ToDecimal(results["SMA8"].ToString()) > Convert.ToDecimal(results["SMA13"].ToString()))
-                { longCnt = longCnt + 3; }
-                if (Convert.ToDecimal(results["SMA5"].ToString()) < Convert.ToDecimal(results["SMA8"].ToString()))
-                { shortCnt = shortCnt + 3; }
-                if (Convert.ToDecimal(results["SMA5"].ToString()) < Convert.ToDecimal(results["SMA13"].ToString()) &&
-                    Convert.ToDecimal(results["SMA8"].ToString()) < Convert.ToDecimal(results["SMA13"].ToString()))
-                { shortCnt = shortCnt + 3; }
-            //}
-            //else
-            //{
-                //// 9, 12, 26 STRATEGY
-                if (Convert.ToDecimal(results["EMA9"].ToString()) > Convert.ToDecimal(results["EMA12"].ToString()))
-                { longCnt = longCnt + 3; }
-                if (Convert.ToDecimal(results["EMA12"].ToString()) > Convert.ToDecimal(results["EMA26"].ToString()))
-                { longCnt = longCnt + 3; }
-                if (Convert.ToDecimal(results["EMA9"].ToString()) < Convert.ToDecimal(results["EMA12"].ToString()))
-                { shortCnt = shortCnt + 3; }
-                if (Convert.ToDecimal(results["EMA12"].ToString()) < Convert.ToDecimal(results["EMA26"].ToString()))
-                { shortCnt = shortCnt + 3; }
-                if (Convert.ToDecimal(results["SMA9"].ToString()) > Convert.ToDecimal(results["SMA12"].ToString()))
-                { longCnt = longCnt + 3; }
-                if (Convert.ToDecimal(results["SMA12"].ToString()) > Convert.ToDecimal(results["SMA26"].ToString()))
-                { longCnt = longCnt + 3; }
-                if (Convert.ToDecimal(results["SMA9"].ToString()) < Convert.ToDecimal(results["SMA12"].ToString()))
-                { shortCnt = shortCnt + 3; }
-                if (Convert.ToDecimal(results["SMA12"].ToString()) < Convert.ToDecimal(results["SMA26"].ToString()))
-                { shortCnt = shortCnt + 3; }
+            //    if (Convert.ToDecimal(results["EMA3"].ToString()) < Convert.ToDecimal(results["EMA10"].ToString()))
+            //    { shortCnt = shortCnt + 3; }
+            //    if (Convert.ToDecimal(results["EMA3"].ToString()) < Convert.ToDecimal(results["EMA16"].ToString()) &&
+            //        Convert.ToDecimal(results["EMA10"].ToString()) < Convert.ToDecimal(results["EMA16"].ToString()))
+            //    { shortCnt = shortCnt + 3; }
+            //    if (Convert.ToDecimal(results["SMA3"].ToString()) < Convert.ToDecimal(results["SMA10"].ToString()))
+            //    { shortCnt = shortCnt + 3; }
+            //    if (Convert.ToDecimal(results["SMA3"].ToString()) < Convert.ToDecimal(results["SMA16"].ToString()) &&
+            //        Convert.ToDecimal(results["SMA10"].ToString()) < Convert.ToDecimal(results["SMA16"].ToString()))
+            //    { shortCnt = shortCnt + 3; }
+            ////}
+            ////else if (use5138)
+            ////{
+            //    //// 5, 13, 13 STRATEGY
+            //    if (Convert.ToDecimal(results["EMA5"].ToString()) > Convert.ToDecimal(results["EMA8"].ToString()))
+            //    { longCnt = longCnt + 3; }
+            //    if (Convert.ToDecimal(results["EMA5"].ToString()) > Convert.ToDecimal(results["EMA13"].ToString()) &&
+            //        Convert.ToDecimal(results["EMA8"].ToString()) > Convert.ToDecimal(results["EMA13"].ToString()))
+            //    { longCnt = longCnt + 3; }
+            //    if (Convert.ToDecimal(results["EMA5"].ToString()) < Convert.ToDecimal(results["EMA8"].ToString()))
+            //    { shortCnt = shortCnt + 3; }
+            //    if (Convert.ToDecimal(results["EMA5"].ToString()) < Convert.ToDecimal(results["EMA13"].ToString()) &&
+            //        Convert.ToDecimal(results["EMA8"].ToString()) < Convert.ToDecimal(results["EMA13"].ToString()))
+            //    { shortCnt = shortCnt + 3; }
+            //    if (Convert.ToDecimal(results["SMA5"].ToString()) > Convert.ToDecimal(results["SMA8"].ToString()))
+            //    { longCnt = longCnt + 3; }
+            //    if (Convert.ToDecimal(results["SMA5"].ToString()) > Convert.ToDecimal(results["SMA13"].ToString())  &&
+            //        Convert.ToDecimal(results["SMA8"].ToString()) > Convert.ToDecimal(results["SMA13"].ToString()))
+            //    { longCnt = longCnt + 3; }
+            //    if (Convert.ToDecimal(results["SMA5"].ToString()) < Convert.ToDecimal(results["SMA8"].ToString()))
+            //    { shortCnt = shortCnt + 3; }
+            //    if (Convert.ToDecimal(results["SMA5"].ToString()) < Convert.ToDecimal(results["SMA13"].ToString()) &&
+            //        Convert.ToDecimal(results["SMA8"].ToString()) < Convert.ToDecimal(results["SMA13"].ToString()))
+            //    { shortCnt = shortCnt + 3; }
+            ////}
+            ////else
+            ////{
+            //    //// 9, 12, 26 STRATEGY
+            //    if (Convert.ToDecimal(results["EMA9"].ToString()) > Convert.ToDecimal(results["EMA12"].ToString()))
+            //    { longCnt = longCnt + 3; }
+            //    if (Convert.ToDecimal(results["EMA12"].ToString()) > Convert.ToDecimal(results["EMA26"].ToString()))
+            //    { longCnt = longCnt + 3; }
+            //    if (Convert.ToDecimal(results["EMA9"].ToString()) < Convert.ToDecimal(results["EMA12"].ToString()))
+            //    { shortCnt = shortCnt + 3; }
+            //    if (Convert.ToDecimal(results["EMA12"].ToString()) < Convert.ToDecimal(results["EMA26"].ToString()))
+            //    { shortCnt = shortCnt + 3; }
+            //    if (Convert.ToDecimal(results["SMA9"].ToString()) > Convert.ToDecimal(results["SMA12"].ToString()))
+            //    { longCnt = longCnt + 3; }
+            //    if (Convert.ToDecimal(results["SMA12"].ToString()) > Convert.ToDecimal(results["SMA26"].ToString()))
+            //    { longCnt = longCnt + 3; }
+            //    if (Convert.ToDecimal(results["SMA9"].ToString()) < Convert.ToDecimal(results["SMA12"].ToString()))
+            //    { shortCnt = shortCnt + 3; }
+            //    if (Convert.ToDecimal(results["SMA12"].ToString()) < Convert.ToDecimal(results["SMA26"].ToString()))
+            //    { shortCnt = shortCnt + 3; }
             //}
 
 
@@ -495,30 +495,30 @@ namespace TMD.PricePrediction
             ////{
             //if (!MACDFocus)
             //{
-            if (Convert.ToDecimal(results["MACD"].ToString()) > Convert.ToDecimal(results["MACDSignal"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) < 0 &&*/ Convert.ToDecimal(results["MACDHistogram"].ToString()) > 0))
-            {
-                longCnt = longCnt + 3;
-            }
-            if (Convert.ToDecimal(results["MACD"].ToString()) < Convert.ToDecimal(results["MACDSignal"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) > 0 &&*/ Convert.ToDecimal(results["MACDHistogram"].ToString()) < 0))
-            {
-                shortCnt = shortCnt + 3;
-            }
-            if (Convert.ToDecimal(results["MACD2"].ToString()) > Convert.ToDecimal(results["MACDSignal2"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) < 0 &&*/ Convert.ToDecimal(results["MACDHistogram2"].ToString()) > 0))
-            {
-                longCnt = longCnt + 3;
-            }
-            if (Convert.ToDecimal(results["MACD2"].ToString()) < Convert.ToDecimal(results["MACDSignal2"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) > 0 &&*/ Convert.ToDecimal(results["MACDHistogram2"].ToString()) < 0))
-            {
-                shortCnt = shortCnt + 3;
-            }
-            if (Convert.ToDecimal(results["MACD3"].ToString()) > Convert.ToDecimal(results["MACDSignal3"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) < 0 &&*/ Convert.ToDecimal(results["MACDHistogram3"].ToString()) > 0))
-            {
-                longCnt = longCnt + 3;
-            }
-            if (Convert.ToDecimal(results["MACD3"].ToString()) < Convert.ToDecimal(results["MACDSignal3"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) > 0 &&*/ Convert.ToDecimal(results["MACDHistogram3"].ToString()) < 0))
-            {
-                shortCnt = shortCnt + 3;
-            }
+            //if (Convert.ToDecimal(results["MACD"].ToString()) > Convert.ToDecimal(results["MACDSignal"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) < 0 &&*/ Convert.ToDecimal(results["MACDHistogram"].ToString()) > 0))
+            //{
+            //    longCnt = longCnt + 3;
+            //}
+            //if (Convert.ToDecimal(results["MACD"].ToString()) < Convert.ToDecimal(results["MACDSignal"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) > 0 &&*/ Convert.ToDecimal(results["MACDHistogram"].ToString()) < 0))
+            //{
+            //    shortCnt = shortCnt + 3;
+            //}
+            //if (Convert.ToDecimal(results["MACD2"].ToString()) > Convert.ToDecimal(results["MACDSignal2"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) < 0 &&*/ Convert.ToDecimal(results["MACDHistogram2"].ToString()) > 0))
+            //{
+            //    longCnt = longCnt + 3;
+            //}
+            //if (Convert.ToDecimal(results["MACD2"].ToString()) < Convert.ToDecimal(results["MACDSignal2"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) > 0 &&*/ Convert.ToDecimal(results["MACDHistogram2"].ToString()) < 0))
+            //{
+            //    shortCnt = shortCnt + 3;
+            //}
+            //if (Convert.ToDecimal(results["MACD3"].ToString()) > Convert.ToDecimal(results["MACDSignal3"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) < 0 &&*/ Convert.ToDecimal(results["MACDHistogram3"].ToString()) > 0))
+            //{
+            //    longCnt = longCnt + 3;
+            //}
+            //if (Convert.ToDecimal(results["MACD3"].ToString()) < Convert.ToDecimal(results["MACDSignal3"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) > 0 &&*/ Convert.ToDecimal(results["MACDHistogram3"].ToString()) < 0))
+            //{
+            //    shortCnt = shortCnt + 3;
+            //}
             //}
             //else
             //{
@@ -543,8 +543,12 @@ namespace TMD.PricePrediction
             //}
 
 
-            //if (Convert.ToDecimal(results["MACDHistogram"].ToString()) > 0m) { longCnt++; }
-            //if (Convert.ToDecimal(results["MACDHistogram"].ToString()) < 0m) { shortCnt++; }
+            if (Convert.ToDecimal(results["Upper Bound Price Diffrence"].ToString()) > Convert.ToDecimal(results["lastPrice"].ToString())) { longCnt++; }
+            if (Convert.ToDecimal(results["Upper Bound Price Diffrence"].ToString()) < Convert.ToDecimal(results["lastPrice"].ToString())) { shortCnt++; }
+            if (Convert.ToDecimal(results["Lower Bound Price Diffrence"].ToString()) > Convert.ToDecimal(results["lastPrice"].ToString())) { longCnt++; }
+            if (Convert.ToDecimal(results["Lower Bound Price Diffrence"].ToString()) < Convert.ToDecimal(results["lastPrice"].ToString())) { shortCnt++; }
+            if (Convert.ToDecimal(results["Forecast Bound Price Diffrence"].ToString()) > Convert.ToDecimal(results["lastPrice"].ToString())) { longCnt++; }
+            if (Convert.ToDecimal(results["Forecast Bound Price Diffrence"].ToString()) < Convert.ToDecimal(results["lastPrice"].ToString())) { shortCnt++; }
             System.Threading.Thread.Sleep(150); //Sleep for 150 milliseconds to avoid throttling
         }
 

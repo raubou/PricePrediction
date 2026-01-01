@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 
-namespace TMDInvestments.Models.Models
+namespace TMDInvestments.Models
 {
     public sealed class BuySellCommodity
     {

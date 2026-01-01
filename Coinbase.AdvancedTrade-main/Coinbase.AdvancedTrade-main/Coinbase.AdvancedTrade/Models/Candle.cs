@@ -42,7 +42,7 @@ namespace Coinbase.AdvancedTrade.Models
         /// Gets or sets the closing price of the asset at the end of the time interval represented by the candlestick.
         /// </summary>
         [JsonProperty("close")]
-        public string Close { get; set; }
+        public float Close { get; set; }
 
         /// <summary>
         /// Gets or sets the trading volume of the asset during the time interval represented by the candlestick.

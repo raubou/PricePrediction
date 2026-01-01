@@ -51,15 +51,15 @@ namespace TMDInvestment.Models
     //[Description(candles)]
     public sealed class CandleItems
     {
-        public decimal open { get; set; }
-        public decimal high { get; set; }
-        public decimal low { get; set; }
-        public decimal close { get; set; }
+        public float open { get; set; }
+        public float high { get; set; }
+        public float low { get; set; }
+        public float close { get; set; }
         public long volume { get; set; }
         public long datetime { get { return new DateTimeOffset(time).ToUnixTimeMilliseconds(); } set { time = DateTimeOffset.FromUnixTimeMilliseconds(value).DateTime; } }
         public DateTime time;// { get; set; }
-        public decimal change { get; set; }
-        public decimal percent { get; set; }
+        public float change { get; set; }
+        public float percent { get; set; }
     }
 
     //public class Quote

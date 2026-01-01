@@ -5,9 +5,10 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using TMD.Services;
 using TMD.Services.Service;
+//using TMDInvestment.Models;
 using TMDInvestments.Context;
 using TMDInvestments.Models;
-using TMDInvestments.Models.Models;
+
 
 namespace TMD.PricePrediction.Classes
 {
@@ -65,14 +66,14 @@ namespace TMD.PricePrediction.Classes
             //Get Products
             products = services.GetProducts();
 
-            //Unload Aging Stocks
-            helper.Log(_logger, LogLevel.Information, $"Unload aging stock");
-            UnloadAgingStocks();
-
             //Update Prices
             helper.Log(_logger, LogLevel.Information, $"Updating Latest Prices on Tracker");
             UpdatePrices();
             //System.Threading.Thread.Sleep(1000);
+
+            //Unload Aging Stocks
+            helper.Log(_logger, LogLevel.Information, $"Unload aging stock");
+            UnloadAgingStocks();
 
             //Get Account Info
             List<PortfolioBreakdown> portfolios = services.GetPortfolios();
@@ -276,6 +277,8 @@ namespace TMD.PricePrediction.Classes
         }
         public void UnloadAgingStocks()
         {
+            var Accounts = services.GetAccounts()/*.Where(x => x.Currency != "USD")*/.ToList();
+            var PublicProducts = services.GetProducts().OrderBy(x => x.DisplayName).ToList();
             // Get the TimeZoneInfo object for Eastern Standard Time
             // The identifier "Eastern Standard Time" is commonly used on Windows systems.
             // On Linux/macOS, you might need "America/New_York".
@@ -300,13 +303,17 @@ namespace TMD.PricePrediction.Classes
             foreach (var crypto in agingcryptos)
             {
                 var results = services.GetQuote(crypto.Coin);
+                string[] coin = crypto.Coin.Split('-');
+                var account = Accounts.Where(x => x.Currency == coin[0] && Convert.ToDecimal(x.AvailableBalance.Value) > 0m).FirstOrDefault();
+                var publicProduct = PublicProducts.Where(x => x.DisplayName == account.Currency + "-USD").FirstOrDefault();
+                var valueofNonTrackedAsset = Math.Round(Convert.ToDecimal(account.AvailableBalance.Value) * Convert.ToDecimal(publicProduct?.Price), 9);
                 //Platform tradePlatform = (Platform)crypto.TradePlatform;
                 TradeDirection currentTradeDirection = (TradeDirection)Enum.Parse(typeof(TradeDirection), crypto.TradeDirection.ToString(), true);
                 TradeDirection tradeDirection = (currentTradeDirection == TradeDirection.BUY) ? TradeDirection.SELL : TradeDirection.BUY_TO_COVER;
                 //switch (tradePlatform)
                 //{
                 //    case Platform.CharlesSchwab:
-                BuySellCrypto(crypto, results, (TradeDirection)crypto.TradeDirection, crypto.Amount ?? 0m, services, products, false/*, true*/);
+                BuySellCrypto(crypto, results, tradeDirection, /*crypto.Amount ?? 0m*/valueofNonTrackedAsset, services, products, false/*, true*/);
                 //        break;
                 //    case Platform.ETrade:
                 //        BuySellStock(stock, results, tradeDirection, stock.Quantity, true, services2);
@@ -346,9 +353,9 @@ namespace TMD.PricePrediction.Classes
                     AnalyiseOwnedCrypto(st, results, products);
             }
         }
-        void QueueCryptotoBuy(/*CryptoTracker2 cryptoTracker,*/ dynamic order, TradeDirection direction, decimal amount)
+        void QueueCryptotoBuy(dynamic order, TradeDirection direction, decimal amount)
         {
-            SaveCryptoTracker(null, direction, amount, order, null, "QUEUED"/*, false*/);
+            SaveCryptoTracker(null, direction, amount, order, null, "QUEUED");
         }
         void CheckforQueuedCrypto()
         {
@@ -359,7 +366,7 @@ namespace TMD.PricePrediction.Classes
             {
                 JsonObject? results = services.GetQuote(crypto.Coin);
                 helper.CalculatePoints(results, /*false, true,*/ ref shortCnt, ref longCnt);
-                if (longCnt >= settings.CryptoLongCount || shortCnt >= settings.CryptoLongCount)
+                if (longCnt >= settings.CryptoLongCount || shortCnt >= settings.CryptoShortCount)
                 {
                     BuySellCrypto(crypto, results,(TradeDirection)crypto.TradeDirection, crypto.Amount ?? 0m, services, products, false/*, true*/);
                 }
@@ -369,7 +376,7 @@ namespace TMD.PricePrediction.Classes
                 }
             }
         }
-        bool BuySellCrypto(CryptoTracker2 cryptoTracker, dynamic order, TradeDirection direction, decimal amount, CoinBaseService service, List<PublicProduct> publicProducts, bool sellShort/*, bool IsUpdate*/)
+        bool BuySellCrypto(CryptoTracker2 cryptoTracker, dynamic order, TradeDirection direction, decimal amount, CoinBaseService service, List<PublicProduct> publicProducts, bool sellShort)
         {
             string symbol = (order["Symbol"].ToString().Substring((order["Symbol"].ToString().Length - 1), 1) == "C") ? order["Symbol"].ToString().Substring(0, (order["Symbol"].ToString().Length - 1)) : order["Symbol"].ToString();
             PublicProduct? product = publicProducts.Where(x => x.DisplayName == symbol).FirstOrDefault();
@@ -441,7 +448,8 @@ namespace TMD.PricePrediction.Classes
             }
 
             if (output != null && (output.Status.ToLower() == "filled" || output.Status.ToLower() == "open" || output.Status.ToLower() == "pending"))
-                SaveCryptoTracker(cryptoTracker, direction, amount, order, output, (direction == TradeDirection.BUY) ? "FILLED" : null/*, IsUpdate*/);
+                SaveCryptoTracker(cryptoTracker, direction, amount, order, output, output.Status);
+            //SaveCryptoTracker(cryptoTracker, direction, amount, order, output, (direction == TradeDirection.BUY) ? "FILLED" : null/*, IsUpdate*/);
             return true;
         }
         bool SaveCryptoTracker(CryptoTracker2 cryptoTracker, TradeDirection direction, decimal currentBalance, dynamic results, Coinbase.AdvancedTrade.Models.Order order, string buyStatus)
@@ -519,7 +527,7 @@ namespace TMD.PricePrediction.Classes
                 cryptoTracker.DatePurchased = helper.easternTime;
                 cryptoTracker.DateCreated = helper.easternTime;
                 cryptoTracker.LastUpdatedBy = 1;
-                cryptoTracker.BuyStatus = (order != null) ? order.Status:(buyStatus != null) ? buyStatus:null;
+                cryptoTracker.BuyStatus = (order != null) ? order.Status:(!string.IsNullOrEmpty(buyStatus)) ? buyStatus:null;
                 if(isNew) {
                     ctx.CryptoTracker2.Add(cryptoTracker);
                     ctx.Entry(cryptoTracker).State = Microsoft.EntityFrameworkCore.EntityState.Added;
@@ -724,7 +732,7 @@ namespace TMD.PricePrediction.Classes
                 //    //they do exist
                 //}
                 var publicProduct = PublicProducts.Where(x => x.DisplayName == item.Currency + "-USD").FirstOrDefault();
-                var valueofNonTrackedAsset = Math.Round(Convert.ToDecimal(item.AvailableBalance.Value) * Convert.ToDecimal(publicProduct?.Price), 5);
+                var valueofNonTrackedAsset = Math.Round(Convert.ToDecimal(item.AvailableBalance.Value) * Convert.ToDecimal(publicProduct?.Price), 9);
                 if (valueofNonTrackedAsset == .0m)
                 {
                     helper.Log(_logger, LogLevel.Information, $"{item.Currency} no available balance.");
@@ -890,7 +898,7 @@ namespace TMD.PricePrediction.Classes
                 var currency = crypto.Coin.Split('-');
                 var account = services.GetAccounts().Where(x => x.Currency == currency[0]).FirstOrDefault();
                 var publicProduct = PublicProducts.Where(x => x.DisplayName == crypto.Coin).FirstOrDefault();
-                var valueofNonTrackedAsset = Math.Round(Convert.ToDecimal(account.AvailableBalance.Value) * Convert.ToDecimal(publicProduct?.Price), 5);
+                var valueofNonTrackedAsset = Math.Round(Convert.ToDecimal(account.AvailableBalance.Value) * Convert.ToDecimal(publicProduct?.Price), 9);
                 //if (decimal.TryParse(account?.AvailableBalance.Value, out decimal bal) && bal <= 1.5m)
                 if (valueofNonTrackedAsset > 0m && valueofNonTrackedAsset <= 1.5m)
                 {

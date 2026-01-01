@@ -16,6 +16,7 @@ namespace TMD.Services.Service
         IHttpClientFactory? _factory = null;
         SchwabServices? services;
         CoinBaseService? coinbaseService;
+        MLPricePredict? mlPricePredict;
         //int fastPeriod = 12; int slowPeriod = 26; int signalPeriod = 9;
         public IndicesCalculatorV2(ILogger log, SchwabSettings settings, IHttpClientFactory factory/*, bool use31016 = false, bool use5138 = false*/)
         {
@@ -48,13 +49,14 @@ namespace TMD.Services.Service
         public dynamic CalculateV2(string symbol, JsonElement quote)
         {
             services = new SchwabServices(_log, _settings, _factory);
-
+            mlPricePredict = new MLPricePredict();
             decimal currentPrice = 0m;
             decimal totalVolume = 0m;
             string exchange = string.Empty;
             dynamic? results = null;
             dynamic? ser = null;
             int? totalDaysBack = 0;
+            JsonObject output = new JsonObject();
             List<TMDInvestment.Models.CandleItems> candle90 = new List<TMDInvestment.Models.CandleItems>();
             try
             {
@@ -114,7 +116,8 @@ namespace TMD.Services.Service
             ser = JsonSerializer.Serialize(results.GetProperty("candles"));
             candle90 = JsonSerializer.Deserialize<List<TMDInvestment.Models.CandleItems>>(ser);
 
-            if(candle90.Count < 26)
+            mlPricePredict.Calculate(candle90, ref output);
+            if (candle90.Count < 26)
             {
                 if(totalDaysBack> 5) //give up after 5 days
                 {
@@ -126,35 +129,35 @@ namespace TMD.Services.Service
 
         GetCandles:
             //var test = candle90.OrderByDescending(x => x.datetime).ToList();
-            decimal? SMA12 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(12).Average(c => c.close) : 0m;
-            decimal? SMA26 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(26)?.Average(c => c.close) : 0m;
-            decimal? SMA9 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(9)?.Average(c => c.close) : 0m;
-            decimal? SMA3 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(3)?.Average(c => c.close) : 0m;
-            decimal? SMA10 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(10)?.Average(c => c.close) : 0m;
-            decimal? SMA16 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(16)?.Average(c => c.close) : 0m;
-            decimal? SMA5 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(5)?.Average(c => c.close) : 0m;
-            decimal? SMA8 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(8)?.Average(c => c.close) : 0m;
-            decimal? SMA13 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(13)?.Average(c => c.close) : 0m;
+            float? SMA12 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(12).Average(c => c.close) : 0f;
+            float? SMA26 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(26)?.Average(c => c.close) : 0f;
+            float? SMA9 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(9)?.Average(c => c.close) : 0f;
+            float? SMA3 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(3)?.Average(c => c.close) : 0f;
+            float? SMA10 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(10)?.Average(c => c.close) : 0f;
+            float? SMA16 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(16)?.Average(c => c.close) : 0f;
+            float? SMA5 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(5)?.Average(c => c.close) : 0f;
+            float? SMA8 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(8)?.Average(c => c.close) : 0f;
+            float? SMA13 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(13)?.Average(c => c.close) : 0f;
 
-            decimal? smoothingFactor12 = (2m / (candle90.OrderByDescending(x => x.datetime).Take(12).ToList().Count + 1m));
-            decimal? smoothingFactor26 = (2m / (candle90.OrderByDescending(x => x.datetime).Take(26).ToList().Count + 1m));            
-            decimal? smoothingFactor9 = (2m / (candle90.OrderByDescending(x => x.datetime).Take(9).ToList().Count + 1m));
-            decimal? smoothingFactor3 = (2m / (candle90.OrderByDescending(x => x.datetime).Take(3).ToList().Count + 1m));
-            decimal? smoothingFactor10 = (2m / (candle90.OrderByDescending(x => x.datetime).Take(10).ToList().Count + 1m));
-            decimal? smoothingFactor16 = (2m / (candle90.OrderByDescending(x => x.datetime).Take(16).ToList().Count + 1m));
-            decimal? smoothingFactor5 = (2m / (candle90.OrderByDescending(x => x.datetime).Take(5).ToList().Count + 1m));
-            decimal? smoothingFactor8 = (2m / (candle90.OrderByDescending(x => x.datetime).Take(8).ToList().Count + 1m));
-            decimal? smoothingFactor13 = (2m / (candle90.OrderByDescending(x => x.datetime).Take(13).ToList().Count + 1m));
+            float? smoothingFactor12 = (2f / (candle90.OrderByDescending(x => x.datetime).Take(12).ToList().Count + 1f));
+            float? smoothingFactor26 = (2f / (candle90.OrderByDescending(x => x.datetime).Take(26).ToList().Count + 1f));
+            float? smoothingFactor9 = (2f / (candle90.OrderByDescending(x => x.datetime).Take(9).ToList().Count + 1f));
+            float? smoothingFactor3 = (2f / (candle90.OrderByDescending(x => x.datetime).Take(3).ToList().Count + 1f));
+            float? smoothingFactor10 = (2f / (candle90.OrderByDescending(x => x.datetime).Take(10).ToList().Count + 1f));
+            float? smoothingFactor16 = (2f / (candle90.OrderByDescending(x => x.datetime).Take(16).ToList().Count + 1f));
+            float? smoothingFactor5 = (2f / (candle90.OrderByDescending(x => x.datetime).Take(5).ToList().Count + 1f));
+            float? smoothingFactor8 = (2f / (candle90.OrderByDescending(x => x.datetime).Take(8).ToList().Count + 1f));
+            float? smoothingFactor13 = (2f / (candle90.OrderByDescending(x => x.datetime).Take(13).ToList().Count + 1f));
 
-            decimal? EMA12 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor12) + (SMA12 * (1 - smoothingFactor12)) : 0m;
-            decimal? EMA26 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor26) + (SMA26 * (1 - smoothingFactor26)) : 0m;
-            decimal? EMA9 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor9) + (SMA9 * (1 - smoothingFactor9)) : 0m;
-            decimal? EMA3 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor3) + (SMA3 * (1 - smoothingFactor3)) : 0m;
-            decimal? EMA10 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor10) + (SMA10 * (1 - smoothingFactor10)) : 0m;
-            decimal? EMA16 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor16) + (SMA16 * (1 - smoothingFactor16)) : 0m;
-            decimal? EMA5 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor5) + (SMA5 * (1 - smoothingFactor5)) : 0m;
-            decimal? EMA8 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor8) + (SMA8 * (1 - smoothingFactor8)) : 0m;
-            decimal? EMA13 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor13) + (SMA13 * (1 - smoothingFactor13)) : 0m;
+            float? EMA12 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor12) + (SMA12 * (1 - smoothingFactor12)) : 0f;
+            float? EMA26 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor26) + (SMA26 * (1 - smoothingFactor26)) : 0f;
+            float? EMA9 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor9) + (SMA9 * (1 - smoothingFactor9)) : 0f;
+            float? EMA3 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor3) + (SMA3 * (1 - smoothingFactor3)) : 0f;
+            float? EMA10 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor10) + (SMA10 * (1 - smoothingFactor10)) : 0f;
+            float? EMA16 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor16) + (SMA16 * (1 - smoothingFactor16)) : 0f;
+            float? EMA5 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor5) + (SMA5 * (1 - smoothingFactor5)) : 0f;
+            float? EMA8 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor8) + (SMA8 * (1 - smoothingFactor8)) : 0f;
+            float? EMA13 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor13) + (SMA13 * (1 - smoothingFactor13)) : 0f;
 
             var closes = candle90.OrderBy(x => x.datetime)/*.Take(52)*/.Select(y => new MACDClosesDateTime { Price = y.close, Datetime = DateTimeOffset.FromUnixTimeMilliseconds(y.datetime).DateTime }).ToList();
 
@@ -170,15 +173,15 @@ namespace TMD.Services.Service
             var macdCalculator3 = new MacdCalculator(fastPeriod, slowPeriod, signalPeriod);
             List<MacdResult> macdCalculatorResults3 = macdCalculator.CalculateMacd(closes);
 
-            decimal? MACDLine = (macdCalculatorResults?.LastOrDefault()?.MacdLine ?? 0);
-            decimal? MACDSignal = (macdCalculatorResults?.LastOrDefault()?.SignalLine ?? 0);
-            decimal? MACDHistogram = (macdCalculatorResults?.LastOrDefault()?.Histogram ?? 0);
-            decimal? MACDLine2 = (macdCalculatorResults2?.LastOrDefault()?.MacdLine ?? 0);
-            decimal? MACDSignal2 = (macdCalculatorResults2?.LastOrDefault()?.SignalLine ?? 0);
-            decimal? MACDHistogram2 = (macdCalculatorResults2?.LastOrDefault()?.Histogram ?? 0);
-            decimal? MACDLine3 = (macdCalculatorResults3?.LastOrDefault()?.MacdLine ?? 0);
-            decimal? MACDSignal3 = (macdCalculatorResults3?.LastOrDefault()?.SignalLine ?? 0);
-            decimal? MACDHistogram3 = (macdCalculatorResults3?.LastOrDefault()?.Histogram ?? 0);
+            float? MACDLine = (macdCalculatorResults?.LastOrDefault()?.MacdLine ?? 0);
+            float? MACDSignal = (macdCalculatorResults?.LastOrDefault()?.SignalLine ?? 0);
+            float? MACDHistogram = (macdCalculatorResults?.LastOrDefault()?.Histogram ?? 0);
+            float? MACDLine2 = (macdCalculatorResults2?.LastOrDefault()?.MacdLine ?? 0);
+            float? MACDSignal2 = (macdCalculatorResults2?.LastOrDefault()?.SignalLine ?? 0);
+            float? MACDHistogram2 = (macdCalculatorResults2?.LastOrDefault()?.Histogram ?? 0);
+            float? MACDLine3 = (macdCalculatorResults3?.LastOrDefault()?.MacdLine ?? 0);
+            float? MACDSignal3 = (macdCalculatorResults3?.LastOrDefault()?.SignalLine ?? 0);
+            float? MACDHistogram3 = (macdCalculatorResults3?.LastOrDefault()?.Histogram ?? 0);
             //decimal? MACDLine2 = EMA3 - EMA10;
             //decimal? MACDSignal2 = EMA3 - EMA16;
             //decimal? MACDHistogram2 = MACDLine2 - MACDSignal2;
@@ -222,7 +225,7 @@ namespace TMD.Services.Service
             //    intCnt++;
             //}
             //var wma = candle90.OrderBy(x => x.datetime).Zip(wmaWeight, (c, d) => c.close * d).ToList();
-            JsonObject output = new JsonObject();
+            
             output.Add("Symbol", symbol);
             try
             {
@@ -298,9 +301,10 @@ namespace TMD.Services.Service
         public dynamic CalculateV2(PublicProduct product)
         {
             coinbaseService = new CoinBaseService(_log, _coinbaseSettings, _factory);
-
+            mlPricePredict = new MLPricePredict();
             decimal currentPrice = 0m;
             decimal totalVolume = 0m;
+            JsonObject output = new JsonObject();
             List<Coinbase.AdvancedTrade.Models.Candle> candle90 = new List<Coinbase.AdvancedTrade.Models.Candle>();
 
             currentPrice = Convert.ToDecimal(product.Price);
@@ -315,7 +319,7 @@ namespace TMD.Services.Service
             candle90 = coinbaseService.GetPriceHistory(product.ProductId,
                 previewDate, DateTime.Now,
                 Granularity.FIFTEEN_MINUTE).OrderByDescending(x => x.StartDate).ToList();
-
+            mlPricePredict.Calculate(candle90, ref output);
             //var test = candle90.OrderByDescending(x => x.StartDate).ToList();
 
             decimal? SMA12 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.StartDate).Take(12).Average(c => Convert.ToDecimal(c.Close)) : 0m;
@@ -348,7 +352,7 @@ namespace TMD.Services.Service
             decimal? EMA8 = (candle90.Count > 0) ? (Convert.ToDecimal(candle90.OrderByDescending(x => x.StartDate).ToList()[0].Close) * smoothingFactor8) + (SMA8 * (1 - smoothingFactor8)) : 0m;
             decimal? EMA13 = (candle90.Count > 0) ? (Convert.ToDecimal(candle90.OrderByDescending(x => x.StartDate).ToList()[0].Close) * smoothingFactor13) + (SMA13 * (1 - smoothingFactor13)) : 0m;
 
-            var closes = candle90.OrderBy(x => x.StartDate)/*.Take(52)*/.Select(y => new MACDClosesDateTime { Price = Convert.ToDecimal(y.Close), Datetime = y.StartDate }).ToList();
+            var closes = candle90.OrderBy(x => x.StartDate)/*.Take(52)*/.Select(y => new MACDClosesDateTime { Price = (float)Convert.ToDouble(y.Close), Datetime = y.StartDate }).ToList();
 
             int fastPeriod = 12; int slowPeriod = 26; int signalPeriod = 9;
             var macdCalculator = new MacdCalculator(fastPeriod, slowPeriod, signalPeriod);
@@ -362,15 +366,15 @@ namespace TMD.Services.Service
             var macdCalculator3 = new MacdCalculator(fastPeriod, slowPeriod, signalPeriod);
             List<MacdResult> macdCalculatorResults3 = macdCalculator.CalculateMacd(closes);
 
-            decimal? MACDLine = (macdCalculatorResults?.LastOrDefault()?.MacdLine ?? 0);
-            decimal? MACDSignal = (macdCalculatorResults?.LastOrDefault()?.SignalLine ?? 0);
-            decimal? MACDHistogram = (macdCalculatorResults?.LastOrDefault()?.Histogram ?? 0);
-            decimal? MACDLine2 = (macdCalculatorResults2?.LastOrDefault()?.MacdLine ?? 0);
-            decimal? MACDSignal2 = (macdCalculatorResults2?.LastOrDefault()?.SignalLine ?? 0);
-            decimal? MACDHistogram2 = (macdCalculatorResults2?.LastOrDefault()?.Histogram ?? 0);
-            decimal? MACDLine3 = (macdCalculatorResults3?.LastOrDefault()?.MacdLine ?? 0);
-            decimal? MACDSignal3 = (macdCalculatorResults3?.LastOrDefault()?.SignalLine ?? 0);
-            decimal? MACDHistogram3 = (macdCalculatorResults3?.LastOrDefault()?.Histogram ?? 0);
+            float? MACDLine = (macdCalculatorResults?.LastOrDefault()?.MacdLine ?? 0);
+            float? MACDSignal = (macdCalculatorResults?.LastOrDefault()?.SignalLine ?? 0);
+            float? MACDHistogram = (macdCalculatorResults?.LastOrDefault()?.Histogram ?? 0);
+            float? MACDLine2 = (macdCalculatorResults2?.LastOrDefault()?.MacdLine ?? 0);
+            float? MACDSignal2 = (macdCalculatorResults2?.LastOrDefault()?.SignalLine ?? 0);
+            float? MACDHistogram2 = (macdCalculatorResults2?.LastOrDefault()?.Histogram ?? 0);
+            float? MACDLine3 = (macdCalculatorResults3?.LastOrDefault()?.MacdLine ?? 0);
+            float? MACDSignal3 = (macdCalculatorResults3?.LastOrDefault()?.SignalLine ?? 0);
+            float? MACDHistogram3 = (macdCalculatorResults3?.LastOrDefault()?.Histogram ?? 0);
             //decimal? MACDLine2 = EMA3 - EMA10;
             //decimal? MACDSignal2 = EMA3 - EMA16;
             //decimal? MACDHistogram2 = MACDLine2 - MACDSignal2;
@@ -406,7 +410,7 @@ namespace TMD.Services.Service
                 _log.LogError($"{ex2.Message}", ex2);
             }
 
-            JsonObject output = new JsonObject();
+
             output.Add("Symbol", product.ProductId);
             output.Add("Name", product.BaseName);
             output.Add("lastPrice", currentPrice);

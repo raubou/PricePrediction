@@ -8,7 +8,7 @@ namespace TMDInvestments.Models
 {
     public sealed class MACDClosesDateTime
     {
-        public decimal Price { get; set; }
+        public float Price { get; set; }
         public DateTime Datetime { get; set; }
     }
 }
