@@ -30,7 +30,7 @@ namespace TMD.Services.Service
             var forecastingPipeline = mlContext.Forecasting.ForecastBySsa(
                 outputColumnName: "ForecastedPriceDiffrence",
                 inputColumnName: "close",
-                windowSize: 7,
+                windowSize: (inputs.Count <= 14) ? (int)Math.Round((decimal)inputs.Count /2, 0) : 7,
                 seriesLength: 21,
                 trainSize: inputs.Count,
                 horizon: 1,
@@ -71,7 +71,7 @@ namespace TMD.Services.Service
             var forecastingPipeline = mlContext.Forecasting.ForecastBySsa(
                 outputColumnName: "ForecastedPriceDiffrence",
                 inputColumnName: "Close",
-                windowSize: 7,
+                windowSize: (inputs.Count <= 14) ? (int)Math.Round((decimal)inputs.Count / 2, 0) : 7,
                 seriesLength: 21,
                 trainSize: inputs.Count,
                 horizon: 1,

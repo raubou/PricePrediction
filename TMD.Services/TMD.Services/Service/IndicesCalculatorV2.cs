@@ -116,7 +116,7 @@ namespace TMD.Services.Service
             ser = JsonSerializer.Serialize(results.GetProperty("candles"));
             candle90 = JsonSerializer.Deserialize<List<TMDInvestment.Models.CandleItems>>(ser);
 
-            mlPricePredict.Calculate(candle90, ref output);
+            //mlPricePredict.Calculate(candle90, ref output);
             if (candle90.Count < 26)
             {
                 if(totalDaysBack> 5) //give up after 5 days
@@ -128,6 +128,7 @@ namespace TMD.Services.Service
             }
 
         GetCandles:
+            mlPricePredict.Calculate(candle90, ref output);
             //var test = candle90.OrderByDescending(x => x.datetime).ToList();
             float? SMA12 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(12).Average(c => c.close) : 0f;
             float? SMA26 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(26)?.Average(c => c.close) : 0f;
