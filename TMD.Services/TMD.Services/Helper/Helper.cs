@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -771,9 +772,12 @@ namespace TMD.PricePrediction
                 stockTracker.SoldSma5 = Convert.ToDecimal(results["SMA5"].ToString());
                 stockTracker.SoldSma8 = Convert.ToDecimal(results["SMA8"].ToString());
                 stockTracker.SoldSma13 = Convert.ToDecimal(results["SMA13"].ToString());
-                stockTracker.SoldMacd = Convert.ToDecimal(results["MACD"].ToString());
-                stockTracker.SoldMacdSignal = Convert.ToDecimal(results["MACDSignal"].ToString());
-                stockTracker.SoldMacdHistogram = Convert.ToDecimal(results["MACDHistogram"].ToString());
+                stockTracker.SoldMacd = Decimal.Parse(results["MACD"].ToString(), NumberStyles.Float,
+            CultureInfo.InvariantCulture);
+                stockTracker.SoldMacdSignal = Decimal.Parse(results["MACDSignal"].ToString(), NumberStyles.Float,
+            CultureInfo.InvariantCulture);
+                stockTracker.SoldMacdHistogram = Decimal.Parse(results["MACDHistogram"].ToString(), NumberStyles.Float,
+            CultureInfo.InvariantCulture);
                 stockTracker.DateSold = easternTime;
                 stockTracker.DateUpdated = easternTime;
                 stockTracker.Status = "FILLED";// status;
@@ -814,9 +818,12 @@ namespace TMD.PricePrediction
                 stockTracker.PurchasedSma5 = Convert.ToDecimal(results["SMA5"].ToString());
                 stockTracker.PurchasedSma8 = Convert.ToDecimal(results["SMA8"].ToString());
                 stockTracker.PurchasedSma13 = Convert.ToDecimal(results["SMA13"].ToString());
-                stockTracker.PurchasedMacd = Convert.ToDecimal(results["MACD"].ToString());
-                stockTracker.PurchasedMacdSignal = Convert.ToDecimal(results["MACDSignal"].ToString());
-                stockTracker.PurchasedMacdHistogram = Convert.ToDecimal(results["MACDHistogram"].ToString());
+                stockTracker.PurchasedMacd = Decimal.Parse(results["MACD"].ToString(),NumberStyles.Float,
+            CultureInfo.InvariantCulture);
+                stockTracker.PurchasedMacdSignal = Decimal.Parse(results["MACDSignal"].ToString(),NumberStyles.Float,
+            CultureInfo.InvariantCulture);
+                stockTracker.PurchasedMacdHistogram = Decimal.Parse(results["MACDHistogram"].ToString(), NumberStyles.Float,
+            CultureInfo.InvariantCulture);
                 stockTracker.LastPrice = Convert.ToDecimal(results["lastPrice"].ToString());
                 stockTracker.DatePurchased = easternTime;
                 stockTracker.DateCreated = easternTime;
@@ -986,9 +993,12 @@ namespace TMD.PricePrediction
                     stockTracker.PurchasedSma5 = Convert.ToDecimal(quote?["SMA5"].ToString());
                     stockTracker.PurchasedSma8 = Convert.ToDecimal(quote?["SMA8"].ToString());
                     stockTracker.PurchasedSma13 = Convert.ToDecimal(quote?["SMA13"].ToString());
-                    stockTracker.PurchasedMacd = Convert.ToDecimal(quote?["MACD"].ToString());
-                    stockTracker.PurchasedMacdSignal = Convert.ToDecimal(quote?["MACDSignal"].ToString());
-                    stockTracker.PurchasedMacdHistogram = Convert.ToDecimal(quote?["MACDHistogram"].ToString());
+                    stockTracker.PurchasedMacd = Decimal.Parse(quote?["MACD"].ToString(), NumberStyles.Float,
+            CultureInfo.InvariantCulture);
+                    stockTracker.PurchasedMacdSignal = Decimal.Parse(quote?["MACDSignal"].ToString(), NumberStyles.Float,
+            CultureInfo.InvariantCulture);
+                    stockTracker.PurchasedMacdHistogram = Decimal.Parse(quote?["MACDHistogram"].ToString(), NumberStyles.Float,
+            CultureInfo.InvariantCulture);
                     stockTracker.DatePurchased = easternTime;
                     stockTracker.DateCreated = easternTime;
                     stockTracker.Status = "FILLED";
@@ -1225,9 +1235,12 @@ namespace TMD.PricePrediction
                         stockTracker.PurchasedSma5 = Convert.ToDecimal(quote?["SMA5"].ToString());
                         stockTracker.PurchasedSma8 = Convert.ToDecimal(quote?["SMA8"].ToString());
                         stockTracker.PurchasedSma13 = Convert.ToDecimal(quote?["SMA13"].ToString());
-                        stockTracker.PurchasedMacd = Convert.ToDecimal(quote?["MACD"].ToString());
-                        stockTracker.PurchasedMacdSignal = Convert.ToDecimal(quote?["MACDSignal"].ToString());
-                        stockTracker.PurchasedMacdHistogram = Convert.ToDecimal(quote?["MACDHistogram"].ToString());
+                        stockTracker.PurchasedMacd = Decimal.Parse(quote?["MACD"].ToString(), NumberStyles.Float,
+            CultureInfo.InvariantCulture);
+                        stockTracker.PurchasedMacdSignal = Decimal.Parse(quote?["MACDSignal"].ToString(), NumberStyles.Float,
+            CultureInfo.InvariantCulture);
+                        stockTracker.PurchasedMacdHistogram = Decimal.Parse(quote?["MACDHistogram"].ToString(), NumberStyles.Float,
+            CultureInfo.InvariantCulture);
                         stockTracker.DatePurchased = easternTime;
                         stockTracker.DateCreated = easternTime;
                         stockTracker.Status = "FILLED";
@@ -1355,6 +1368,7 @@ namespace TMD.PricePrediction
         {
             //var stockTracker = ctx?.StockTracker?.Where(x => x.PriceSold == null && x.DateSold == null && x.Status.Trim() == "Filled" && x.TradePlatform == (int)Platform.ETrade).ToList();
             var stockTracker = ctx?.StockTracker2?.Where(x => x.PriceSold == null && x.DateSold == null && x.Status.Trim() == "Filled" && x.TradePlatform == (int)platform).ToList();
+            var alreadyQueuedStock = ctx?.StockTracker2?.Where(x => x.Status == "QUEUED" && x.TradePlatform == (int)platform).ToList();
             if (stockTracker?.Count() >= (settings?.MaxNumberofStockstoBuy / 2))
                 return;
             int stockCnt = 0;
@@ -1377,7 +1391,8 @@ namespace TMD.PricePrediction
                 if (qty >= 2 && lastPrice >= 5m)
                 {
                     //BuySellStock(null, result, direction, qty, false, services);
-                    QueueStocktoBuy(result, platform, direction, qty);
+                    if(!alreadyQueuedStock.Where(x => x.Symbol == result["Symbol"].ToString()).Any())
+                        QueueStocktoBuy(result, platform, direction, qty);
                     stockCnt++;
                     BuySellStockList.Remove(item);
                 }
@@ -1456,7 +1471,7 @@ namespace TMD.PricePrediction
             {
                 dynamic? results = services.GetQuote(stock.Symbol);
                 CalculatePoints(results, /*false, true,*/ ref shortCnt, ref longCnt);
-                if (longCnt >= settings.StockLongCount || shortCnt >= settings.StockShortCount)
+                if (longCnt >= settings.StockLongCount || (shortCnt >= settings.StockShortCount && (bool)settings.ShortEnabled))
                 {
                     switch(platform)
                     {

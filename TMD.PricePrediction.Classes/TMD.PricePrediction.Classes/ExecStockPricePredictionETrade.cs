@@ -77,7 +77,7 @@ namespace TMD.PricePrediction.Classes
 
             //Checked for queued crypto adn see if direction is the same
             helper.Log(_logger, LogLevel.Information, $"Check for queued stock");
-            helper.CheckforQueuedStock(settings, Platform.CharlesSchwab);
+            helper.CheckforQueuedStock(settings, Platform.ETrade);
 
             if (totalAvailiableforLongTrade > 100 && (bool)settings.EtradeAnalysisTradeEnabled)
             {

@@ -1,6 +1,7 @@
 ﻿using Coinbase.AdvancedTrade.Models;
 using Coinbase.AdvancedTrade.Models.Public;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using TMD.Services;
@@ -366,7 +367,7 @@ namespace TMD.PricePrediction.Classes
             {
                 JsonObject? results = services.GetQuote(crypto.Coin);
                 helper.CalculatePoints(results, /*false, true,*/ ref shortCnt, ref longCnt);
-                if (longCnt >= settings.CryptoLongCount || shortCnt >= settings.CryptoShortCount)
+                if (longCnt >= settings.CryptoLongCount /*|| shortCnt >= settings.CryptoShortCount*/)
                 {
                     BuySellCrypto(crypto, results,(TradeDirection)crypto.TradeDirection, crypto.Amount ?? 0m, services, products, false/*, true*/);
                 }
@@ -476,9 +477,12 @@ namespace TMD.PricePrediction.Classes
                 cryptoTracker.SoldSma5 = Convert.ToDecimal(results["SMA5"].ToString());
                 cryptoTracker.SoldSma8 = Convert.ToDecimal(results["SMA8"].ToString());
                 cryptoTracker.SoldSma13 = Convert.ToDecimal(results["SMA13"].ToString());
-                cryptoTracker.SoldMacd = Convert.ToDecimal(results["MACD"].ToString());
-                cryptoTracker.SoldMacdSignal = Convert.ToDecimal(results["MACDSignal"].ToString());
-                cryptoTracker.SoldMacdHistogram = Convert.ToDecimal(results["MACDHistogram"].ToString());
+                cryptoTracker.SoldMacd = Decimal.Parse(results["MACD"].ToString(), NumberStyles.Float,
+            CultureInfo.InvariantCulture);
+                cryptoTracker.SoldMacdSignal = Decimal.Parse(results["MACDSignal"].ToString(), NumberStyles.Float,
+            CultureInfo.InvariantCulture);
+                cryptoTracker.SoldMacdHistogram = Decimal.Parse(results["MACDHistogram"].ToString(), NumberStyles.Float,
+            CultureInfo.InvariantCulture);
                 cryptoTracker.CurrentBalance = /*(direction == TradeDirection.SELL) ? cryptoTracker.CurrentBalance :*/ currentBalance;                
                 cryptoTracker.SellOrderId = (order != null) ? Guid.Parse(order?.OrderId): null;
                 cryptoTracker.SellStatus = (order != null) ? order.Status: null;
@@ -520,9 +524,12 @@ namespace TMD.PricePrediction.Classes
                 cryptoTracker.PurchasedSma5 = Convert.ToDecimal(results["SMA5"].ToString());
                 cryptoTracker.PurchasedSma8 = Convert.ToDecimal(results["SMA8"].ToString());
                 cryptoTracker.PurchasedSma13 = Convert.ToDecimal(results["SMA13"].ToString());
-                cryptoTracker.PurchasedMacd = Convert.ToDecimal(results["MACD"].ToString());
-                cryptoTracker.PurchasedMacdSignal = Convert.ToDecimal(results["MACDSignal"].ToString());
-                cryptoTracker.PurchasedMacdHistogram = Convert.ToDecimal(results["MACDHistogram"].ToString());
+                cryptoTracker.PurchasedMacd = Decimal.Parse(results["MACD"].ToString(), NumberStyles.Float,
+            CultureInfo.InvariantCulture);
+                cryptoTracker.PurchasedMacdSignal = Decimal.Parse(results["MACDSignal"].ToString(), NumberStyles.Float,
+            CultureInfo.InvariantCulture);
+                cryptoTracker.PurchasedMacdHistogram = Decimal.Parse(results["MACDHistogram"].ToString(), NumberStyles.Float,
+            CultureInfo.InvariantCulture);
                 cryptoTracker.LastPrice = Convert.ToDecimal(results["lastPrice"].ToString());
                 cryptoTracker.DatePurchased = helper.easternTime;
                 cryptoTracker.DateCreated = helper.easternTime;
@@ -687,6 +694,7 @@ namespace TMD.PricePrediction.Classes
        
         void CalculatePurchaseAmount(decimal? availiabletoTrade, List<PublicProduct> products, List<CryptoTracker2> cryptoTracker, ref List<BuySellCommodity> BuySellCryptoList)
         {
+            var alreadyQueuedStock = ctx?.CryptoTracker2?.Where(x => x.BuyStatus == "QUEUED").ToList();
             if (cryptoTracker.Count() >= settings.MaxNumberofCryptotoBuy)
                 return;
             int cryptoCnt = 0;
@@ -707,7 +715,8 @@ namespace TMD.PricePrediction.Classes
                 if (perCrypto >= 5)
                 {
                     //BuySellCrypto(null, result, direction,Math.Round((decimal)perCrypto, 5), services, products, sellShort);
-                    QueueCryptotoBuy(/*null,*/ result, direction, Math.Round((decimal)perCrypto, 5));
+                    if (!alreadyQueuedStock.Where(x => x.Coin == result["Symbol"].ToString()).Any())
+                        QueueCryptotoBuy(result, direction, Math.Round((decimal)perCrypto, 5));
                     cryptoCnt++;
                 }
             }
