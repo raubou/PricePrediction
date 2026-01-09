@@ -15,7 +15,7 @@ namespace TraderGo.Pages
     public class IndexModel : PageModelBase
     {
         private readonly ILogger<IndexModel> _logger;
-        HttpClient _httpClient;
+        //HttpClient _httpClient;
         private readonly SchwabSettings? _settings;
         private readonly IHttpClientFactory? _factory;
         SchwabServices? services;
@@ -27,15 +27,15 @@ namespace TraderGo.Pages
         Manager _marketMgr;
         //Manager _NewsMgr;
         TraderGoService _traderGoService;
-        public IndexModel(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<MailSettings> mailSettings, IOptions<SchwabSettings> settings, IHttpClientFactory factory, ILogger<IndexModel> logger) //: base(connectionSettings,connectionSettings2, mailSettings)
+        public IndexModel(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<MailSettings> mailSettings, IOptions<SchwabSettings> settings, IOptions<yfapiSettings> yfapiSettings, IHttpClientFactory factory, ILogger<IndexModel> logger) //: base(connectionSettings,connectionSettings2, mailSettings)
         {
             _logger = logger;
-            _httpClient = factory.CreateClient();
+            //_httpClient = factory.CreateClient();
             _settings = settings.Value;
             _factory = factory;
             _marketMgr = new Manager(connectionSettings?.Value?.Connection, "",null);
             //_NewsMgr = new Manager(connectionSettings2?.Value?.Connection, "", _logger);
-            _traderGoService = new TraderGoService(_logger, _httpClient, false);
+            _traderGoService = new TraderGoService(yfapiSettings.Value,_logger, _factory, false);
             services = new SchwabServices(_logger, _settings, _factory);
         }
 
@@ -45,7 +45,7 @@ namespace TraderGo.Pages
             //GainersandLosers = _marketMgr.GetGainersandLosers();
             //Markets = JsonArray.Create(_traderGoService.GetMarkets());
             Markets = _traderGoService.GetMarkets();
-            GainersandLosers = _traderGoService.GetGainersandLosers();
+            GainersandLosers = _traderGoService.GetGainersandLosers(false);
             //Movers = services.GetMovers("$SPX");
             TmdContext ctx = new TmdContext();
             var stockTracker = ctx.StockTracker2.ToList();

@@ -27,6 +27,7 @@ class PricePrediction
         var CoinBaseSettings = config.GetSection("CoinBase").Get<CoinBaseSettings>();
         var ETadeSettings = config.GetSection("ETradeAPI").Get<ETradeSettings>();
         var TaAPISettings = config.GetSection("TaApi").Get<TaAPISettings>();
+        var yfapiSettings = config.GetSection("yfapi").Get<yfapiSettings>();
 
         var loggerFactory = LoggerFactory.Create(builder =>
         {
@@ -63,28 +64,28 @@ class PricePrediction
             exec1 = new ExecStockPricePredictionSchwab(logger, SchwabSettings, TaAPISettings, httpClientFactory);
             exec3 = new ExecStockPricePredictionETrade(logger, ETadeSettings, SchwabSettings, httpClientFactory);
             exec2 = new ExecCryptoPricePrediction(logger, CoinBaseSettings, TaAPISettings, httpClientFactory);
-            helper = new Helper(logger, SchwabSettings, ETadeSettings, httpClientFactory);
+            helper = new Helper(logger, SchwabSettings, ETadeSettings, yfapiSettings, httpClientFactory);
             try
             {
-                if (helper.IsNotHolidayorWeekend())
-                {
-                    helper.UnloadAgingStocks();
-                    helper.CheckSchwabOrderStatus(ref totalAvailiableforLongTradeSchwab);
-                    helper.CheckETradeOrderStatus(ref totalAvailiableforLongTradeETrade);
+                //if (helper.IsNotHolidayorWeekend())
+                //{
+                //    helper.UnloadAgingStocks();
+                //    helper.CheckSchwabOrderStatus(ref totalAvailiableforLongTradeSchwab);
+                //    helper.CheckETradeOrderStatus(ref totalAvailiableforLongTradeETrade);
 
-                    if (totalAvailiableforLongTradeSchwab > 100 || totalAvailiableforLongTradeETrade > 100)
+                //    if (totalAvailiableforLongTradeSchwab > 100 || totalAvailiableforLongTradeETrade > 100)
                         BuySellStockList = helper.GetQuoteList();
 
-                    if (totalAvailiableforLongTradeSchwab > 100)
-                        exec1.Exec(totalAvailiableforLongTradeSchwab, ref BuySellStockList);
-                    else
-                        logger.LogInformation($"Not enough buying power in Schwab account to make a trade. ${totalAvailiableforLongTradeSchwab}");
-                }
-                else
-                {
-                    logger.LogError("Time is outside of trading window.");
-                    goto ExecCrypto;
-                }
+                //    if (totalAvailiableforLongTradeSchwab > 100)
+                //        exec1.Exec(totalAvailiableforLongTradeSchwab, ref BuySellStockList);
+                //    else
+                //        logger.LogInformation($"Not enough buying power in Schwab account to make a trade. ${totalAvailiableforLongTradeSchwab}");
+                //}
+                //else
+                //{
+                //    logger.LogError("Time is outside of trading window.");
+                //    goto ExecCrypto;
+                //}
             }
             catch (Exception ex)
             {

@@ -1,14 +1,17 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Newtonsoft.Json.Linq;
 using System.Data;
 using System.Dynamic;
-using TMD.Database.Connect.Managers;
-using TMD.Database.Connect.Helper;
+using System.Net.Http;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using TMD.Database.Connect.Helper;
+using TMD.Database.Connect.Managers;
 using TMDInvestments.Models;
-using Microsoft.Extensions.Options;
+using TMDInvestments.Models.Models.Polygon;
 using TMDInvestments.Services;
-using Newtonsoft.Json.Linq;
 
 namespace TMD.Services.Service
 {
@@ -18,7 +21,8 @@ namespace TMD.Services.Service
         private IOptions<FinnHub> _finnHub;
         private IOptions<Polygon> _polygon;
         private readonly IHttpClientFactory? _factory;
-        dynamic yfapi = new ExpandoObject();
+        //dynamic yfapi = new ExpandoObject();
+        yfapiSettings yfapi;
         //dynamic polygon = new ExpandoObject();
         public static dynamic finnhub = new ExpandoObject();
         private static HttpClient? _client;
@@ -30,6 +34,7 @@ namespace TMD.Services.Service
         string? conn2 = string.Empty;
         private static IConfiguration? connection;
         //List<DataRow>? dataRows;
+        IndicesCalculatorV2 indicesCalculatorV2 = null;
         DataTable? dt;
         static TraderGoService()
         {
@@ -37,13 +42,14 @@ namespace TMD.Services.Service
             finnhub.finnhubKey = "cjbc5i9r01qn9c1l9ncgcjbc5i9r01qn9c1l9nd0";
             finnhub.URL = "https://finnhub.io/api/v1";
         }
-        public TraderGoService(ILogger log, HttpClient client, bool isAzureFunction)
+        public TraderGoService(yfapiSettings yfapi, ILogger log, IHttpClientFactory _factory, bool isAzureFunction)
         {
-            yfapi.URL = "https://yfapi.net";
-            yfapi.MarketSummary = "/v6/finance/quote/marketSummary?lang=en&region=US";
-            //yfapi.Trending = "/v1/finance/trending/US";
-            yfapi.GainersLosers = "/ws/screeners/v1/finance/screener/predefined/saved?count=30&scrIds={direction}";
-            yfapi.yfapiKey = "dJpHrhx6GG9aLvvqoSL0l8QliXlxQbjt55I0YLPY";
+            this.yfapi = yfapi;
+            //yfapi.URL = "https://yfapi.net";
+            //yfapi.MarketSummary = "/v6/finance/quote/marketSummary?lang=en&region=US";
+            ////yfapi.Trending = "/v1/finance/trending/US";
+            //yfapi.GainersLosers = "/ws/screeners/v1/finance/screener/predefined/saved?count=30&scrIds={direction}";
+            //yfapi.yfapiKey = "dJpHrhx6GG9aLvvqoSL0l8QliXlxQbjt55I0YLPY";
 
             //polygon.URL = "https://api.polygon.io";
             //polygon.GainersLosers = "/v2/snapshot/locale/us/markets/stocks/{direction}?include_otc=false";
@@ -55,7 +61,21 @@ namespace TMD.Services.Service
             finnhub.finnhubKey = "cjbc5i9r01qn9c1l9ncgcjbc5i9r01qn9c1l9nd0";
 
             _log = log;
-            _client = client;
+            this._factory = _factory;
+            if (_factory == null)
+            {
+                var handler = new SocketsHttpHandler
+                {
+                    PooledConnectionLifetime = TimeSpan.FromMinutes(7), // Recreate every 15 minutes
+
+                };
+
+                _client = new HttpClient(handler);
+            }
+            else
+            {
+                _client = _factory.CreateClient();
+            }
             if (!isAzureFunction)
             {
                 IConfigurationBuilder builder = new ConfigurationBuilder()
@@ -72,13 +92,27 @@ namespace TMD.Services.Service
             //NewsManager = new Manager(conn, "", _log);
             MarketsManager = new Manager(conn2, "", _log);
         }
-        public TraderGoService(ILogger log, HttpClient client, bool isAzureFunction,IOptions<FinnHub> finnHub, IOptions<Polygon> polycon, IHttpClientFactory? httpClientFactory, IOptions<SchwabSettings> settings)
+        public TraderGoService(ILogger log, HttpClient client, bool isAzureFunction,IOptions<FinnHub> finnHub, IOptions<Polygon> polycon, IHttpClientFactory? _factory, IOptions<SchwabSettings> settings)
         {
             _log = log;
             _client = client;
             _finnHub = finnHub;
             _polygon = polycon;
-            _factory = httpClientFactory;
+            this._factory = _factory;
+            if (_factory == null)
+            {
+                var handler = new SocketsHttpHandler
+                {
+                    PooledConnectionLifetime = TimeSpan.FromMinutes(7), // Recreate every 15 minutes
+
+                };
+
+                _client = new HttpClient(handler);
+            }
+            else
+            {
+                _client = _factory.CreateClient();
+            }
             _settings = settings.Value;
             if (!isAzureFunction)
             {
@@ -104,20 +138,51 @@ namespace TMD.Services.Service
             else 
                 return null;
         }
-        public dynamic GetGainersandLosers()
+        public dynamic GetGainersandLosers(bool GetTechnicalAnalysis)
         {
             dynamic GainersandLosers = new ExpandoObject();
             GainersandLosers.Gainers = new ExpandoObject();
             GainersandLosers.Losers = new ExpandoObject();
+            dynamic GainersArray = new ExpandoObject();
+            dynamic LosersArray = new ExpandoObject();
+            indicesCalculatorV2 = new IndicesCalculatorV2(_log, _settings, _factory);
             Dictionary<string, string> headers = new Dictionary<string, string>();
             headers.Add("X-API-KEY", yfapi.yfapiKey.ToString());
             var losers = GeneralHelper.GetRequest(headers, yfapi.URL.ToString() + yfapi.GainersLosers.ToString().Replace("{direction}", "day_losers"), _client, error);
             var gainers = GeneralHelper.GetRequest(headers, yfapi.URL.ToString() + yfapi.GainersLosers.ToString().Replace("{direction}", "day_gainers"), _client, error);
             if (gainers is JsonElement)
-            GainersandLosers.Gainers = gainers.GetProperty("finance").GetProperty("result")[0].GetProperty("quotes")?.EnumerateArray();
+                GainersArray = gainers.GetProperty("finance").GetProperty("result")[0].GetProperty("quotes")?.EnumerateArray();
+            //GainersandLosers.Gainers = gainers.GetProperty("finance").GetProperty("result")[0].GetProperty("quotes")?.EnumerateArray();
             if (losers is JsonElement)
-            GainersandLosers.Losers = losers.GetProperty("finance").GetProperty("result")[0].GetProperty("quotes")?.EnumerateArray();
-            return GainersandLosers;
+                LosersArray = losers.GetProperty("finance").GetProperty("result")[0].GetProperty("quotes")?.EnumerateArray();
+            //GainersandLosers.Losers = losers.GetProperty("finance").GetProperty("result")[0].GetProperty("quotes")?.EnumerateArray();
+            if (GetTechnicalAnalysis)
+            {
+                JsonObject[] gains = new JsonObject[1];
+                JsonObject[] losses = new JsonObject[1];
+                foreach (var item in GainersArray)
+                {                   
+                    string symbol = item.GetProperty("symbol").ToString();
+                    var results = item;
+                    gains[gains.Length - 1] = indicesCalculatorV2.CalculateV2(symbol, results);
+                    Array.Resize(ref gains, gains.Length + 1);
+                }
+                foreach (var item in LosersArray)
+                {
+                    string symbol = item.GetProperty("symbol").ToString();
+                    var results = item;
+                    losses[losses.Length - 1] = indicesCalculatorV2.CalculateV2(symbol, results);
+                    Array.Resize(ref losses, losses.Length + 1);
+                }
+                GainersandLosers.Gainers = gains;
+                GainersandLosers.Losers = losses;
+            }
+            else
+            {
+                GainersandLosers.Gainers = GainersArray;
+                GainersandLosers.Losers = LosersArray;  
+            }
+                return GainersandLosers;
         }
         DateTime fromDate = DateTime.Now;
         DateTime toDate = DateTime.Now.AddDays(35);

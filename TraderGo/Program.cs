@@ -53,6 +53,7 @@ builder.Services.Configure<Polygon>(builder.Configuration.GetSection("polygon"))
 builder.Services.Configure<SchwabSettings>(builder.Configuration.GetSection("SchwabAPI"));
 builder.Services.Configure<CoinBaseSettings>(builder.Configuration.GetSection("CoinBase"));
 builder.Services.Configure<ETradeSettings>(builder.Configuration.GetSection("ETradeAPI"));
+builder.Services.Configure<yfapiSettings>(builder.Configuration.GetSection("yfapi"));
 builder.Services.AddHttpClient();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

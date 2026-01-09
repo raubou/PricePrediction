@@ -17,7 +17,7 @@ namespace TraderGo.Pages
     {
         private readonly ILogger<AnalysisModel> _logger;
         TraderGoService _traderGoService;
-        HttpClient _httpClient;
+        //HttpClient _httpClient;
         SchwabSettings _settings;
         IHttpClientFactory _factory;
         Manager _mgr;
@@ -31,9 +31,9 @@ namespace TraderGo.Pages
             _logger = logger;
             _settings = settings.Value;
             _factory = factory;
-            _httpClient = _factory.CreateClient();
+            //_httpClient = _factory.CreateClient();
             _mgr = new Manager(connectionSettings?.Value?.Connection, "", null);
-            _traderGoService = new TraderGoService(_logger, _httpClient, false);
+            _traderGoService = new TraderGoService(null, _logger, _factory, false);
             services = new SchwabServices(_logger, _settings, _factory);
         }
         public override IActionResult Execute()

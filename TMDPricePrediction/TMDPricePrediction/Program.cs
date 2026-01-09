@@ -27,6 +27,11 @@ builder.Services.AddOptions<CoinBaseSettings>()
 {
     configuration.GetSection("CoinBase").Bind(settings);
 });
+builder.Services.AddOptions<yfapiSettings>()
+.Configure<IConfiguration>((settings, configuration) =>
+{
+    configuration.GetSection("yfapi").Bind(settings);
+});
 
 await builder.Build().RunAsync();
 

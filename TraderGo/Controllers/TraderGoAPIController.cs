@@ -43,8 +43,8 @@ namespace TraderGo.Controllers
             _settings = settings.Value;
             _factory = httpClientFactory;
             //_client = _httpClientFactory.CreateClient();
-            _client = httpClientFactory?.CreateClient();
-            _traderGoService = new TraderGoService(_logger, _client, false);
+            //_client = httpClientFactory?.CreateClient();
+            _traderGoService = new TraderGoService(null, _logger, httpClientFactory, false);
         }
         [HttpGet("Init")]
         public string Init()

@@ -28,7 +28,7 @@ namespace TraderGo.Controllers
         private readonly IHttpClientFactory? _factory;
         CoinBaseService? services;
         TraderGoService _traderGoService;
-        HttpClient _client;
+       // HttpClient _client;
         TmdContext ctx = null;
         public CoinBaseAPIController(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<FinnHub> finnHub, IOptions<Polygon> polycon, IHttpClientFactory? httpClientFactory, ILogger<TraderGoAPIController> logger, IOptions<CoinBaseSettings> settings)
         {
@@ -40,8 +40,8 @@ namespace TraderGo.Controllers
             _settings = settings.Value;
             _factory = httpClientFactory;
             //_client = _httpClientFactory.CreateClient();
-            _client = httpClientFactory?.CreateClient();
-            _traderGoService = new TraderGoService(_logger, _client, false);
+            //_client = httpClientFactory?.CreateClient();
+            _traderGoService = new TraderGoService(null, _logger, httpClientFactory, false);
         }
         [HttpGet, Route("GetQuote/{symbol}")]
         public IActionResult GetQuote(string symbol)

@@ -22,6 +22,7 @@ namespace TMD.Services
         private static SqlConnection? _connection;
         private List<ImageFileObject>? imagefileObject;
         private NetworkCredential? credentials;
+        private yfapiSettings? yfapi;
         public DataAggregator(ILogger? log, bool isAzureFunction)
         {
             _log = log;
@@ -367,9 +368,10 @@ namespace TMD.Services
             manager.MoveAdvertisingQueue();
         }
 
-        public void LoadStockData(HttpClient client)
+        public void LoadStockData(IHttpClientFactory client)
         {
-            TraderGoService tg = new TraderGoService(_log, client, _isAzureFunction);
+
+            TraderGoService tg = new TraderGoService(yfapi, _log, client, _isAzureFunction);
             try
             {
                 tg.StartRequests();

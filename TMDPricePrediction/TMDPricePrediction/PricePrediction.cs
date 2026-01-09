@@ -15,6 +15,7 @@ namespace TMDPricePrediction
         IOptions<SchwabSettings> _SchwabSettings;
         IOptions<ETradeSettings> _ETradeSettings;
         IOptions<CoinBaseSettings> _CoinBaseSettings;
+        IOptions<yfapiSettings> _yfapiSettings;
         ExecStockPricePredictionSchwab? exec1 = null;
         ExecStockPricePredictionETrade? exec3 = null;
         ExecCryptoPricePrediction? exec2 = null;
@@ -22,13 +23,14 @@ namespace TMDPricePrediction
         readonly IHttpClientFactory? httpClientFactory = null;
         Helper? helper = null;
 
-        public PricePrediction(ILoggerFactory loggerFactory, IOptions<SchwabSettings> SchwabSettings, IOptions<ETradeSettings> ETradeSettings, IOptions<CoinBaseSettings> CoinBaseSettings)
+        public PricePrediction(ILoggerFactory loggerFactory, IOptions<SchwabSettings> SchwabSettings, IOptions<ETradeSettings> ETradeSettings, IOptions<CoinBaseSettings> CoinBaseSettings, IOptions<yfapiSettings> yfapiSettings)
         {
             _logger = loggerFactory.CreateLogger("Price Prediction");
             _CoinBaseSettings = CoinBaseSettings;
             _SchwabSettings = SchwabSettings;
             _ETradeSettings = ETradeSettings;
             BuySellStockList = new List<BuySellCommodity>();
+            _yfapiSettings = yfapiSettings;
         }
 
         [Function("PricePrediction")]
@@ -49,7 +51,7 @@ namespace TMDPricePrediction
         .SetHandlerLifetime(Timeout.InfiniteTimeSpan); // Disable rotation, as it is handled by PooledConnectionLifetime
             var serviceProvider = client.Services.BuildServiceProvider();
             var httpClientFactory = serviceProvider.GetService<IHttpClientFactory>();
-            helper = new Helper(_logger, _SchwabSettings.Value, _ETradeSettings.Value, httpClientFactory);
+            helper = new Helper(_logger, _SchwabSettings.Value, _ETradeSettings.Value, _yfapiSettings.Value, httpClientFactory);
 
             exec1 = new ExecStockPricePredictionSchwab(_logger, _SchwabSettings.Value, httpClientFactory);
             exec3 = new ExecStockPricePredictionETrade(_logger, _ETradeSettings.Value, _SchwabSettings.Value, httpClientFactory);

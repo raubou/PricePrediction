@@ -6,11 +6,8 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Xml.Linq;
 using TMD.Services.Service;
-using TMDInvestment.Models;
 using TMDInvestments.Context;
 using TMDInvestments.Models;
-using TMDInvestments.Models.Models;
-using TMDInvestments.Models.Models.Polygon;
 using TMDInvestments.Services;
 
 namespace TMD.PricePrediction
@@ -20,12 +17,14 @@ namespace TMD.PricePrediction
         SchwabSettings? _settings = null;
         ETradeSettings? _settings2 = null;
         RulesEngine? rulesEngine = null;
+        TraderGoService _traderGoService = null;
         private readonly ILogger? _logger = null;
         private readonly IHttpClientFactory? _factory = null;
         SchwabServices? services = null;
         ETradeService? services2 = null;
         TmdContext? ctx = null;
         Polygon? _polygon = null;
+        DateTime runTime;// = easternTime;
         public DateTime easternTime;
         public Helper()
         {
@@ -61,6 +60,18 @@ namespace TMD.PricePrediction
             services2 = new ETradeService(_logger, _settings2, _factory);
             SetTimeZone();
         }
+        public Helper(ILogger logger, SchwabSettings settings, ETradeSettings settings2, yfapiSettings yfapiSettings, IHttpClientFactory factory)
+        {
+            _logger = logger;
+            _settings = settings;
+            _settings2 = settings2;
+            _factory = factory;
+            ctx = new TmdContext();
+            services = new SchwabServices(_logger, _settings, _factory);
+            services2 = new ETradeService(_logger, _settings2, _factory);
+            _traderGoService = new TraderGoService(yfapiSettings, _logger, _factory, false);
+            SetTimeZone();
+        }
         public List<BuySellCommodity> GetQuoteList()
         {
             int? shortCnt = 0;
@@ -75,6 +86,7 @@ namespace TMD.PricePrediction
             int? NASDAQLong = 0;
             int? NASDAQShort = 0;
 
+            StockTracker2 stockTrackerInd = null;
             var BuySellStockList = new List<BuySellCommodity>();
             rulesEngine = ctx.RulesEngine.FirstOrDefault();
 
@@ -141,9 +153,140 @@ namespace TMD.PricePrediction
             //{
             //    vixsandpShortCnt = 1;
             //}
-            Log(_logger, LogLevel.Information, $"Getting movers from Schwab");
-            StockTracker2 stockTrackerInd = null;
+
+            if(runTime.Hour == 9 && (runTime.Minute >= 00 && runTime.Minute <= 30))
+            {
+                Log(_logger, LogLevel.Information, $"Getting movers from Yahoo");
+                var GainersandLosers = _traderGoService.GetGainersandLosers(true);
+                foreach (var gainer in GainersandLosers.Gainers)
+                {
+                    shortCnt = 0;
+                    longCnt = 0;
+                    if (gainer == null || string.IsNullOrEmpty(gainer["Symbol"].ToString()))
+                        continue;
+                    try
+                    {
+                        stockTrackerInd = stockTracker.Where(x => x.Symbol == gainer["Symbol"].ToString() && x.PriceSold == null && x.DateSold == null && x.Status == "Filled").FirstOrDefault();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(_logger, LogLevel.Error, $"Error in retrieving quote {ex.Message.ToString()} - {ex.StackTrace.ToString()}");
+                        continue;
+                    }
+
+                    if (stockTrackerInd == null)
+                    {
+                        _logger.LogInformation($"Checking {gainer["Symbol"].ToString()} - ({gainer["Symbol"].ToString()})");
+                        if (Convert.ToDecimal(gainer["volume"].ToString()) < 40000)
+                        {
+                            Log(_logger, LogLevel.Information, $"Not buying/selling short {gainer["Symbol"].ToString()} - ({gainer["Symbol"].ToString()}). Volume fall below min of 40000");
+                            continue;
+                        }
+                        if (Convert.ToDecimal(gainer["lastPrice"].ToString()) >= rulesEngine.MinStockPrice && Convert.ToDecimal(gainer["lastPrice"].ToString()) <= 50m)
+                        {
+                            CalculatePoints(gainer, /*true, false,*/ ref shortCnt, ref longCnt);
+                        }
+                        else
+                        {
+                            Log(_logger, LogLevel.Information, $"Not buying/selling short {gainer["Symbol"].ToString()} - ({gainer["Symbol"].ToString()}). Stock fall above or below min stock price or is excluded");
+                            continue;
+                        }
+
+                        Log(_logger, LogLevel.Information, $"{gainer["Symbol"].ToString()} - ({gainer["Name"].ToString()}) Score. Long score: {longCnt}. Short score {shortCnt}");
+
+                        if ((longCnt + vixsandpLongCnt) >= rulesEngine.StockLongCount)
+                        {
+                            Log(_logger, LogLevel.Information, $"Adding {gainer["Symbol"].ToString()} - ({gainer["Name"].ToString()}) to potential long list.");
+                            if (!BuySellStockList.Any(x => x.Results["Symbol"].ToString() == gainer["Symbol"].ToString()))
+                            {
+                                BuySellStockList.Add(new BuySellCommodity((longCnt + vixsandpLongCnt), TradeDirection.BUY, gainer));
+                                stockCnt++;
+                            }
+                        }
+                        else
+                        if ((shortCnt + vixsandpShortCnt) >= rulesEngine.StockShortCount && (bool)rulesEngine.ShortEnabled)
+                        {
+                            Log(_logger, LogLevel.Information, $"Adding {gainer["Symbol"].ToString()} - ({gainer["Name"].ToString()}) to potential short list.");
+                            if (!BuySellStockList.Any(x => x.Results["Symbol"].ToString() == gainer["Symbol"].ToString()))
+                            {
+                                BuySellStockList.Add(new BuySellCommodity((shortCnt + vixsandpShortCnt), TradeDirection.SELL_SHORT, gainer));
+                                stockCnt++;
+                            }
+                        }
+                        else
+                        {
+                            Log(_logger, LogLevel.Information, $"Not buying/selling short {gainer["Symbol"].ToString()} - ({gainer["Name"].ToString()}). Long score: {longCnt}. Short score {shortCnt}");
+                        }
+                    }
+                }
+
+                foreach (var loser in GainersandLosers.Losers)
+                {
+                    shortCnt = 0;
+                    longCnt = 0;
+                    if (loser == null || string.IsNullOrEmpty(loser["Symbol"].ToString()))
+                        continue;
+                    try
+                    {
+                        stockTrackerInd = stockTracker.Where(x => x.Symbol == loser["Symbol"].ToString() && x.PriceSold == null && x.DateSold == null && x.Status == "Filled").FirstOrDefault();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(_logger, LogLevel.Error, $"Error in retrieving quote {ex.Message.ToString()} - {ex.StackTrace.ToString()}");
+                        continue;
+                    }
+
+                    if (stockTrackerInd == null)
+                    {
+                        _logger.LogInformation($"Checking {loser["Symbol"].ToString()} - ({loser["Symbol"].ToString()})");
+                        if (Convert.ToDecimal(loser["volume"].ToString()) < 40000)
+                        {
+                            Log(_logger, LogLevel.Information, $"Not buying/selling short {loser["Symbol"].ToString()} - ({loser["Symbol"].ToString()}). Volume fall below min of 40000");
+                            continue;
+                        }
+                        if (Convert.ToDecimal(loser["lastPrice"].ToString()) >= rulesEngine.MinStockPrice && Convert.ToDecimal(loser["lastPrice"].ToString()) <= 50m)
+                        {
+                            CalculatePoints(loser, /*true, false,*/ ref shortCnt, ref longCnt);
+                        }
+                        else
+                        {
+                            Log(_logger, LogLevel.Information, $"Not buying/selling short {loser["Symbol"].ToString()} - ({loser["Symbol"].ToString()}). Stock fall above or below min stock price or is excluded");
+                            continue;
+                        }
+
+                        Log(_logger, LogLevel.Information, $"{loser["Symbol"].ToString()} - ({loser["Name"].ToString()}) Score. Long score: {longCnt}. Short score {shortCnt}");
+
+                        if ((longCnt + vixsandpLongCnt) >= rulesEngine.StockLongCount)
+                        {
+                            Log(_logger, LogLevel.Information, $"Adding {loser["Symbol"].ToString()} - ({loser["Name"].ToString()}) to potential long list.");
+                            if (!BuySellStockList.Any(x => x.Results["Symbol"].ToString() == loser["Symbol"].ToString()))
+                            {
+                                BuySellStockList.Add(new BuySellCommodity((longCnt + vixsandpLongCnt), TradeDirection.BUY, loser));
+                                stockCnt++;
+                            }
+                        }
+                        else
+                        if ((shortCnt + vixsandpShortCnt) >= rulesEngine.StockShortCount && (bool)rulesEngine.ShortEnabled)
+                        {
+                            Log(_logger, LogLevel.Information, $"Adding {loser["Symbol"].ToString()} - ({loser["Name"].ToString()}) to potential short list.");
+                            if (!BuySellStockList.Any(x => x.Results["Symbol"].ToString() == loser["Symbol"].ToString()))
+                            {
+                                BuySellStockList.Add(new BuySellCommodity((shortCnt + vixsandpShortCnt), TradeDirection.SELL_SHORT, loser));
+                                stockCnt++;
+                            }
+                        }
+                        else
+                        {
+                            Log(_logger, LogLevel.Information, $"Not buying/selling short {loser["Symbol"].ToString()} - ({loser["Name"].ToString()}). Long score: {longCnt}. Short score {shortCnt}");
+                        }
+                    }
+                }
+            }
+
+
+            Log(_logger, LogLevel.Information, $"Getting movers from Schwab");           
             var movers = services.GetMovers();
+
             foreach(var mover in movers)
             {
                 shortCnt = 0;
@@ -183,15 +326,22 @@ namespace TMD.PricePrediction
                     if ((longCnt + vixsandpLongCnt) >= rulesEngine.StockLongCount)
                     {
                         Log(_logger, LogLevel.Information, $"Adding {mover["Symbol"].ToString()} - ({mover["Name"].ToString()}) to potential long list.");
-                        BuySellStockList.Add(new BuySellCommodity((longCnt + vixsandpLongCnt), TradeDirection.BUY, mover));
-                        stockCnt++;
+                        if(!BuySellStockList.Any(x => x.Results["Symbol"].ToString() == mover["Symbol"].ToString()))
+                        {
+                            BuySellStockList.Add(new BuySellCommodity((longCnt + vixsandpLongCnt), TradeDirection.BUY, mover));
+                            stockCnt++;
+                        }
+
                     }
                     else
                     if ((shortCnt + vixsandpShortCnt) >= rulesEngine.StockShortCount && (bool)rulesEngine.ShortEnabled)
                     {
                         Log(_logger, LogLevel.Information, $"Adding {mover["Symbol"].ToString()} - ({mover["Name"].ToString()}) to potential short list.");
-                        BuySellStockList.Add(new BuySellCommodity((shortCnt + vixsandpShortCnt), TradeDirection.SELL_SHORT, mover));
-                        stockCnt++;
+                        if (!BuySellStockList.Any(x => x.Results["Symbol"].ToString() == mover["Symbol"].ToString())) 
+                        {
+                            BuySellStockList.Add(new BuySellCommodity((shortCnt + vixsandpShortCnt), TradeDirection.SELL_SHORT, mover));
+                            stockCnt++;
+                        }
                     }
                     else
                     {
@@ -300,6 +450,7 @@ namespace TMD.PricePrediction
                     if ((longCnt + vixsandpLongCnt) >= rulesEngine.StockLongCount)
                     {
                         Log(_logger, LogLevel.Information, $"Adding {stock.Symbol} - ({stock.Name}) to potential long list.");
+                    if (!BuySellStockList.Any(x => x.Results["Symbol"].ToString() == results["Symbol"].ToString()))
                         BuySellStockList.Add(new BuySellCommodity((longCnt + vixsandpLongCnt), TradeDirection.BUY, results));
                         stockCnt++;
                     }
@@ -307,6 +458,7 @@ namespace TMD.PricePrediction
                     if ((shortCnt + vixsandpShortCnt) >= rulesEngine.StockShortCount && (bool)rulesEngine.ShortEnabled)
                     {
                         Log(_logger, LogLevel.Information, $"Adding {stock.Symbol} - ({stock.Name}) to potential short list.");
+                    if (!BuySellStockList.Any(x => x.Results["Symbol"].ToString() == results["Symbol"].ToString()))
                         BuySellStockList.Add(new BuySellCommodity((shortCnt + vixsandpShortCnt), TradeDirection.SELL_SHORT, results));
                         stockCnt++;
                     }
@@ -349,17 +501,17 @@ namespace TMD.PricePrediction
 
             //if (!useOneHourRSI)
             //{
-            //if (Convert.ToDecimal(results["RSI"].ToString()) > 0)
-            //{
-            //    if (Convert.ToDecimal(results["RSI"].ToString()) >= 80)
-            //    {
-            //        shortCnt = shortCnt + 3;
-            //    }
-            //    if (Convert.ToDecimal(results["RSI"].ToString()) <= 20)
-            //    {
-            //        longCnt = longCnt + 3;
-            //    }
-            //}
+            if (Convert.ToDecimal(results["RSI"].ToString()) > 0)
+            {
+                if (Convert.ToDecimal(results["RSI"].ToString()) >= 70)
+                {
+                    shortCnt = shortCnt + 1;
+                }
+                if (Convert.ToDecimal(results["RSI"].ToString()) <= 30)
+                {
+                    longCnt = longCnt + 1;
+                }
+            }
 
             //}
             //else
@@ -625,7 +777,7 @@ namespace TMD.PricePrediction
         public bool IsNotHolidayorWeekend()
         {
             bool run = true;
-            DateTime runTime = easternTime;
+            //DateTime runTime = easternTime;
             TimeSpan startTime = new TimeSpan(9, 25, 0);
             TimeSpan endTime = new TimeSpan(15, 55, 0);
 
@@ -1342,6 +1494,7 @@ namespace TMD.PricePrediction
 
             // Convert the UTC time to Eastern Time
             easternTime = TimeZoneInfo.ConvertTimeFromUtc(utcNow, easternTimeZone);
+            runTime = easternTime;
         }
         public void UnloadAgingStocks()
         {

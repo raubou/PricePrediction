@@ -29,8 +29,10 @@ namespace PricePredictionTest
         ETradeService ETradeService = null;
         ETradeSettings? _settings3;
         Polygon? _polygon = null;
+        yfapiSettings? yfapiSettings = null;
         StackCommerceService? stackCommerceService = null;
         RakutenService? rakutenService = null;
+        TraderGoService _traderGoService = null;
 
         [TestInitialize]
         public void GetSettings()
@@ -51,6 +53,7 @@ namespace PricePredictionTest
             _settings3 = config.GetSection("ETradeAPI").Get<ETradeSettings>();
             _polygon = config.GetSection("polygon").Get<Polygon>();
             _taApiSettings = config.GetSection("TaApi").Get<TaAPISettings>();
+            yfapiSettings = config.GetSection("yfapi").Get<yfapiSettings>();
             var loggerFactory = LoggerFactory.Create(builder =>
             {
                 //builder.AddConsole();
@@ -63,7 +66,7 @@ namespace PricePredictionTest
             SchwabService = new SchwabServices(_logger, _settings2, _taApiSettings, httpClientFactory);
             ETradeService = new ETradeService(_logger, _settings3, httpClientFactory);
             stackCommerceService = new StackCommerceService(_logger, httpClientFactory);
-            //rakutenService = new RakutenService();
+            _traderGoService = new TraderGoService(yfapiSettings, _logger, httpClientFactory, false);
         }
         [TestMethod]
         public void TestCoinBaseQuote()
@@ -958,9 +961,15 @@ namespace PricePredictionTest
             Assert.IsTrue(true);
         }
         [TestMethod]
-        public void RakutenLoadMerchants()
+        public void TestRakutenLoadMerchants()
         {
             var merchants = RakutenService.LoadMerchants(_logger);
+            Assert.IsTrue(true);
+        }
+        [TestMethod]
+        public void TestYahooMovers()
+        {
+            var GainersandLosers = _traderGoService.GetGainersandLosers(true);
             Assert.IsTrue(true);
         }
     }

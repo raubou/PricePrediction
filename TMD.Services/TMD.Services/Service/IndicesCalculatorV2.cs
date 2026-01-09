@@ -3,6 +3,7 @@ using Coinbase.AdvancedTrade.Models.Public;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using TMDInvestment.Models;
 using TMDInvestments.Models;
 using TMDInvestments.Services;
 
@@ -83,8 +84,18 @@ namespace TMD.Services.Service
                     }
                     catch (Exception ex3) 
                     {
-                        _log.LogError($"{ex3.Message}", ex2);
-                        return null;
+                        try
+                        {
+                            currentPrice = Convert.ToDecimal(quote.GetProperty("regularMarketPrice").ToString());
+                            totalVolume = Convert.ToDecimal(quote.GetProperty("regularMarketVolume").ToString());
+                            exchange = "movers";
+                        }
+                        catch (Exception)
+                        {
+                            _log.LogError($"{ex3.Message}", ex2);
+                            return null;
+                        }
+
                     }
                 }
             }
@@ -245,10 +256,17 @@ namespace TMD.Services.Service
                         output.Add("Name", quote.GetProperty("description").ToString());
                     }
                     catch (Exception ex3)
-                    { 
+                    {
+                        try
+                        {
+                            output.Add("Name", quote.GetProperty("shortName").ToString());
+                        }
+                        catch (Exception)
+                        {
+                            _log.LogError($"{ex3.Message}", ex2);
+                            return null;
+                        }
 
-                        _log.LogError($"{ex3.Message}", ex2);
-                        return null;
                     }
                 }
             }

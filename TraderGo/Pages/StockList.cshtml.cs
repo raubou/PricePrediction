@@ -12,7 +12,7 @@ namespace TraderGo.Pages
     {
         private readonly ILogger<StockListModel> _logger;
         TraderGoService _traderGoService;
-        HttpClient _httpClient;
+        //HttpClient _httpClient;
         Manager _mgr;
         [BindProperty] public List<StockList>? StockLists { get; set; }
         [BindProperty] public StockList? StockList { get; set; } = new StockList();
@@ -20,9 +20,9 @@ namespace TraderGo.Pages
         public StockListModel(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<MailSettings> mailSettings, IHttpClientFactory _factory, ILogger<StockListModel> logger) //: base(connectionSettings, connectionSettings2, mailSettings)
         {
             _logger = logger;
-            _httpClient = _factory.CreateClient();
+            //_httpClient = _factory.CreateClient();
             _mgr = new Manager(connectionSettings?.Value?.Connection, "", null);
-            _traderGoService = new TraderGoService(_logger, _httpClient, false);
+            _traderGoService = new TraderGoService(null, _logger, _factory, false);
         }
         public override IActionResult Execute()
         {
