@@ -1040,9 +1040,10 @@ namespace TMD.PricePrediction
 
             }
 
-            decimal cash = Convert.ToDecimal(initialBalances.GetProperty("cashBalance").ToString());
+            decimal cash = Convert.ToDecimal(initialBalances.GetProperty("availableFundsNonMarginableTrade").ToString());
+            //decimal cash = Convert.ToDecimal(initialBalances.GetProperty("cashBalance").ToString());
             decimal margin = 0m;// Convert.ToDecimal(initialBalances.GetProperty("margin").ToString());
-            totalAvailiableforLongTrade = Math.Round((cash + margin) * .85m, 2);
+            totalAvailiableforLongTrade = Math.Round((cash + margin) * .9m, 2);
             //totalAvailiableforLongTrade = 0m;
 
             Log(_logger, LogLevel.Information, $"Cash Balance ${cash}. Margin Balance ${margin}. Total Availiable ${totalAvailiableforLongTrade}");
@@ -1274,10 +1275,11 @@ namespace TMD.PricePrediction
             var portfolio = services2?.Portfolio();
             positions = portfolio?.Element("AccountPortfolio")?.Elements("Position").ToList();
 
-            decimal cash = Convert.ToDecimal(securitiesAccount.Element("cashBuyingPower").Value.ToString());
+            //decimal cash = Convert.ToDecimal(securitiesAccount.Element("cashBuyingPower").Value.ToString());
+            decimal cash = Convert.ToDecimal(securitiesAccount.Element("cashAvailableForInvestment").Value.ToString());
             decimal margin = 0m;// Convert.ToDecimal(securitiesAccount.Element("marginBuyingPower").Value.ToString());
             //totalAvailiableforLongTrade = Math.Round((cash + margin), 2);
-            totalAvailiableforLongTrade = Math.Round((cash + margin) * .85m, 2);
+            totalAvailiableforLongTrade = Math.Round((cash + margin) * .9m, 2);
             //totalAvailiableforLongTrade = 200m;
 
             Log(_logger, LogLevel.Information, $"Cash Balance ${cash}. Margin Balance ${margin}. Total Availiable ${totalAvailiableforLongTrade}");
