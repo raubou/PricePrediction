@@ -23,6 +23,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TMDPricePrediction", "..\TM
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TraderGo", "..\TraderGo\TraderGo.csproj", "{C8515F41-1398-CB29-F948-BDF09A40DDB3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TMD.EquitiesPrediction.Service", "..\TMD.EquitiesPrediction.Service\TMD.EquitiesPrediction.Service.csproj", "{08FEF57E-2566-4D38-9F93-4B29667393C6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -69,6 +71,10 @@ Global
 		{C8515F41-1398-CB29-F948-BDF09A40DDB3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C8515F41-1398-CB29-F948-BDF09A40DDB3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C8515F41-1398-CB29-F948-BDF09A40DDB3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{08FEF57E-2566-4D38-9F93-4B29667393C6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{08FEF57E-2566-4D38-9F93-4B29667393C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{08FEF57E-2566-4D38-9F93-4B29667393C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{08FEF57E-2566-4D38-9F93-4B29667393C6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

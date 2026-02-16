@@ -1,16 +1,19 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
-using TMDInvestments.Models;
-using TMD.PricePrediction.Classes;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using TMD.PricePrediction;
+using TMD.PricePrediction.Classes;
+using TMD.Services.Service;
+using TMDInvestments.Models;
 using TMDInvestments.Models.Models;
 
 namespace TMD.EquitiesPrediction;
-class PricePrediction
+class PricePrediction //: BackgroundService
 {
     static void Main(string[] args)
+    //protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         //Console.WriteLine("Loading Account Info, StockkList, IPO's, and Earnings");
         var builder = new ConfigurationBuilder();
@@ -69,15 +72,15 @@ class PricePrediction
             {
                 //if (helper.IsNotHolidayorWeekend())
                 //{
-                //    helper.UnloadAgingStocks();
-                //    helper.CheckSchwabOrderStatus(ref totalAvailiableforLongTradeSchwab);
-                //    helper.CheckETradeOrderStatus(ref totalAvailiableforLongTradeETrade);
+                //helper.UnloadAgingStocks();
+                //helper.CheckSchwabOrderStatus(ref totalAvailiableforLongTradeSchwab);
+                //helper.CheckETradeOrderStatus(ref totalAvailiableforLongTradeETrade);
 
                 //    if (totalAvailiableforLongTradeSchwab > 100 || totalAvailiableforLongTradeETrade > 100)
-                        BuySellStockList = helper.GetQuoteList();
+                //BuySellStockList = helper.GetQuoteList();
 
                 //    if (totalAvailiableforLongTradeSchwab > 100)
-                //        exec1.Exec(totalAvailiableforLongTradeSchwab, ref BuySellStockList);
+                        //exec1.Exec(totalAvailiableforLongTradeSchwab, ref BuySellStockList);
                 //    else
                 //        logger.LogInformation($"Not enough buying power in Schwab account to make a trade. ${totalAvailiableforLongTradeSchwab}");
                 //}
@@ -93,10 +96,10 @@ class PricePrediction
             }
             try
             {
-                if (totalAvailiableforLongTradeETrade > 100)
-                    exec3.Exec(totalAvailiableforLongTradeETrade, ref BuySellStockList);
-                else
-                    logger.LogInformation($"Not enough buying power in ETrade account to make a trade. ${totalAvailiableforLongTradeETrade}");
+                //if (totalAvailiableforLongTradeETrade > 100)
+                    //exec3.Exec(totalAvailiableforLongTradeETrade, ref BuySellStockList);
+                //else
+                //    logger.LogInformation($"Not enough buying power in ETrade account to make a trade. ${totalAvailiableforLongTradeETrade}");
             }
             catch (Exception ex)
             {
@@ -115,14 +118,15 @@ class PricePrediction
             exec1 = null;
             exec2 = null;
             exec3 = null;
-            System.Threading.Thread.Sleep(720000); //five minutes
+            System.Threading.Thread.Sleep(240000); //four minutes
         } while (true);
 
     }
 }
 
 public class Versioning
-{    public string GetAssemblyVersion()
+{
+    public string GetAssemblyVersion()
     {
         return GetType().Assembly.GetName().Version.ToString();
     }

@@ -73,7 +73,7 @@ namespace TMD.PricePrediction.Classes
 
             //Unload Aging Stocks
             helper.Log(_logger, LogLevel.Information, $"Unload aging stock");
-            UnloadAgingStocks();
+            //UnloadAgingStocks();
 
             //Get Account Info
             List<PortfolioBreakdown> portfolios = services.GetPortfolios();
@@ -105,9 +105,7 @@ namespace TMD.PricePrediction.Classes
 
                 //Crypto sold/brought to cover in the last 2(4) hrs
                 var CryptoHold24Hr = ctx.CryptoTracker2.ToList().Where(x => x.PriceSold != null && x.DateSold != null && Math.Abs((x.DateSold - helper.easternTime).Value.TotalHours) < 24).ToList().Select(y => new { Coin = y.Coin, DateSold = y.DateSold, DateUpdated = y.DateUpdated }).ToList();
-                //var CryptoHold12Hr = ctx.CryptoTracker.ToList().Where(x => x.PriceSold != null && x.DateSold != null && Math.Abs((x.DateSold - DateTime.Now).Value.TotalHours) < 12).ToList().Select(y => new { Coin = y.Coin, DateSold = y.DateSold, DateUpdated = y.DateUpdated }).ToList();
-                //var CryptoHold2Hr = ctx.CryptoTracker.ToList().Where(x => x.PriceSold != null && x.DateSold != null && Math.Abs((x.DateSold - DateTime.Now).Value.TotalHours) < 2).ToList().Select(y => new { Coin = y.Coin, DateSold = y.DateSold }).ToList();
-                //var CryptoHold2Hr = ctx.CryptoTracker.ToList().Where(x => x.PriceSold != null && x.DateSold != null && Math.Abs((x.DateSold - DateTime.Now).Value.TotalHours) < 2).ToList().Select(y => new { Coin = y.Coin, DateSold = y.DateSold }).ToList();
+
                 //Loop through and evaluate.
                 int? shortCnt = 0;
                 int? longCnt = 0;
@@ -310,15 +308,9 @@ namespace TMD.PricePrediction.Classes
                 //Platform tradePlatform = (Platform)crypto.TradePlatform;
                 TradeDirection currentTradeDirection = (TradeDirection)Enum.Parse(typeof(TradeDirection), crypto.TradeDirection.ToString(), true);
                 TradeDirection tradeDirection = (currentTradeDirection == TradeDirection.BUY) ? TradeDirection.SELL : TradeDirection.BUY_TO_COVER;
-                //switch (tradePlatform)
-                //{
-                //    case Platform.CharlesSchwab:
+
                 BuySellCrypto(crypto, results, tradeDirection, /*crypto.Amount ?? 0m*/valueofNonTrackedAsset, services, products, false/*, true*/);
-                //        break;
-                //    case Platform.ETrade:
-                //        BuySellStock(stock, results, tradeDirection, stock.Quantity, true, services2);
-                //        break;
-                //}
+
             }
         }
         void UpdatePrices()
@@ -355,6 +347,10 @@ namespace TMD.PricePrediction.Classes
         }
         void QueueCryptotoBuy(dynamic order, TradeDirection direction, decimal amount)
         {
+            string symbol = order["Symbol"].ToString();
+            var duplicateQueue = ctx?.CryptoTracker2.Where(x => x.Coin == symbol && x.BuyStatus == "QUEUED").FirstOrDefault();
+            if (duplicateQueue != null)
+                return;
             SaveCryptoTracker(null, direction, amount, order, null, "QUEUED");
         }
         void CheckforQueuedCrypto()
@@ -362,7 +358,7 @@ namespace TMD.PricePrediction.Classes
             int? longCnt = 0;
             int? shortCnt = 0;
             var queuedCrypto = ctx.CryptoTracker2.Where(x => x.BuyStatus == "QUEUED").ToList();
-             foreach (var crypto in queuedCrypto)
+            foreach (var crypto in queuedCrypto)
             {
                 JsonObject? results = services.GetQuote(crypto.Coin);
                 helper.CalculatePoints(results, /*false, true,*/ ref shortCnt, ref longCnt);
@@ -384,26 +380,19 @@ namespace TMD.PricePrediction.Classes
             string[] currency = product.DisplayName.Split('-');
             var account = services.GetAccounts().Where(x => x.Currency == currency[0] && Convert.ToDecimal(x.AvailableBalance.Value) > 0m).FirstOrDefault();
             decimal minSubtract = 0m;
-            //var valueofNonTrackedAsset = Math.Round(Convert.ToDecimal(account.AvailableBalance.Value) * Convert.ToDecimal(product?.Price), 2
-            //var valueofNonTrackedAsset = Math.Round(Convert.ToDecimal(account.AvailableBalance.Value) * Convert.ToDecimal(product?.Price), 2);
+
             Coinbase.AdvancedTrade.Models.Order output = null;
             Coinbase.AdvancedTrade.Enums.OrderSide coinbaseDirection = (direction == TradeDirection.BUY || direction == TradeDirection.BUY_TO_COVER) ? Coinbase.AdvancedTrade.Enums.OrderSide.BUY : Coinbase.AdvancedTrade.Enums.OrderSide.SELL;
             switch (direction)
             {
                 case TradeDirection.BUY:
-                    //product = publicProducts.Where(x => x.DisplayName == symbol).FirstOrDefault();
-                    ////precision = product.BaseIncrement.Substring((product.BaseIncrement.IndexOf(".") + 1), (product.BaseIncrement.Length - (product.BaseIncrement.IndexOf(".") + 1)));
-                    //currency = product.DisplayName.Split('-');
+
                     var perItem = amount.ToString();
                     var amountSize = Convert.ToDecimal(perItem.Substring(0, ((perItem.Length - perItem.IndexOf(".")) - 1)));
                     output = services.SetOrder(product.DisplayName, coinbaseDirection, amountSize);
                     break;
                 case TradeDirection.SELL:
-                    //product = publicProducts.Where(x => x.DisplayName == symbol).FirstOrDefault();
-                    //precision = product.BaseIncrement.Substring((product.BaseIncrement.IndexOf(".") + 1), (product.BaseIncrement.Length - (product.BaseIncrement.IndexOf(".") + 1)));
-                    //currency = product.DisplayName.Split('-');
-                    //var account = services.GetAccounts().Where(x => x.Currency == currency[0]).FirstOrDefault();
-                    //var baseSize = (account.AvailableBalance.Value.IndexOf(".") == -1) ? Convert.ToDecimal(account.AvailableBalance.Value) : Convert.ToDecimal(account.AvailableBalance.Value.Substring(0, (account.AvailableBalance.Value.IndexOf(".") + precision.Length)));
+
                     switch (precision.Length)
                     {
                         case 1:
@@ -543,8 +532,6 @@ namespace TMD.PricePrediction.Classes
                     ctx.CryptoTracker2.Attach(cryptoTracker);
                     ctx.Entry(cryptoTracker).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
                 }
-                    
-                
             }
             try
             {
@@ -593,7 +580,7 @@ namespace TMD.PricePrediction.Classes
             decimal lastPrice = (crypto.LastPrice ?? 0);
             decimal pricePurchased = (crypto.PricePurchased ?? 0);
             decimal currentPrice = Convert.ToDecimal(results["lastPrice"].ToString());
-            //var order = services.GetOrder((Guid)crypto.BuyOrderId);
+
             var product = products.Where(x => x.DisplayName == crypto.Coin).FirstOrDefault();
             var account = services?.GetAccounts().Where(x => x.Currency == crypto.Coin.Split(new char[] { '-' })[0] && Convert.ToDecimal(x.AvailableBalance.Value) > 0m).FirstOrDefault();
             var currentBalance = Math.Round(Convert.ToDecimal(account?.AvailableBalance?.Value) * Convert.ToDecimal(product?.Price), 5);
@@ -667,7 +654,7 @@ namespace TMD.PricePrediction.Classes
                 }
                 else
                 //if (currentPrice < lastPrice) // try to kill the loss by selling only if above amount balance
-                if (currentPrice < lastPrice /*&& currentBalance > (crypto.Amount * 1.08m)*/)
+                if (currentPrice < lastPrice && currentBalance > (crypto.Amount * 1.08m))
                 {
                     if (percentDiffLastPrice > settings.StopLossPercentLastPriceCrypto)
                     {
@@ -698,17 +685,13 @@ namespace TMD.PricePrediction.Classes
             if (cryptoTracker.Count() >= settings.MaxNumberofCryptotoBuy)
                 return;
             int cryptoCnt = 0;
-            //decimal? perCrypto = (BuySellCryptoList.Count() < (settings.MaxNumberofCryptotoBuy - cryptoTracker.Count())) ? availiabletoTrade / BuySellCryptoList.Count() : availiabletoTrade / (settings.MaxNumberofCryptotoBuy - cryptoTracker.Count());//(availiabletoTrade / BuySellCryptoList.Count) > (availiabletoTrade * (settings.MaxPercentofAvailBalancePerOrder/100)) ? (availiabletoTrade * (settings.MaxPercentofAvailBalancePerOrder / 100)) : (availiabletoTrade / BuySellCryptoList.Count);
-            //decimal? perCrypto = availiabletoTrade / Math.Abs((int)settings.MaxNumberofCryptotoBuy - cryptoTracker.Count());
-            //decimal? perCrypto = ((availiabletoTrade / Math.Abs((int)settings.MaxNumberofCryptotoBuy - cryptoTracker.Count())) > settings.MaxDollarAmountPerCrypto) ? settings.MaxDollarAmountPerCrypto : (availiabletoTrade / Math.Abs((int)settings.MaxNumberofCryptotoBuy - cryptoTracker.Count()));
-            //decimal? perCrypto = (availiabletoTrade / BuySellCryptoList.Count());
+
             decimal ? perCrypto = (availiabletoTrade / BuySellCryptoList.Count()) > settings.MaxDollarAmountPerCrypto ? (availiabletoTrade < settings.MaxDollarAmountPerCrypto) ? availiabletoTrade : settings.MaxDollarAmountPerCrypto : (availiabletoTrade / BuySellCryptoList.Count());
             foreach (var item in BuySellCryptoList)
             {
                 if ((cryptoTracker.Count() + cryptoCnt) >= settings.MaxNumberofCryptotoBuy)
                     break;
-                //var result = item.Key;
-                //var direction = item.Value;
+
                 var result = item.Results;
                 var direction = item.Direction;
                 bool sellShort = (direction == TradeDirection.SELL_SHORT) ? true : false;
@@ -731,7 +714,6 @@ namespace TMD.PricePrediction.Classes
             var Accounts = services.GetAccounts()/*.Where(x => x.Currency != "USD")*/.ToList();
             helper.Log(_logger, LogLevel.Information, $"Getting owned crypto list");
             var PublicProducts = services.GetProducts().OrderBy(x => x.DisplayName).ToList();
-            //var Cryptos = ctx.CryptoTracker.Where(x => x.PriceSold == null && x.DateSold == null && x.BuyStatus == "FILLED").ToList();
             //check if there is a wallet with cash not in tracker
             foreach (var item in Accounts)
             {

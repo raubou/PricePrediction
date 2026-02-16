@@ -397,12 +397,12 @@ let addURL = '';
                 $("#stockBody").append("<div class='row'><div class='col border-end'><b>SMA (26)</b> :" + data.SMA26.toFixed(4) + "</div><div class='col border-end'><b>SMA (12)</b> :" + data.SMA12.toFixed(4) + "</div><div class='col'><b>SMA (9)</b> :" + data.SMA9.toFixed(4) + "</div></div>");
                 $("#stockBody").append("<div class='row'><div class='col border-end'><b>EMA (26)</b> :" + data.EMA26.toFixed(4) + "</div><div class='col border-end'><b>EMA (12)</b> :" + data.EMA12.toFixed(4) + "</div><div class='col'><b>EMA (9)</b> :" + data.EMA9.toFixed(4) + "</div></div>");
 
-                $("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD</b> :" + data.MACD.toFixed(4) + "</div><div class='col'><b>MACD Signal</b> :" + data.MACDSignal.toFixed(4) + "</div></div>");
-                $("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD Histogram</b> :" + data.MACDHistogram.toFixed(4) + "</div><div class='col'>&nbsp;</div></div>");
-                $("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD 2</b> :" + data.MACD2.toFixed(4) + "</div><div class='col'><b>MACD Signal 2</b> :" + data.MACDSignal2.toFixed(4) + "</div></div>");
-                $("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD Histogram 2</b> :" + data.MACDHistogram2.toFixed(4) + "</div><div class='col'>&nbsp;</div></div>");
-                $("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD 3</b> :" + data.MACD3.toFixed(4) + "</div><div class='col'><b>MACD Signal 3</b> :" + data.MACDSignal3.toFixed(4) + "</div></div>");
-                $("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD Histogram 2</b> :" + data.MACDHistogram3.toFixed(4) + "</div><div class='col'>&nbsp;</div></div>");
+                $("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD</b> :" + data.MACD + "</div><div class='col'><b>MACD Signal</b> :" + data.MACDSignal + "</div></div>");
+                $("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD Histogram</b> :" + data.MACDHistogram + "</div><div class='col'>&nbsp;</div></div>");
+                $("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD 2</b> :" + data.MACD2 + "</div><div class='col'><b>MACD Signal 2</b> :" + data.MACDSignal2 + "</div></div>");
+                $("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD Histogram 2</b> :" + data.MACDHistogram2 + "</div><div class='col'>&nbsp;</div></div>");
+                $("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD 3</b> :" + data.MACD3 + "</div><div class='col'><b>MACD Signal 3</b> :" + data.MACDSignal3 + "</div></div>");
+                $("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD Histogram 2</b> :" + data.MACDHistogram3 + "</div><div class='col'>&nbsp;</div></div>");
 
                 //$("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD DD 2</b> :" + data.MACDDD2.toFixed(4) + "</div><div class='col'><b>MACD Signal DD 2</b> :" + data.MACDSignalDD2.toFixed(4) + "</div></div>");
                 //$("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD Histogram DD 2</b> :" + data.MACDHistogramDD2.toFixed(4) + "</div><div class='col'>&nbsp;</div></div>");
@@ -456,7 +456,7 @@ let addURL = '';
             context: document.body
         }).catch(function (e) { $('#infoWindow').hide(500); alert('error'); }).done(function (data) {
             //alert(JSON.stringify(data));
-            //alert(JSON.stringify(data[value]));
+            //alert(JSON.stringify(data));
             //$(this).addClass("done");
             $("#stockBody").empty();
             //$("#stockBody").append(JSON.stringify(data));
@@ -479,12 +479,12 @@ let addURL = '';
             $("#stockBody").append("<div class='row'><div class='col border-end'><b>SMA (26)</b> :" + data.SMA26.toFixed(4) + "</div><div class='col border-end'><b>SMA (12)</b> :" + data.SMA12.toFixed(4) + "</div><div class='col'><b>SMA (9)</b> :" + data.SMA9.toFixed(4) + "</div></div>");
             $("#stockBody").append("<div class='row'><div class='col border-end'><b>EMA (26)</b> :" + data.EMA26.toFixed(4) + "</div><div class='col border-end'><b>EMA (12)</b> :" + data.EMA12.toFixed(4) + "</div><div class='col'><b>EMA (9)</b> :" + data.EMA9.toFixed(4) + "</div></div>");
 
-            $("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD</b> :" + data.MACD.toFixed(4) + "</div><div class='col'><b>MACD Signal</b> :" + data.MACDSignal.toFixed(4) + "</div></div>");
-            $("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD Histogram</b> :" + data.MACDHistogram.toFixed(4) + "</div><div class='col'>&nbsp;</div></div>");
-            $("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD 2</b> :" + data.MACD2.toFixed(4) + "</div><div class='col'><b>MACD Signal 2</b> :" + data.MACDSignal2.toFixed(4) + "</div></div>");
-            $("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD Histogram 2</b> :" + data.MACDHistogram2.toFixed(4) + "</div><div class='col'>&nbsp;</div></div>");
-            $("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD 3</b> :" + data.MACD3.toFixed(4) + "</div><div class='col'><b>MACD Signal 3</b> :" + data.MACDSignal3.toFixed(4) + "</div></div>");
-            $("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD Histogram 2</b> :" + data.MACDHistogram3.toFixed(4) + "</div><div class='col'>&nbsp;</div></div>");
+            $("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD</b> :" + data.MACD + "</div><div class='col'><b>MACD Signal</b> :" + data.MACDSignal + "</div></div>");
+            $("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD Histogram</b> :" + data.MACDHistogram + "</div><div class='col'>&nbsp;</div></div>");
+            $("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD 2</b> :" + data.MACD2 + "</div><div class='col'><b>MACD Signal 2</b> :" + data.MACDSignal2 + "</div></div>");
+            $("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD Histogram 2</b> :" + data.MACDHistogram2 + "</div><div class='col'>&nbsp;</div></div>");
+            $("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD 3</b> :" + data.MACD3 + "</div><div class='col'><b>MACD Signal 3</b> :" + data.MACDSignal3 + "</div></div>");
+            $("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD Histogram 2</b> :" + data.MACDHistogram3 + "</div><div class='col'>&nbsp;</div></div>");
 
             //$("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD DD 2</b> :" + data.MACDDD2.toFixed(4) + "</div><div class='col'><b>MACD Signal DD 2</b> :" + data.MACDSignalDD2.toFixed(4) + "</div></div>");
             //$("#stockBody").append("<div class='row'><div class='col border-end'><b>MACD Histogram DD 2</b> :" + data.MACDHistogramDD2.toFixed(4) + "</div><div class='col'>&nbsp;</div></div>");

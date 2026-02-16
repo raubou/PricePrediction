@@ -8,7 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UserSecretsId>da3059f2-eccf-4284-8b9c-2639a1d48493</UserSecretsId>
-    <Version>2.6.6.5</Version>
+    <Version>2.6.6.8</Version>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="ExecCryptoPricePrediction.cs" />
