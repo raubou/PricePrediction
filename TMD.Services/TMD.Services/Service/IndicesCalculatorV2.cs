@@ -103,34 +103,34 @@ namespace TMD.Services.Service
             //var results = services.GetPriceHistory(symbol, "month", "1", "daily", 1, DateTime.Now.AddDays(-90), DateTime.Now);//.ToList();
             DateTime previewDate = DateTime.Now;
             if (previewDate.DayOfWeek == DayOfWeek.Saturday)
-                previewDate = previewDate.AddDays(-1).AddHours(-24);
+                previewDate = previewDate.AddDays(-1).AddHours(-48);
             else if (previewDate.DayOfWeek == DayOfWeek.Sunday)
-                previewDate = previewDate.AddDays(-2).AddHours(-24);
+                previewDate = previewDate.AddDays(-2).AddHours(-48);
             else
-                previewDate = previewDate.AddHours(-24);
+                previewDate = previewDate.AddHours(-48);
             goto GetPriceHistory;
 
         GoBackOneDay:
-            previewDate = previewDate.AddHours(-24);
-            results = services.GetPriceHistory(symbol, "day", "1", "minute", 15,
-                previewDate, DateTime.Now);
-            ser = JsonSerializer.Serialize(results.GetProperty("candles"));
-            candle90 = JsonSerializer.Deserialize<List<TMDInvestment.Models.CandleItems>>(ser);
+            previewDate = previewDate.AddHours(-48);
+            //results = services.GetPriceHistory(symbol, "day", "2", "minute", 15,
+            //    previewDate, DateTime.Now);
+            //ser = JsonSerializer.Serialize(results.GetProperty("candles"));
+            //candle90 = JsonSerializer.Deserialize<List<TMDInvestment.Models.CandleItems>>(ser);
 
         //var results = services.GetPriceHistory(symbol, "day", "1", "minute", 15, 
         //    new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 0, 0, 0, 0), 
         //    new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 12, 23, 59, 59));
         GetPriceHistory:
             System.Threading.Thread.Sleep(25); //Sleep for 50 milliseconds to avoid throttling
-            results = services.GetPriceHistory(symbol, "day", "1", "minute", 15,
+            results = services.GetPriceHistory(symbol, "day", "2", "minute", 15,
                     previewDate, DateTime.Now);
             ser = JsonSerializer.Serialize(results.GetProperty("candles"));
             candle90 = JsonSerializer.Deserialize<List<TMDInvestment.Models.CandleItems>>(ser);
 
             //mlPricePredict.Calculate(candle90, ref output);
-            if (candle90.Count < 26)
+            if (candle90.Count < 52)
             {
-                if(totalDaysBack> 5) //give up after 5 days
+                if(totalDaysBack > 20) //give up after 20 days
                 {
                     goto GetCandles;
                 }
@@ -330,7 +330,7 @@ namespace TMD.Services.Service
             totalVolume = Convert.ToDecimal(product.Volume24h);
 
             //List<Coinbase.AdvancedTrade.Models.Candle> candle90 = coinbaseService.GetPriceHistory(product.ProductId, DateTime.Now.AddDays(-90), DateTime.Now, Granularity.ONE_DAY).OrderByDescending(x => x.StartDate).ToList();
-            var previewDate = DateTime.Now.AddHours(-24);
+            var previewDate = DateTime.Now.AddHours(-48);
             //List<Coinbase.AdvancedTrade.Models.Candle> candle90 = coinbaseService.GetPriceHistory(product.ProductId,
             //    new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 0, 0, 0, 0), 
             //    new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 12, 23, 59, 59), 

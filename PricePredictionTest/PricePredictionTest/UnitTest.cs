@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Xml.Linq;
+using TMD.Database.Connect.Managers;
 using TMD.Services;
 using TMD.Services.Service;
 using TMDInvestments.Context;
@@ -33,6 +34,8 @@ namespace PricePredictionTest
         StackCommerceService? stackCommerceService = null;
         RakutenService? rakutenService = null;
         TraderGoService _traderGoService = null;
+        Manager manager = null;
+        MailSettings mailSettings = null;
 
         [TestInitialize]
         public void GetSettings()
@@ -45,7 +48,7 @@ namespace PricePredictionTest
             IConfiguration config = builder.Build();
 
             //var ConnectionStrings = config.GetSection("ConnectionStrings").Get<ConnectionSettings>();
-            //var MailSettings = config.GetSection("MailSettings").Get<MailSettings>();
+            mailSettings = config.GetSection("MailSettings").Get<MailSettings>();
             //var FinnHub = config.GetSection("finnhub").Get<FinnHub>();
             //var Polygon = config.GetSection("polygon").Get<Polygon>();
             _settings2 = config.GetSection("SchwabAPI").Get<SchwabSettings>();
@@ -67,6 +70,12 @@ namespace PricePredictionTest
             ETradeService = new ETradeService(_logger, _settings3, httpClientFactory);
             stackCommerceService = new StackCommerceService(_logger, httpClientFactory);
             _traderGoService = new TraderGoService(yfapiSettings, _logger, httpClientFactory, false);
+            manager = new Manager(_logger);
+        }
+        [TestMethod]
+        public void SendMail()
+        {
+            manager.SendEmail(mailSettings.SenderName, mailSettings.UserName, mailSettings.Password, "Polycard, Richard", new string[] { "raubou@yahoo.com","raubou@gmail.com" }, "Test Email from TMD Investments", "This is a test email from the TMD Investments application.",mailSettings.Server, mailSettings.Port);
         }
         [TestMethod]
         public void TestCoinBaseQuote()

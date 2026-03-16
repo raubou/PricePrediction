@@ -29,6 +29,7 @@ namespace TMDInvestments.Context
         //public DbSet<CryptoTracker> CryptoTracker { get; set; }
         public DbSet<CryptoTracker2> CryptoTracker2 { get; set; }
         //public DbSet<DayTradeTracker> DayTradeTracker { get; set; }
+        public DbSet<Exceptions> Exceptions { get; set; }
 
         //protected void OnModelCreatingPartial(ModelBuilder modelBuilder)
         //{

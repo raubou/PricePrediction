@@ -90,7 +90,7 @@ namespace TraderGo.Pages
                 else
                 {
                     string body = "<div style='width:100%;height:200px;margin:0px auto;float:none;overflow:hidden;color:black;border:1px solid #cacaca;border-radius:3px;padding:5px;'><div style='width:100%;height:40px;margin:0px auto;float:none;overflow:hidden;color:white;background-color:#6699cc;padding:5px;'><img src='http://www.tradergo.com//images/stocklogo.png' height='30' />Trader Go</div><br>Here's your Password :" + password + "</div>";
-                    if (!mgr.SendEmail("TraderGo", mail.UserName, mail.Password, loginRegister?.recover?.UserName, loginRegister?.recover?.UserName, "Password Recovery", body, mail.Server, mail.Port))
+                    if (!mgr.SendEmail("TraderGo", mail.UserName, mail.Password, loginRegister?.recover?.UserName, new string[] { loginRegister?.recover?.UserName }, "Password Recovery", body, mail.Server, mail.Port))
                     {
                         return Page();
                     }

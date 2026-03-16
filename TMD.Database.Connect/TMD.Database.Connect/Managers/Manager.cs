@@ -35,6 +35,10 @@ namespace TMD.Database.Connect.Managers
         private static SqlConnection _con;
         string _connectionString = string.Empty;
         //public Manager(string connectionString, FinnHub finnhub, Polygon polygon, HttpClient client, ILogger log)
+        public Manager(ILogger log)
+        {
+            _log = log;
+        }
         public Manager(string connectionString, FinnHub finnhub, Polygon polygon, IHttpClientFactory clientFactory, ILogger log)
         {
             _connectionString = connectionString;
@@ -1334,15 +1338,18 @@ namespace TMD.Database.Connect.Managers
             return results;
         }
 
-        public bool SendEmail(string senderName, string senderEmail, string senderPassword, string name, string email, string subject, string body, string server, int port)
+        public bool SendEmail(string senderName, string senderEmail, string senderPassword, string name, string[] emails, string subject, string body, string server, int port)
         {
             bool success = true;
             using (MimeMessage emailMessage = new MimeMessage())
             {
                 MailboxAddress emailFrom = new MailboxAddress(senderName, senderEmail);
                 emailMessage.From.Add(emailFrom);
-                MailboxAddress emailTo = new MailboxAddress(name, email);
-                emailMessage.To.Add(emailTo);
+                foreach(string email in emails)
+                {
+                    MailboxAddress emailTo = new MailboxAddress(name, email);
+                    emailMessage.To.Add(emailTo);
+                }
 
                 //emailMessage.Cc.Add(new MailboxAddress("Cc Receiver", "cc@example.com"));
                 //emailMessage.Bcc.Add(new MailboxAddress("Bcc Receiver", "bcc@example.com"));

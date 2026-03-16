@@ -107,7 +107,7 @@ namespace TMD.PricePrediction.Classes
             }
             else
             {
-                helper.Log(_logger, LogLevel.Error, $"Cash and margin balance below threshold ${totalAvailiableforLongTrade}  or trading disabled.");
+                helper.Log(_logger, LogLevel.Warning, $"Cash and margin balance below threshold ${totalAvailiableforLongTrade}  or trading disabled.");
             }
         }
         void UpdatePrices()

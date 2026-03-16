@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using System.Globalization;
+using System.Runtime.ConstrainedExecution;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -193,7 +194,7 @@ namespace TMD.PricePrediction
                             Log(_logger, LogLevel.Information, $"Not buying/selling short {gainer["Symbol"].ToString()} - ({gainer["Symbol"].ToString()}). Volume fall below min of 40000");
                             continue;
                         }
-                        if (Convert.ToDecimal(gainer["lastPrice"].ToString()) >= rulesEngine.MinStockPrice && Convert.ToDecimal(gainer["lastPrice"].ToString()) <= 50m)
+                        if (Convert.ToDecimal(gainer["lastPrice"].ToString()) >= rulesEngine.MinStockPrice && Convert.ToDecimal(gainer["lastPrice"].ToString()) <= rulesEngine.MaxStockPrice)
                         {
                             CalculatePoints(gainer, /*true, false,*/ ref shortCnt, ref longCnt);
                         }
@@ -255,7 +256,7 @@ namespace TMD.PricePrediction
                             Log(_logger, LogLevel.Information, $"Not buying/selling short {loser["Symbol"].ToString()} - ({loser["Symbol"].ToString()}). Volume fall below min of 40000");
                             continue;
                         }
-                        if (Convert.ToDecimal(loser["lastPrice"].ToString()) >= rulesEngine.MinStockPrice && Convert.ToDecimal(loser["lastPrice"].ToString()) <= 50m)
+                        if (Convert.ToDecimal(loser["lastPrice"].ToString()) >= rulesEngine.MinStockPrice && Convert.ToDecimal(loser["lastPrice"].ToString()) <= rulesEngine.MaxStockPrice)
                         {
                             CalculatePoints(loser, /*true, false,*/ ref shortCnt, ref longCnt);
                         }
@@ -322,7 +323,7 @@ namespace TMD.PricePrediction
                         Log(_logger, LogLevel.Information, $"Not buying/selling short {mover["Symbol"].ToString()} - ({mover["Symbol"].ToString()}). Volume fall below min of 40000");
                         continue;
                     }
-                    if (Convert.ToDecimal(mover["lastPrice"].ToString()) >= rulesEngine.MinStockPrice && Convert.ToDecimal(mover["lastPrice"].ToString()) <= 50m)
+                    if (Convert.ToDecimal(mover["lastPrice"].ToString()) >= rulesEngine.MinStockPrice && Convert.ToDecimal(mover["lastPrice"].ToString()) <= rulesEngine.MaxStockPrice)
                     {
                         CalculatePoints(mover, /*true, false,*/ ref shortCnt, ref longCnt);
                     }
@@ -446,7 +447,7 @@ namespace TMD.PricePrediction
                         Log(_logger, LogLevel.Information, $"Not buying/selling short {results["Symbol"].ToString()} - ({results["Symbol"].ToString()}). Volume fall below min of 40000");
                         continue;
                     }
-                    if (Convert.ToDecimal(results["lastPrice"].ToString()) >= rulesEngine.MinStockPrice /*&& !stock.ExcludeFromAutomation*/)
+                    if (Convert.ToDecimal(results["lastPrice"].ToString()) >= rulesEngine.MinStockPrice && Convert.ToDecimal(results["lastPrice"].ToString()) <= rulesEngine.MaxStockPrice)
                     {
                         CalculatePoints(results, /*true, false,*/ ref shortCnt, ref longCnt);
                     }
@@ -661,11 +662,11 @@ namespace TMD.PricePrediction
             //{
             try
             {
-                if (Convert.ToDecimal(results["MACD"].ToString()) > Convert.ToDecimal(results["MACDSignal"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) < 0 &&*/ Convert.ToDecimal(results["MACDHistogram"].ToString()) > 0))
+                if (decimal.Parse(results["MACD"].ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture) > decimal.Parse(results["MACDSignal"].ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture) && (/*decimal.Parse(results["MACDSignal"].ToString()) < 0 &&*/ decimal.Parse(results["MACDHistogram"].ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture) > 0))
                 {
                     longCnt = longCnt + 1;
                 }
-                if (Convert.ToDecimal(results["MACD"].ToString()) < Convert.ToDecimal(results["MACDSignal"].ToString()) && (/*Convert.ToDecimal(results["MACDSignal"].ToString()) > 0 &&*/ Convert.ToDecimal(results["MACDHistogram"].ToString()) < 0))
+                if (decimal.Parse(results["MACD"].ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture) < decimal.Parse(results["MACDSignal"].ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture) && (/*decimal.Parse(results["MACDSignal"].ToString()) > 0 &&*/ decimal.Parse(results["MACDHistogram"].ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture) < 0))
                 {
                     shortCnt = shortCnt + 1;
                 }
@@ -1049,6 +1050,8 @@ namespace TMD.PricePrediction
             {
                 securitiesAccount = account.GetProperty("securitiesAccount");
                 initialBalances = securitiesAccount.GetProperty("initialBalances");
+                //for testing
+                //dynamic crap = JsonSerializer.Deserialize<dynamic>(initialBalances);
             }
             catch (Exception ex)
             {
@@ -1059,8 +1062,8 @@ namespace TMD.PricePrediction
 
             }
 
-            decimal cash = Convert.ToDecimal(initialBalances.GetProperty("availableFundsNonMarginableTrade").ToString());
-            //decimal cash = Convert.ToDecimal(initialBalances.GetProperty("cashBalance").ToString());
+            //decimal cash = Convert.ToDecimal(initialBalances.GetProperty("availableFundsNonMarginableTrade").ToString());
+            decimal cash = Convert.ToDecimal(initialBalances.GetProperty("cashBalance").ToString());
             decimal margin = 0m;// Convert.ToDecimal(initialBalances.GetProperty("margin").ToString());
             totalAvailiableforLongTrade = Math.Round((cash + margin) * .9m, 2);
             //totalAvailiableforLongTrade = 0m;
@@ -1693,6 +1696,14 @@ namespace TMD.PricePrediction
         {
             log.Log(logLevel, message);
             log.Log(LogLevel.Information, Environment.NewLine);
+            if(logLevel == LogLevel.Error)
+            {
+                var exception = new Exceptions { Message = message, DateCreated = easternTime, LastUpdateBy = 1 };
+                ctx.Exceptions.Add(exception);
+                ctx.Entry(exception).State = Microsoft.EntityFrameworkCore.EntityState.Added;
+                ctx.SaveChanges();
+            }
+                
         }
         ~Helper()
         {

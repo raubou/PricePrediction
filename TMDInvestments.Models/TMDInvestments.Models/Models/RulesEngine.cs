@@ -17,6 +17,7 @@ namespace TMDInvestments.Models
         public int? MaxNumberofSharesPerStock { get; set; }
         public decimal? MaxDollarAmountPerCrypto { get; set; }
         public decimal? MinStockPrice { get; set; }
+        public decimal? MaxStockPrice { get; set; }
         public bool? ShortEnabled { get; set; }
         public bool? SchwabAnalysisTradeEnabled { get; set; }
         public bool? EtradeAnalysisTradeEnabled { get; set; }
