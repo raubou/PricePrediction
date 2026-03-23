@@ -12,6 +12,7 @@ using TMD.Services;
 using TMD.Services.Service;
 using TMDInvestments.Context;
 using TMDInvestments.Models;
+using TMDInvestments.Models.Models.Polygon;
 using TMDInvestments.Services;
 
 namespace PricePredictionTest
@@ -36,6 +37,7 @@ namespace PricePredictionTest
         TraderGoService _traderGoService = null;
         Manager manager = null;
         MailSettings mailSettings = null;
+        MLPricePredict ml = null;
 
         [TestInitialize]
         public void GetSettings()
@@ -71,17 +73,18 @@ namespace PricePredictionTest
             stackCommerceService = new StackCommerceService(_logger, httpClientFactory);
             _traderGoService = new TraderGoService(yfapiSettings, _logger, httpClientFactory, false);
             manager = new Manager(_logger);
+            ml = new MLPricePredict();
         }
         [TestMethod]
         public void SendMail()
         {
-            manager.SendEmail(mailSettings.SenderName, mailSettings.UserName, mailSettings.Password, "Polycard, Richard", new string[] { "raubou@yahoo.com","raubou@gmail.com" }, "Test Email from TMD Investments", "This is a test email from the TMD Investments application.",mailSettings.Server, mailSettings.Port);
+            manager.SendEmail(mailSettings.SenderName, mailSettings.UserName, mailSettings.Password, "Polycard, Richard", new string[] { "raubou@yahoo.com", "raubou@gmail.com" }, "Test Email from TMD Investments", "This is a test email from the TMD Investments application.", mailSettings.Server, mailSettings.Port);
         }
         [TestMethod]
         public void TestCoinBaseQuote()
         {
             //int? longCnt = 0; int? shortCnt = 0;
-            var results = services.GetQuote("LTC-USD");
+            var results = services.GetQuote("BTC-USD");
             //Helper.CalculatePoints(results, ref shortCnt, ref longCnt);
             Assert.IsNotNull(results);
         }
@@ -979,6 +982,23 @@ namespace PricePredictionTest
         public void TestYahooMovers()
         {
             var GainersandLosers = _traderGoService.GetGainersandLosers(true);
+            Assert.IsTrue(true);
+        }
+        [TestMethod]
+        public void TestMultiTrainer()
+        {
+            string symbol = "AMZN";
+            JsonObject quote = SchwabService.GetQuote(symbol, true, false);
+            //var results = SchwabService.GetPriceHistory(symbol, "day", "2", "minute", 15,
+            //    DateTime.Now.AddDays(-30), DateTime.Now);
+            var results = SchwabService.GetPriceHistory(symbol, "day", "2", "minute", 15,
+            null, null);
+            var ser = JsonSerializer.Serialize(results.GetProperty("candles"));
+            var candle90 = JsonSerializer.Deserialize<List<TMDInvestment.Models.CandleItems>>(ser);
+            decimal lastPrice = (decimal)quote["lastPrice"];
+            //ml.MultiTrainer(candle90, Convert.ToSingle(lastPrice));
+            JsonObject result = new JsonObject();
+            ml.Calculate(candle90, ref result);
             Assert.IsTrue(true);
         }
     }

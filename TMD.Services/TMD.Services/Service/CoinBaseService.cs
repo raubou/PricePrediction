@@ -2,7 +2,6 @@
 using Coinbase.AdvancedTrade.Enums;
 using Coinbase.AdvancedTrade.Models;
 using Coinbase.AdvancedTrade.Models.Public;
-//using Coinbase.AdvancedTrade.Models.WebSocket;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -85,34 +84,10 @@ namespace TMD.Services
         }
         public dynamic GetQuote(string productId)
         {
-            //IndicesCalculator indicesCalculator = new IndicesCalculator(_logger, _settings, _factory);
-            //IndicesCalculatorV2 indicesCalculator = new IndicesCalculatorV2(_logger, _settings, _factory);
+
             IndicesCalculatorV2 indicesCalculator = new IndicesCalculatorV2(_logger, _settings, _factory/*, false, true*/);
             var product = _coinbasePublicClient.Public.GetPublicProductAsync(productId).Result;
-            //if(useV2)
-                var results = indicesCalculator.CalculateV2(product);
-            //else
-            //    return indicesCalculator.calculate(product, productId);
-            //var indices = taAPIService?.GetTechnicalAnalysis(productId.Replace("-","/"), "5m", "crypto", "coinbase");
-            //if (indices.ValueKind == JsonValueKind.Object && !indices.TryGetProperty("errors", out JsonElement value2))
-            //{
-            //    JsonElement taapi = indices.GetProperty("data");
-            //    foreach (var item in taapi.EnumerateArray())
-            //    {
-            //        string name = item.GetProperty("indicator").ToString();
-            //        if (name == "macd")
-            //        {
-            //            ((JsonObject)results).Add("MACD3", Convert.ToDecimal(item.GetProperty("result").GetProperty("valueMACD").ToString()));
-            //            ((JsonObject)results).Add("MACDMACDSignal3", Convert.ToDecimal(item.GetProperty("result").GetProperty("valueMACDSignal").ToString()));
-            //            ((JsonObject)results).Add("MACDHistogram3", Convert.ToDecimal(item.GetProperty("result").GetProperty("valueMACDHist").ToString()));
-            //        }
-            //        else
-            //        {
-            //            decimal value3 = Convert.ToDecimal(item.GetProperty("result").GetProperty("value").ToString());
-            //            ((JsonObject)results).Add(name.ToUpper(), value3);
-            //        }
-            //    }
-            //}
+            var results = indicesCalculator.CalculateV2(product);
             return results;
         }
         public List<PortfolioBreakdown> GetPortfolios()
@@ -124,11 +99,12 @@ namespace TMD.Services
             }
             return portfolios;
         }
-        public List<Candle> GetPriceHistory(string productId, DateTime? startDate, DateTime? endDate, Granularity granularity) 
+        public List<Coinbase.AdvancedTrade.Models.Public.PublicCandle> GetPriceHistory(string productId, DateTime? startDate, DateTime? endDate, Granularity granularity) 
         {
-            var start = new DateTimeOffset(startDate.Value.ToUniversalTime()).ToUnixTimeSeconds().ToString();
-            var end = new DateTimeOffset(endDate.Value.ToUniversalTime()).ToUnixTimeSeconds().ToString();
-            return _coinbaseClient.Products.GetProductCandlesAsync(productId, start, end, granularity).Result;
+            var start = new DateTimeOffset(startDate.Value.ToUniversalTime()).ToUnixTimeSeconds()/*.ToString()*/;
+            var end = new DateTimeOffset(endDate.Value.ToUniversalTime()).ToUnixTimeSeconds()/*.ToString()*/;
+            //return _coinbaseClient.Products.GetProductCandlesAsync(productId, start, end, granularity).Result;
+            return _coinbasePublicClient.Public.GetPublicProductCandlesAsync(productId, start, end, granularity).Result;
         }
 
         public Coinbase.AdvancedTrade.Models.Order SetOrder(string productId, OrderSide side, decimal amount) 

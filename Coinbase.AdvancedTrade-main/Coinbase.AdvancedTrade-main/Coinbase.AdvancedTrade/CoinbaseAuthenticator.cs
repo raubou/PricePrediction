@@ -8,6 +8,7 @@ using Coinbase.AdvancedTrade.Enums;
 using Newtonsoft.Json;
 using RestSharp;
 
+
 namespace Coinbase.AdvancedTrade
 {
     /// <summary>
@@ -86,7 +87,17 @@ namespace Coinbase.AdvancedTrade
             var headers = _useOAuth ? CreateOAuth2Headers() : CreateHeaders(method, path, bodyObj);
 
             // Execute the request and return the result
-            return await ExecuteRequestAsync(method, path, bodyObj, headers, queryParams);
+            //return await ExecuteRequestAsync(method, path, bodyObj, headers, queryParams);
+            try
+            {
+                var results = await ExecuteRequestAsync(method, path, bodyObj, headers, queryParams);
+                return results;
+            }
+            catch (Exception ex)
+            {
+
+                return null;
+            }
         }
 
         /// <summary>
@@ -109,10 +120,13 @@ namespace Coinbase.AdvancedTrade
         /// <returns>A dictionary of headers with the Authorization header containing the JWT for authenticating the request using Coinbase Developer Platform (CDP) API keys.</returns>
         private Dictionary<string, string> CreateJwtHeaders(string method, string path)
         {
-            string jwtToken = JwtTokenGenerator.GenerateJwt(_apiKey, _apiSecret, "retail_rest_api_proxy", method, path);
+            string jwtToken2 = JwtTokenGenerator.GenerateJwt(_apiKey, _apiSecret, "retail_rest_api_proxy", method, path);
+            //string secret = JwtTokenGenerator2.parseKey(_apiSecret);
+            //string jwtToken = JwtTokenGenerator2.GenerateJwt(_apiKey, _apiSecret, method, path);
+            //var isValid = JwtTokenGenerator2.isTokenValid(jwtToken, _apiKey, secret);
             return new Dictionary<string, string>
             {
-                { "Authorization", $"Bearer {jwtToken}" }
+                { "Authorization", $"Bearer {jwtToken2}" }
             };
         }
 

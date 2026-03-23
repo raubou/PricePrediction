@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <PackageId>TinyOAuth2</PackageId>
     <PackageVersion>2.0.1</PackageVersion>
     <Authors>Martijn Melchers</Authors>

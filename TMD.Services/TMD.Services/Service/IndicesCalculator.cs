@@ -85,8 +85,8 @@ namespace TMD.Services
         {
             coinbaseService = new CoinBaseService(_log, _coinbaseSettings, _factory);
             var currentPrice = Convert.ToDecimal(product.Price);
-            List<Coinbase.AdvancedTrade.Models.Candle> candle90 = coinbaseService.GetPriceHistory(product.ProductId, DateTime.Now.AddDays(-90), DateTime.Now, Granularity.ONE_DAY).OrderByDescending(x => x.StartDate).ToList();
-            List<Coinbase.AdvancedTrade.Models.Candle> candleOneHour = coinbaseService.GetPriceHistory(product.ProductId, DateTime.Now.AddDays(-1), DateTime.Now, Granularity.ONE_HOUR).OrderByDescending(x => x.StartDate).ToList();
+            List<Coinbase.AdvancedTrade.Models.Public.PublicCandle> candle90 = coinbaseService.GetPriceHistory(product.ProductId, DateTime.Now.AddDays(-90), DateTime.Now, Granularity.ONE_DAY).OrderByDescending(x => x.StartDate).ToList();
+            List<Coinbase.AdvancedTrade.Models.Public.PublicCandle> candleOneHour = coinbaseService.GetPriceHistory(product.ProductId, DateTime.Now.AddDays(-1), DateTime.Now, Granularity.ONE_HOUR).OrderByDescending(x => x.StartDate).ToList();
             //var candle60 = candle90.Take(60).ToList();
             var candle30 = candle90.Take(30).ToList();
             var candle26 = candle90.Take(26).ToList();

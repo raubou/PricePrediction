@@ -100,45 +100,41 @@ namespace TMD.Services.Service
                 }
             }
 
-            //var results = services.GetPriceHistory(symbol, "month", "1", "daily", 1, DateTime.Now.AddDays(-90), DateTime.Now);//.ToList();
-            DateTime previewDate = DateTime.Now;
-            if (previewDate.DayOfWeek == DayOfWeek.Saturday)
-                previewDate = previewDate.AddDays(-1).AddHours(-48);
-            else if (previewDate.DayOfWeek == DayOfWeek.Sunday)
-                previewDate = previewDate.AddDays(-2).AddHours(-48);
-            else
-                previewDate = previewDate.AddHours(-48);
-            goto GetPriceHistory;
+            DateTime previewDate = DateTime.Now.AddDays(-30);
+        //    if (previewDate.DayOfWeek == DayOfWeek.Saturday)
+        //        previewDate = previewDate.AddDays(-1).AddHours(-48);
+        //    else if (previewDate.DayOfWeek == DayOfWeek.Sunday)
+        //        previewDate = previewDate.AddDays(-2).AddHours(-48);
+        //    else
+        //        previewDate = previewDate.AddHours(-48);
+        //    goto GetPriceHistory;
 
-        GoBackOneDay:
-            previewDate = previewDate.AddHours(-48);
-            //results = services.GetPriceHistory(symbol, "day", "2", "minute", 15,
-            //    previewDate, DateTime.Now);
-            //ser = JsonSerializer.Serialize(results.GetProperty("candles"));
-            //candle90 = JsonSerializer.Deserialize<List<TMDInvestment.Models.CandleItems>>(ser);
+        //GoBackOneDay:
+        //    previewDate = previewDate.AddHours(-48);
 
-        //var results = services.GetPriceHistory(symbol, "day", "1", "minute", 15, 
-        //    new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 0, 0, 0, 0), 
-        //    new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 12, 23, 59, 59));
-        GetPriceHistory:
+        //GetPriceHistory:
             System.Threading.Thread.Sleep(25); //Sleep for 50 milliseconds to avoid throttling
+            //results = services.GetPriceHistory(symbol, "day", "2", "minute", 15,
+            //        previewDate, DateTime.Now);
+        //    results = services.GetPriceHistory(symbol, "year", "1", "daily", 1,
+        //null, null);
             results = services.GetPriceHistory(symbol, "day", "2", "minute", 15,
-                    previewDate, DateTime.Now);
+            null, null);
             ser = JsonSerializer.Serialize(results.GetProperty("candles"));
             candle90 = JsonSerializer.Deserialize<List<TMDInvestment.Models.CandleItems>>(ser);
 
-            //mlPricePredict.Calculate(candle90, ref output);
-            if (candle90.Count < 52)
-            {
-                if(totalDaysBack > 20) //give up after 20 days
-                {
-                    goto GetCandles;
-                }
-                totalDaysBack++;
-                goto GoBackOneDay;
-            }
+            //if (candle90.Count < 52)
+            //{
+            //    if(totalDaysBack > 20) //give up after 20 days
+            //    {
+            //        goto GetCandles;
+            //    }
+            //    totalDaysBack++;
+            //    goto GoBackOneDay;
+            //}
 
-        GetCandles:
+            //GetCandles:
+            candle90 = candle90.OrderBy(x => x.datetime).ToList();
             mlPricePredict.Calculate(candle90, ref output);
             //var test = candle90.OrderByDescending(x => x.datetime).ToList();
             float? SMA12 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(12).Average(c => c.close) : 0f;
@@ -324,20 +320,20 @@ namespace TMD.Services.Service
             decimal currentPrice = 0m;
             decimal totalVolume = 0m;
             JsonObject output = new JsonObject();
-            List<Coinbase.AdvancedTrade.Models.Candle> candle90 = new List<Coinbase.AdvancedTrade.Models.Candle>();
+            List<Coinbase.AdvancedTrade.Models.Public.PublicCandle> candle90 = new List<Coinbase.AdvancedTrade.Models.Public.PublicCandle>();
 
             currentPrice = Convert.ToDecimal(product.Price);
             totalVolume = Convert.ToDecimal(product.Volume24h);
 
             //List<Coinbase.AdvancedTrade.Models.Candle> candle90 = coinbaseService.GetPriceHistory(product.ProductId, DateTime.Now.AddDays(-90), DateTime.Now, Granularity.ONE_DAY).OrderByDescending(x => x.StartDate).ToList();
-            var previewDate = DateTime.Now.AddHours(-48);
+            var previewDate = DateTime.Now.AddHours(-24);
             //List<Coinbase.AdvancedTrade.Models.Candle> candle90 = coinbaseService.GetPriceHistory(product.ProductId,
             //    new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 0, 0, 0, 0), 
             //    new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 12, 23, 59, 59), 
             //    Granularity.FIFTEEN_MINUTE).OrderByDescending(x => x.StartDate).ToList();
             candle90 = coinbaseService.GetPriceHistory(product.ProductId,
                 previewDate, DateTime.Now,
-                Granularity.FIFTEEN_MINUTE).OrderByDescending(x => x.StartDate).ToList();
+                Granularity.FIFTEEN_MINUTE).OrderBy(x => x.StartDate).ToList();
             mlPricePredict.Calculate(candle90, ref output);
             //var test = candle90.OrderByDescending(x => x.StartDate).ToList();
 

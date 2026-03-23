@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System;
 
 namespace Coinbase.AdvancedTrade.Models.Public
 {
@@ -35,12 +36,32 @@ namespace Coinbase.AdvancedTrade.Models.Public
         /// Gets or sets the closing price at the end of the candle's time period.
         /// </summary>
         [JsonProperty("close")]
-        public string Close { get; set; }
+        public float Close { get; set; }
 
         /// <summary>
         /// Gets or sets the trading volume during the candle's time period.
         /// </summary>
         [JsonProperty("volume")]
         public string Volume { get; set; }
+
+        /// <summary>
+        /// Gets the start date and time of the candlestick.
+        /// </summary>
+        [JsonIgnore]
+        public DateTime StartDate => !string.IsNullOrEmpty(Start) ? UnixTimeStampToDateTime(Start) : DateTime.MinValue;
+
+        /// <summary>
+        /// Converts a UNIX timestamp string to its corresponding DateTime value.
+        /// </summary>
+        /// <param name="unixTimeStamp">The UNIX timestamp string.</param>
+        /// <returns>The converted DateTime value, or DateTime.MinValue if the conversion fails.</returns>
+        private static DateTime UnixTimeStampToDateTime(string unixTimeStamp)
+        {
+            if (long.TryParse(unixTimeStamp, out long parsedUnixTime))
+            {
+                return DateTimeOffset.FromUnixTimeSeconds(parsedUnixTime).UtcDateTime;
+            }
+            return DateTime.MinValue;
+        }
     }
 }

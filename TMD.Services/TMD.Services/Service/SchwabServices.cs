@@ -573,37 +573,13 @@ namespace TMDInvestments.Services
                 {
                     fetchRetry++;
                     FetchToken("",ref success, true);
-                    //System.Threading.Thread.Sleep(6000); //Five Seconds.
                     _token = ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
                     goto Retry;
                 }
-                //return GetQuote(symbol, skipCalculation);
             }
             if (!skipCalculation)
                 if (useV2)
-                    //results = polygonService.GetIndicators(symbol, DateTime.Now, "day", 14, 12, 26, 9, results);
-                    //results = indicesCalculator.CalculateV2(symbol, results);
                     results = indicesCalculatorV2.CalculateV2(symbol, results);
-            //var indices = taAPIService?.GetTechnicalAnalysis(symbol, "5m", "stocks", "stocks");
-            //if (indices.ValueKind == JsonValueKind.Object && !indices.TryGetProperty("errors", out JsonElement value2))
-            //{
-            //    JsonElement taapi = indices.GetProperty("data");
-            //    foreach (var item in taapi.EnumerateArray())
-            //    {
-            //        string name = item.GetProperty("indicator").ToString();
-            //        if(name == "macd")
-            //        {
-            //            ((JsonObject)results).Add("MACD3", Convert.ToDecimal(item.GetProperty("result").GetProperty("valueMACD").ToString()));
-            //            ((JsonObject)results).Add("MACDMACDSignal3", Convert.ToDecimal(item.GetProperty("result").GetProperty("valueMACDSignal").ToString()));
-            //            ((JsonObject)results).Add("MACDHistogram3", Convert.ToDecimal(item.GetProperty("result").GetProperty("valueMACDHist").ToString()));
-            //        }
-            //        else
-            //        {
-            //            decimal value3 = Convert.ToDecimal(item.GetProperty("result").GetProperty("value").ToString());
-            //            ((JsonObject)results).Add(name.ToUpper(), value3);
-            //        }
-            //    }
-            //}
 
             return results;
         }
@@ -701,14 +677,14 @@ namespace TMDInvestments.Services
             client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
             try
             {
-                //if (periodType != "day")
-                //{
+                if (periodType != "day")
+                {
                     results = client.Get($"marketdata/v1/pricehistory?symbol={symbol}&periodType={periodType}&period={1}&frequencyType={frequencyType}&frequency={frequency}&startDate={start}&endDate={end}", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
-                //}
-                //else
-                //{
-                //    results = client.Get($"marketdata/v1/pricehistory?symbol={symbol}&periodType={periodType}&period={1}&frequencyType={frequencyType}&frequency={frequency}", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
-                //}
+                }
+                else
+                {
+                    results = client.Get($"marketdata/v1/pricehistory?symbol={symbol}&periodType={periodType}&period={1}&frequencyType={frequencyType}&frequency={frequency}", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
+                }
             }
             catch (Exception ex)
             {

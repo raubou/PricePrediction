@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -11,7 +11,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="BouncyCastle.Cryptography" Version="2.5.0" />
     <PackageReference Include="DotNetOpenAuth.OAuth.Consumer" Version="4.3.4.13329" />
     <PackageReference Include="DotNetOpenAuth.OAuth.Core" Version="4.3.4.13329" />
     <PackageReference Include="GraphQL" Version="8.3.1" />
@@ -23,7 +22,7 @@
     <PackageReference Include="Microsoft.ML.FastTree" Version="5.0.0" />
     <PackageReference Include="Microsoft.ML.LightGbm" Version="5.0.0" />
     <PackageReference Include="Microsoft.ML.TimeSeries" Version="5.0.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="System.Runtime.InteropServices" Version="4.3.0" />
   </ItemGroup>
 

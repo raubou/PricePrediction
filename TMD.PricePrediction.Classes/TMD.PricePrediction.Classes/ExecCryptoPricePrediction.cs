@@ -96,7 +96,7 @@ namespace TMD.PricePrediction.Classes
 
             helper.Log(_logger, LogLevel.Information, $"Cash Balance ${cash}. Crypto Balance ${cryptoBalance}. Total Availiable ${totalAvailiableforLongTrade}");
 
-            if (totalAvailiableforLongTrade > 30)
+            if (totalAvailiableforLongTrade > 30 && cryptoTracker.Count < settings.MaxNumberofCryptotoBuy)
             {
                 //Get list of Crypto to trade not in tracker
                 var cryptoList = ctx.CryptoList.Where(x => (!cryptoTrackerList.Contains(x.Coin) && !cryptoTrackerList.Contains(x.Coin.Substring(0, (x.Coin.Length - 1)))) && !x.ExcludeFromAutomation).OrderBy(y => Guid.NewGuid()).ToList();
@@ -116,7 +116,7 @@ namespace TMD.PricePrediction.Classes
 
                 BuySellCryptoList = new List<BuySellCommodity>();
 
-                if (cryptoTracker.Count < settings.MaxNumberofCryptotoBuy)
+                //if (cryptoTracker.Count < settings.MaxNumberofCryptotoBuy)
                 foreach (var crypto in cryptoList)
                 {
                     shortCnt = 0;
@@ -172,7 +172,7 @@ namespace TMD.PricePrediction.Classes
                     }
                     //skip crypto under $1
                     decimal? lowestPrice = .5m;
-                        if (Convert.ToDecimal(product.Price) <= lowestPrice)
+                    if (Convert.ToDecimal(product.Price) <= lowestPrice)
                     {
                         helper.Log(_logger, LogLevel.Warning, $"Price of {crypto.Coin} - ({crypto.Name}) ${product.Price} too low below ${lowestPrice}, skipping");
                         rejectPriceCount++;

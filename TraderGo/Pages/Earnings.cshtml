@@ -1,8 +1,12 @@
 ﻿@page
 @model TraderGo.Pages.EarningsModel
 @using System.Globalization;
+@using System.Text.Json.Nodes;
 @{
     ViewData["Title"] = "Tradergo.com - Earnings";
+    int rowCnt = 1;
+    string boldStyle = string.Empty;
+    JsonObject quote = null;
 }
 <div class="row">
     <div class="col">
@@ -32,7 +36,9 @@
     <div class="container-fluid">
 
         <div class="row fw-bold fixRowHeaderBlue">
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">&nbsp;</div>
             <div class="col border border-1 border-info bg-info text-white text-nowrap">Symbol</div>
+            <div class="col border border-1 border-info bg-info text-white text-nowrap">Last Price</div>
             <div class="col border border-1 border-info bg-info text-white text-nowrap">Name</div>
             <div class="col border border-1 border-info bg-info text-white text-nowrap">Year</div>
             <div class="col border border-1 border-info bg-info text-white text-nowrap">Quarter</div>
@@ -46,11 +52,34 @@
         </div>
 
         @foreach (var item in Model?.Earnings)
-                {
+        {
+            try
+            {
+                quote = Model?.schwabServices?.GetQuote(item.symbol);
+            }
+            catch (Exception ex)
+            {
+
+            }
+            
+            if ((bool)Model?.stockList?.Any(x => x.Symbol == item.symbol))
+            {
+                boldStyle = "fw-bolder";
+            }
+            else
+            {
+                boldStyle = "";
+            }
             <div class="row border border-1 border-info">
-                        <div class="col">
-                    <b><a rel="canonical" href="javascript:objContext.GetQuote('@item.symbol','@item.name.ToString().Replace(@"'"," ")')" style="color:#006699;text-decoration:none;">@item.symbol</a></b>
-                        </div>
+                <div class="col">
+                    @rowCnt
+                </div>
+                <div class="col @boldStyle">
+                    <a rel="canonical" href="javascript:objContext.GetQuote('@item.symbol','@item.name.ToString().Replace(@"'", " ")')" style="color:#006699;text-decoration:none;">@item.symbol</a>
+                </div>
+                <div class="col">
+                    $@quote?["lastPrice"]?.ToString()
+                </div>
                 <div class="col overflow-hidden">
                     @item.name
                 </div>
@@ -82,7 +111,7 @@
                             @item.date.ToString()
                         </div>
                     </div>
-
-                }
+                rowCnt++;
+            }
     </div>
 </div>

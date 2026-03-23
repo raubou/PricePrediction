@@ -8,8 +8,8 @@ namespace TMDInvestments.Models
 {
     public sealed class MLModelResults
     {
-        public float[] ForecastedPriceDiffrence { get; init; }
-        public float[] LowerBoundPriceDiffrence { get; init; }
-        public float[] UpperBoundPriceDiffrence { get; init; }
+        public float[] ForecastedPriceDifference { get; init; }
+        public float[] LowerBoundPriceDifference { get; init; }
+        public float[] UpperBoundPriceDifference { get; init; }
     }
 }

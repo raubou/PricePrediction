@@ -2,6 +2,7 @@
 @model TraderGo.Pages.StockAnalysisModel
 @{
     ViewData["Title"] = "Tradergo.com - Stock Analysis";
+    int rowCnt = 1;
 }
 <div class="row">
     <div class="col">
@@ -41,6 +42,7 @@
     {
 
         <div class="row border border-1 border-info">
+            <div class="col">@rowCnt</div>
             <div class="col">
                 <a href="javascript:objContext.GetQuote('@item["Symbol"].ToString().ToUpper()', '@item["Name"]');">@item["Symbol"].ToString().ToUpper()</a>
             </div>
@@ -51,5 +53,8 @@
                 @String.Format("{0:C}", Convert.ToDecimal(item["lastPrice"].ToString()))
             </div>
         </div>
+        rowCnt++;
+
     }
+    
 </div>
