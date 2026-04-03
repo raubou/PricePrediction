@@ -80,7 +80,7 @@ namespace TMD.PricePrediction.Classes
 
             //Checked for queued crypto adn see if direction is the same
             helper.Log(_logger, LogLevel.Information, $"Check for queued stock");
-            helper.CheckforQueuedStock(settings, Platform.CharlesSchwab);
+            //helper.CheckforQueuedStock(settings, Platform.CharlesSchwab);
 
             if (totalAvailiableforLongTrade > 100 && (bool)settings.SchwabAnalysisTradeEnabled)
             {
@@ -90,16 +90,18 @@ namespace TMD.PricePrediction.Classes
                     var numOfNeededStock = (int)((settings.MaxNumberofStockstoBuy / 2) - stockTrackerBuy.Count);
                     if (numOfNeededStock > 0)
                     {
-                        List<BuySellCommodity> BuySellStockListLong = BuySellStockList.Where(x => x.Direction == TradeDirection.BUY).OrderByDescending(x => x.Points).ThenBy(x => Convert.ToDecimal(x.Results["RSI"].ToString())).Take(numOfNeededStock).ToList();
+                        List<BuySellCommodity> BuySellStockListLong = BuySellStockList.Where(x => x.Direction == TradeDirection.BUY).OrderByDescending(x => x.Points).ThenBy(x => Convert.ToDecimal(x.Results["RSI"].ToString()))/*.Take(numOfNeededStock)*/.ToList();
                         List<BuySellCommodity> BuySellStockListShort = new List<BuySellCommodity>();
                         if ((numOfNeededStock - BuySellStockListLong.Count()) > 0)
-                            BuySellStockListShort = BuySellStockList.Where(x => x.Direction == TradeDirection.SELL_SHORT).OrderByDescending(x => x.Points).ThenByDescending(x => Convert.ToDecimal(x.Results["RSI"].ToString())).Take((numOfNeededStock - BuySellStockListLong.Count())).ToList();
+                            BuySellStockListShort = BuySellStockList.Where(x => x.Direction == TradeDirection.SELL_SHORT).OrderByDescending(x => x.Points).ThenByDescending(x => Convert.ToDecimal(x.Results["RSI"].ToString()))/*.Take((numOfNeededStock - BuySellStockListLong.Count()))*/.ToList();
                         //CalculatePurchaseAmount(totalAvailiableforLongTrade, ref BuySellStockList);
                         List<BuySellCommodity> BuySellStockListTotal = new List<BuySellCommodity>();
                         BuySellStockListTotal.AddRange(BuySellStockListLong);
                         BuySellStockListTotal.AddRange(BuySellStockListShort);
-                        helper.CalculatePurchaseAmount(totalAvailiableforLongTrade, ref BuySellStockListTotal, settings, Platform.CharlesSchwab);
                         BuySellStockList = BuySellStockListTotal;
+                        //helper.CalculatePurchaseAmount(totalAvailiableforLongTrade, ref BuySellStockListTotal, settings, Platform.CharlesSchwab);
+                        helper.CalculatePurchaseAmount(totalAvailiableforLongTrade, ref BuySellStockList, settings, Platform.CharlesSchwab);
+                        //BuySellStockList = BuySellStockListTotal;
                     }
                 }
                 else

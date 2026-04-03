@@ -53,15 +53,15 @@
 
         @foreach (var item in Model?.Earnings)
         {
-            try
+@*          try
             {
                 quote = Model?.schwabServices?.GetQuote(item.symbol);
             }
             catch (Exception ex)
             {
 
-            }
-            
+            } *@
+
             if ((bool)Model?.stockList?.Any(x => x.Symbol == item.symbol))
             {
                 boldStyle = "fw-bolder";
@@ -77,9 +77,20 @@
                 <div class="col @boldStyle">
                     <a rel="canonical" href="javascript:objContext.GetQuote('@item.symbol','@item.name.ToString().Replace(@"'", " ")')" style="color:#006699;text-decoration:none;">@item.symbol</a>
                 </div>
-                <div class="col">
+                <div id="lastPrice_@rowCnt" class="col">
                     $@quote?["lastPrice"]?.ToString()
                 </div>
+                <script type="text/javascript">
+                    $.ajax({
+                          url: "api/TraderGoAPI/GetQuote/@item.symbol",
+                      }).done(function (data) {
+                          console.log(JSON.stringify(data));
+                            $("#lastPrice_@rowCnt").html("$" + data.lastPrice)
+                    objContext.sleep(500);
+                      }).catch(function (e) {
+
+                      });
+                </script>
                 <div class="col overflow-hidden">
                     @item.name
                 </div>

@@ -1,6 +1,8 @@
 ﻿using Coinbase.AdvancedTrade.Enums;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.ML;
+using Microsoft.ML.TorchSharp;
 using MongoDB.Driver;
 using System.Globalization;
 using System.Net.Http;
@@ -84,7 +86,7 @@ namespace PricePredictionTest
         public void TestCoinBaseQuote()
         {
             //int? longCnt = 0; int? shortCnt = 0;
-            var results = services.GetQuote("BTC-USD");
+            var results = services.GetQuote("ZRO-USD");
             //Helper.CalculatePoints(results, ref shortCnt, ref longCnt);
             Assert.IsNotNull(results);
         }
@@ -177,7 +179,7 @@ namespace PricePredictionTest
         }
 
         [TestMethod]
-        public void TestGetMovers()
+        public void TestSchwabGetMovers()
         {
             var results = SchwabService.GetMovers();
             Assert.IsNotNull(results);
@@ -1001,5 +1003,54 @@ namespace PricePredictionTest
             ml.Calculate(candle90, ref result);
             Assert.IsTrue(true);
         }
+        [TestMethod]
+        public void TestTextCategoryTrainer()
+        {
+            //// Initialize MLContext
+            //var mlContext = new MLContext();
+
+            //// Load your data into a strongly-typed collection
+            //var reviews = new[]
+            //{
+            //    new { Text = "This is a bad steak", Sentiment = "Negative" },
+            //    new { Text = "I really like this restaurant", Sentiment = "Positive" },
+            //    new { Text = "The food was okay, but the service was slow", Sentiment = "Negative" },
+            //    new { Text = "Amazing experience, definitely coming back!", Sentiment = "Positive" }
+            //};
+            //var reviewsDV = mlContext.Data.LoadFromEnumerable(reviews);
+
+            //// Define your training pipeline
+            //var pipeline = mlContext.Transforms.Conversion.MapValueToKey("Label", "Sentiment")
+            //    .Append(mlContext.MulticlassClassification.Trainers.TextClassification(/*numberOfClasses: 2,*/ sentence1ColumnName: "Text"))
+            //    .Append(mlContext.Transforms.Conversion.MapKeyToValue("PredictedLabel")); // Map the predicted key back to a string label
+
+            //// Train the model (Fit the pipeline to the data)
+            //var model = pipeline.Fit(reviewsDV);
+
+            //// Create a prediction engine for making predictions
+            //var predEngine = mlContext.Model.CreatePredictionEngine<SentimentData, SentimentPrediction>(model);
+
+            //// Test the trained model with new data
+            //var input = new SentimentData { Text = "The meal was fantastic!" };
+            //var result = predEngine.Predict(input);
+
+            //Console.WriteLine($"Text: {input.Text}");
+            //Console.WriteLine($"Prediction: {result.PredictedLabel}");
+
+            ml.TestTextCategoryTrainer();
+        }
+        // Define the data classes
+        //class SentimentData
+        //{
+        //    public string Text { get; set; }
+        //    public string Sentiment { get; set; }
+        //}
+
+        //class SentimentPrediction
+        //{
+        //    // ML.NET requires a property with this specific name for the prediction output
+        //    public string PredictedLabel { get; set; }
+        //    public float[] Score { get; set; } // Confidence scores for each class
+        //}
     }
 }

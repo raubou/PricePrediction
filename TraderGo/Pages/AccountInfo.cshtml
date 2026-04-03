@@ -6,16 +6,13 @@
     string status = string.Empty;
     string bold = string.Empty;
     dynamic? quote = null;
-    //JsonElement? securitiesAccount = null;
-    //JsonElement? initialBalances = null;
-    //JsonElement? currentBalances = null;
-    //List<JsonElement>? positions = null;
+    int stockCnt = 1;
 }
-@* @if (!Model.AccountInfo.TryGetProperty("errors", out JsonElement value)) *@
+
 @if (!string.IsNullOrEmpty(Model?.AccountInfo?.securitiesAccount?.accountNumber))
 {
 
-    <h4 style="color:#006699;">Account Info</h4>
+    <h4 style="color:#006699;">Schwab/Etrade Account Info</h4>
     <div class="row">
         <div class="col">
             @await Html.PartialAsync("~/Pages/Partial/_StockMenu.cshtml")
@@ -23,20 +20,6 @@
     </div>
     <div class="border border-1 border-primary rounded-3 overflow-hidden w-100 h-75 p-2 m-2">
         <h6 style="color:#006699;">Balances</h6>
-        @{
-            try
-            {
-                //securitiesAccount = Model.AccountInfo.GetProperty("securitiesAccount");
-                //initialBalances = securitiesAccount.Value.GetProperty("initialBalances");
-                //currentBalances = securitiesAccount.Value.GetProperty("currentBalances");
-                //positions = JsonSerializer.Deserialize<List<JsonElement>>(securitiesAccount.Value.GetProperty("positions")).OrderBy(x => x.GetProperty("instrument").GetProperty("symbol").GetString()).ToList();
-            }
-            catch (Exception)
-            {
-
-            }
-
-        }
 
         <div class='row bg-info text-light p-0' style="font-size:11px;">
             <div class='col fw-bold border border-1 border-light'>Account Number</div>
@@ -64,24 +47,20 @@
         </div>
 
     </div>
-    <div class="border border-1 border-primary rounded-3 overflow-hidden w-100 h-75 p-2 m-2">
+@*     <div class="border border-1 border-primary rounded-3 overflow-hidden w-100 h-75 p-2 m-2">
         <h6 style="color:#006699;">Token Info</h6>
         <div class='row bg-info text-light p-0' style="font-size:11px;">
             <div class='col fw-bold border border-1 border-light'>Token Type</div>
             <div class='col fw-bold border border-1 border-light'>Date Entered</div>
             <div class='col fw-bold border border-1 border-light'>Date Expires</div>
         </div>
-@*Place holder token*@
+Place holder token
 
-    </div>
+    </div> *@
     <div class="border border-1 border-primary rounded-3 overflow-hidden w-100 h-75 p-2 m-2">
         <h6 style="color:#006699;">Schwab Positions</h6>
         <div class="row fw-bold p-0" style="font-size:11px;">&nbsp;</div>
-        <div class="row fw-bold bg-info text-light p-0" style="font-size:11px;    font-size: 11px;
-        position: fixed;
-        width: 100%;
-        height: 20px;
-        top: 355px;">
+        <div class="row fw-bold bg-info text-light p-0" style="font-size:11px;    font-size: 11px;">
             <div class='col border border-1 border-light text-center'>Number</div>
             <div class='col border border-1 border-light text-center'>Symbol</div>
             <div class='col border border-1 border-light text-center'>Quantity</div>
@@ -98,24 +77,12 @@
             <div class="col border border-1 border-light text-center">Date Purchased</div>
             <div class="col border border-1 border-light text-center">&nbsp;</div>
         </div>
-        @{
-            int stockCnt = 1;
-            // decimal daysGain = 0;
-            // decimal daysGainPercent = 0;
-            // decimal totalGain = 0;
-            // decimal marketValue = 0;
-        }
-        @* @foreach (var item in securitiesAccount.GetProperty("positions").EnumerateArray()/*.OrderBy(x => x.GetProperty("instrument").GetProperty("symbol"))*/) *@
-        @* <form method="post"> *@
+
         @foreach (var item in Model.AccountInfo.securitiesAccount.Positions)
         {
             try
             {
                 quote = Model.services.GetQuote(item.Instruments.symbol);
-@*                 daysGain += Convert.ToDecimal(item.currentDayProfitLoss);
-                daysGainPercent += Convert.ToDecimal(item.currentDayProfitLossPercentage);
-                //totalGain += Convert.ToDecimal(item.GetProperty("currentDayProfitLoss").ToString());
-                marketValue += Convert.ToDecimal(item.marketValue); *@
             }
             catch (Exception ex)
             {
@@ -160,14 +127,12 @@
                     @if (Convert.ToDecimal(item.shortQuantity) > 0)
                     {
                         <div class='col border border-1 border-info'> $@Math.Round(Convert.ToDecimal(item.shortOpenProfitLoss), 2)</div>
-                        //totalGain += Convert.ToDecimal(item.shortOpenProfitLoss);
                     }
                     else
                     {
                         <div class='col border border-1 border-info'>
                             $@Math.Round(Convert.ToDecimal(item.longOpenProfitLoss), 2)
                         </div>
-                        //totalGain += Convert.ToDecimal(item.longOpenProfitLoss);
                     }
                     <div class='col border border-1 border-info'>$@item.marketValue</div>
                     <div class="col border border-1">
@@ -261,7 +226,10 @@
 
             ++stockCnt;
         }
-        @* </form> *@
+
+        <div class="border border-1 border-primary rounded-3 overflow-hidden w-100  p-2 m-2">
+            <p><a target="_blank" href="https://api.schwabapi.com/v1/oauth/authorize?response_type=code&client_id=@Uri.EscapeDataString(Model.clientSecret)&scope=readonly&redirect_uri=https://127.0.0.1/SchwabAPICallBack">Authorize Schwab</a></p>
+        </div>
     </div>
 @*     <div class='row bg-info text-light p-0' style="font-size:11px;">
         <div class='col fw-bold border border-1 border-light'>Day's Gain Total</div>
@@ -275,7 +243,7 @@
         <div class='col border border-1 border-info'>$@totalGain</div>
         <div class='col border border-1 border-info'>@marketValue</div>
     </div> *@
-    <div class="border border-1 border-primary rounded-3 overflow-hidden w-100 h-75 p-2 m-2" style="display:none;">
+@*     <div class="border border-1 border-primary rounded-3 overflow-hidden w-100 h-75 p-2 m-2" style="display:none;">
         <h6 style="color:#006699;">Orders</h6>
         <div class="row mb-1">
             <div class="col-2">Start Date</div>
@@ -289,11 +257,13 @@
         </div>
         <hr />
         <div id="orderResults" class="container-fluid"></div>
-       @*Place holder orders*@  
-        </div>
+        </div> *@
+        }
+@* @if (Model?.AccountInfo2?.AccountPortfolio != null)
+{ *@
     <div class="border border-1 border-primary rounded-3 overflow-hidden w-100 h-75 p-2 m-2">
         <h6 style="color:#006699;">E-trade Positions</h6>
-@*         <div class="row fw-bold bg-info text-light p-0" style="font-size:11px;">
+        <div class="row fw-bold bg-info text-light p-0" style="font-size:11px;">
             <div class='col border border-1 border-light text-center'>Number</div>
             <div class='col border border-1 border-light text-center'>Symbol</div>
             <div class='col border border-1 border-light text-center'>Quantity</div>
@@ -309,7 +279,7 @@
             <div class="col border border-1 border-light text-center">Percent Difference Last Price/Current Price</div>
             <div class='col border border-1 border-lignt text-center'>Date Purchased</div>
             <div class="col border border-1 border-light text-center">&nbsp;</div>
-        </div> *@
+        </div>
         @{
             stockCnt = 1;
             //var positions2 = Model.AccountInfo2?.Element("AccountPortfolio")?.Elements("Position").ToList();
@@ -440,13 +410,12 @@
                 <a target="_blank" href="/ETradeAuth">Authorize ETrade</a>
             </p>
         </div>
-        <div class="border border-1 border-primary rounded-3 overflow-hidden w-100  p-2 m-2">
+@*         <div class="border border-1 border-primary rounded-3 overflow-hidden w-100  p-2 m-2">
             <p><a target="_blank" href="https://api.schwabapi.com/v1/oauth/authorize?response_type=code&client_id=@Uri.EscapeDataString(Model.clientSecret)&scope=readonly&redirect_uri=https://127.0.0.1/SchwabAPICallBack">Authorize Schwab</a></p>
-            @* <p><a target="_blank" href="https://api.schwabapi.com/v1/oauth/authorize?response_type=code&client_id=@Uri.EscapeDataString(Model.clientSecret)&redirect_uri=https://127.0.0.1/SchwabAPICallBack">Authorize Schwab</a></p> *@
-        </div>
+        </div>  *@
     </div>
-}
-else
+@* } *@
+@* else
 {
     <h4 style="color:#006699;">Message</h4>
     <div class="border border-1 border-primary rounded-3 overflow-hidden w-100  p-2 m-2">
@@ -457,6 +426,5 @@ else
     <div class="border border-1 border-primary rounded-3 overflow-hidden w-100  p-2 m-2">
 
         <p><a target="_blank" href="https://api.schwabapi.com/v1/oauth/authorize?response_type=code&client_id=@Uri.EscapeDataString(Model.clientSecret)&scope=readonly&redirect_uri=https://127.0.0.1/SchwabAPICallBack">Authorize Schwab</a></p>
-        @* <p><a target="_blank" href="https://api.schwabapi.com/v1/oauth/authorize?response_type=code&client_id=@Uri.EscapeDataString(Model.clientSecret)&redirect_uri=https://127.0.0.1/SchwabAPICallBack">Authorize Schwab</a></p> *@
     </div>
-}
+} *@

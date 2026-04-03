@@ -31,17 +31,18 @@ namespace TMD.PricePrediction
         public Helper()
         {
             SetTimeZone();
-        }
-        public Helper(ILogger logger, SchwabSettings settings, Polygon polygon, IHttpClientFactory factory)
-        {
-            _logger = logger;
-            _settings = settings;
-            _factory = factory;
-            _polygon = polygon;
             ctx = new TmdContext();
-            services = new SchwabServices(logger, settings, _polygon, factory);
-            SetTimeZone();
         }
+        //public Helper(ILogger logger, SchwabSettings settings, Polygon polygon, IHttpClientFactory factory)
+        //{
+        //    _logger = logger;
+        //    _settings = settings;
+        //    _factory = factory;
+        //    _polygon = polygon;
+        //    ctx = new TmdContext();
+        //    services = new SchwabServices(logger, settings, _polygon, factory);
+        //    SetTimeZone();
+        //}
         public Helper(ILogger logger, SchwabSettings settings, IHttpClientFactory factory)
         {
             _logger = logger;
@@ -526,51 +527,51 @@ namespace TMD.PricePrediction
             //if (use31016)
             //{
             //// 3, 10, 16 STRATEGY
-            if (Convert.ToDecimal(results["EMA3"].ToString()) > Convert.ToDecimal(results["EMA10"].ToString()))
-            { longCnt = longCnt + 1; }
-            if (Convert.ToDecimal(results["EMA3"].ToString()) > Convert.ToDecimal(results["EMA16"].ToString()) &&
-                Convert.ToDecimal(results["EMA10"].ToString()) > Convert.ToDecimal(results["EMA16"].ToString()))
-            { longCnt = longCnt + 1; }
-            if (Convert.ToDecimal(results["SMA3"].ToString()) > Convert.ToDecimal(results["SMA10"].ToString()))
-            { longCnt = longCnt + 1; }
-            if (Convert.ToDecimal(results["SMA3"].ToString()) > Convert.ToDecimal(results["SMA16"].ToString()) &&
-                Convert.ToDecimal(results["SMA10"].ToString()) > Convert.ToDecimal(results["SMA16"].ToString()))
-            { longCnt = longCnt + 1; }
+            //if (Convert.ToDecimal(results["EMA3"].ToString()) > Convert.ToDecimal(results["EMA10"].ToString()))
+            //{ longCnt = longCnt + 1; }
+            //if (Convert.ToDecimal(results["EMA3"].ToString()) > Convert.ToDecimal(results["EMA16"].ToString()) &&
+            //    Convert.ToDecimal(results["EMA10"].ToString()) > Convert.ToDecimal(results["EMA16"].ToString()))
+            //{ longCnt = longCnt + 1; }
+            //if (Convert.ToDecimal(results["SMA3"].ToString()) > Convert.ToDecimal(results["SMA10"].ToString()))
+            //{ longCnt = longCnt + 1; }
+            //if (Convert.ToDecimal(results["SMA3"].ToString()) > Convert.ToDecimal(results["SMA16"].ToString()) &&
+            //    Convert.ToDecimal(results["SMA10"].ToString()) > Convert.ToDecimal(results["SMA16"].ToString()))
+            //{ longCnt = longCnt + 1; }
 
-            if (Convert.ToDecimal(results["EMA3"].ToString()) < Convert.ToDecimal(results["EMA10"].ToString()))
-            { shortCnt = shortCnt + 1; }
-            if (Convert.ToDecimal(results["EMA3"].ToString()) < Convert.ToDecimal(results["EMA16"].ToString()) &&
-                Convert.ToDecimal(results["EMA10"].ToString()) < Convert.ToDecimal(results["EMA16"].ToString()))
-            { shortCnt = shortCnt + 1; }
-            if (Convert.ToDecimal(results["SMA3"].ToString()) < Convert.ToDecimal(results["SMA10"].ToString()))
-            { shortCnt = shortCnt + 1; }
-            if (Convert.ToDecimal(results["SMA3"].ToString()) < Convert.ToDecimal(results["SMA16"].ToString()) &&
-                Convert.ToDecimal(results["SMA10"].ToString()) < Convert.ToDecimal(results["SMA16"].ToString()))
-            { shortCnt = shortCnt + 1; }
+            //if (Convert.ToDecimal(results["EMA3"].ToString()) < Convert.ToDecimal(results["EMA10"].ToString()))
+            //{ shortCnt = shortCnt + 1; }
+            //if (Convert.ToDecimal(results["EMA3"].ToString()) < Convert.ToDecimal(results["EMA16"].ToString()) &&
+            //    Convert.ToDecimal(results["EMA10"].ToString()) < Convert.ToDecimal(results["EMA16"].ToString()))
+            //{ shortCnt = shortCnt + 1; }
+            //if (Convert.ToDecimal(results["SMA3"].ToString()) < Convert.ToDecimal(results["SMA10"].ToString()))
+            //{ shortCnt = shortCnt + 1; }
+            //if (Convert.ToDecimal(results["SMA3"].ToString()) < Convert.ToDecimal(results["SMA16"].ToString()) &&
+            //    Convert.ToDecimal(results["SMA10"].ToString()) < Convert.ToDecimal(results["SMA16"].ToString()))
+            //{ shortCnt = shortCnt + 1; }
             ////}
             ////else if (use5138)
             ////{
-            //    //// 5, 13, 13 STRATEGY
-            //    if (Convert.ToDecimal(results["EMA5"].ToString()) > Convert.ToDecimal(results["EMA8"].ToString()))
-            //    { longCnt = longCnt + 3; }
-            //    if (Convert.ToDecimal(results["EMA5"].ToString()) > Convert.ToDecimal(results["EMA13"].ToString()) &&
-            //        Convert.ToDecimal(results["EMA8"].ToString()) > Convert.ToDecimal(results["EMA13"].ToString()))
-            //    { longCnt = longCnt + 3; }
-            //    if (Convert.ToDecimal(results["EMA5"].ToString()) < Convert.ToDecimal(results["EMA8"].ToString()))
-            //    { shortCnt = shortCnt + 3; }
-            //    if (Convert.ToDecimal(results["EMA5"].ToString()) < Convert.ToDecimal(results["EMA13"].ToString()) &&
-            //        Convert.ToDecimal(results["EMA8"].ToString()) < Convert.ToDecimal(results["EMA13"].ToString()))
-            //    { shortCnt = shortCnt + 3; }
-            //    if (Convert.ToDecimal(results["SMA5"].ToString()) > Convert.ToDecimal(results["SMA8"].ToString()))
-            //    { longCnt = longCnt + 3; }
-            //    if (Convert.ToDecimal(results["SMA5"].ToString()) > Convert.ToDecimal(results["SMA13"].ToString())  &&
-            //        Convert.ToDecimal(results["SMA8"].ToString()) > Convert.ToDecimal(results["SMA13"].ToString()))
-            //    { longCnt = longCnt + 3; }
-            //    if (Convert.ToDecimal(results["SMA5"].ToString()) < Convert.ToDecimal(results["SMA8"].ToString()))
-            //    { shortCnt = shortCnt + 3; }
-            //    if (Convert.ToDecimal(results["SMA5"].ToString()) < Convert.ToDecimal(results["SMA13"].ToString()) &&
-            //        Convert.ToDecimal(results["SMA8"].ToString()) < Convert.ToDecimal(results["SMA13"].ToString()))
-            //    { shortCnt = shortCnt + 3; }
+            //    //// 5, 13, 8 STRATEGY
+            if (Convert.ToDecimal(results["EMA5"].ToString()) > Convert.ToDecimal(results["EMA8"].ToString()))
+            { longCnt = longCnt + 1; }
+            if (Convert.ToDecimal(results["EMA5"].ToString()) > Convert.ToDecimal(results["EMA13"].ToString()) &&
+                Convert.ToDecimal(results["EMA8"].ToString()) > Convert.ToDecimal(results["EMA13"].ToString()))
+            { longCnt = longCnt + 1; }
+            if (Convert.ToDecimal(results["EMA5"].ToString()) < Convert.ToDecimal(results["EMA8"].ToString()))
+            { shortCnt = shortCnt + 1; }
+            if (Convert.ToDecimal(results["EMA5"].ToString()) < Convert.ToDecimal(results["EMA13"].ToString()) &&
+                Convert.ToDecimal(results["EMA8"].ToString()) < Convert.ToDecimal(results["EMA13"].ToString()))
+            { shortCnt = shortCnt + 1; }
+            if (Convert.ToDecimal(results["SMA5"].ToString()) > Convert.ToDecimal(results["SMA8"].ToString()))
+            { longCnt = longCnt + 1; }
+            if (Convert.ToDecimal(results["SMA5"].ToString()) > Convert.ToDecimal(results["SMA13"].ToString()) &&
+                Convert.ToDecimal(results["SMA8"].ToString()) > Convert.ToDecimal(results["SMA13"].ToString()))
+            { longCnt = longCnt + 1; }
+            if (Convert.ToDecimal(results["SMA5"].ToString()) < Convert.ToDecimal(results["SMA8"].ToString()))
+            { shortCnt = shortCnt + 1; }
+            if (Convert.ToDecimal(results["SMA5"].ToString()) < Convert.ToDecimal(results["SMA13"].ToString()) &&
+                Convert.ToDecimal(results["SMA8"].ToString()) < Convert.ToDecimal(results["SMA13"].ToString()))
+            { shortCnt = shortCnt + 1; }
             ////}
             ////else
             ////{
@@ -591,7 +592,7 @@ namespace TMD.PricePrediction
             //{ shortCnt = shortCnt + 1; }
             //if (Convert.ToDecimal(results["SMA12"].ToString()) < Convert.ToDecimal(results["SMA26"].ToString()))
             //{ shortCnt = shortCnt + 1; }
-     
+
             try
             {
                 if (decimal.Parse(results["MACD"].ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture) > decimal.Parse(results["MACDSignal"].ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture) && (/*decimal.Parse(results["MACDSignal"].ToString()) < 0 &&*/ decimal.Parse(results["MACDHistogram"].ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture) > 0))
@@ -709,9 +710,9 @@ namespace TMD.PricePrediction
             DateTime goodFriday = new DateTime();
             DateTime easterSunday = new DateTime();
             EasterSunday(runTime.Year, ref goodFriday, ref easterSunday);
-            if (runTime.Month == easterSunday.Month && (runTime.Day == easterSunday.Day && runTime.Day <= (easterSunday.Day - 2)))
+            if (runTime.Month == easterSunday.Month && runTime.Day == easterSunday.Day /*&& runTime.Day <= (easterSunday.Day - 2))*/)
                 run = false;
-            if (runTime.Month == goodFriday.Month && (runTime.Day == goodFriday.Day && runTime.Day <= (goodFriday.Day - 2)))
+            if (runTime.Month == goodFriday.Month && runTime.Day == goodFriday.Day /*&& runTime.Day <= (goodFriday.Day - 2))*/)
                 run = false;
 
             //Memorial Day
@@ -972,7 +973,7 @@ namespace TMD.PricePrediction
                 quote = services.GetQuote(sym, true, false);
                 try
                 {
-                    if (!CheckMarketIndexes(quote))
+                    if (quote == null || !CheckMarketIndexes(quote))
                     {
                         continue;
                     }
@@ -1437,14 +1438,16 @@ namespace TMD.PricePrediction
         {
             //var stockTracker = ctx?.StockTracker?.Where(x => x.PriceSold == null && x.DateSold == null && x.Status.Trim() == "Filled" && x.TradePlatform == (int)Platform.ETrade).ToList();
             var stockTracker = ctx?.StockTracker2?.Where(x => x.PriceSold == null && x.DateSold == null && x.Status.Trim() == "Filled" && x.TradePlatform == (int)platform).ToList();
-            var alreadyQueuedStock = ctx?.StockTracker2?.Where(x => x.Status == "QUEUED" && x.TradePlatform == (int)platform).ToList();
+            //var alreadyQueuedStock = ctx?.StockTracker2?.Where(x => x.Status == "QUEUED" && x.TradePlatform == (int)platform).ToList();
             if (stockTracker?.Count() >= (settings?.MaxNumberofStockstoBuy / 2))
                 return;
             int stockCnt = 0;
             //decimal? perStockSet = (BuySellStockList.Count() < (settings.MaxNumberofStockstoBuy - BuySellStockList.Count())) ? availiabletoTrade / BuySellStockList.Count() : availiabletoTrade / (settings.MaxNumberofStockstoBuy - stockTracker.Count());//(availiabletoTrade / BuySellStockList.Count) > (availiabletoTrade * (settings.MaxPercentofAvailBalancePerOrder / 100)) ? (availiabletoTrade * (settings.MaxPercentofAvailBalancePerOrder / 100)) : (availiabletoTrade / BuySellStockList.Count);
             if ((int)(settings.MaxNumberofStockstoBuy / 2) - stockTracker.Count() < 1)
                 return;
-            decimal? perStockSet = availiabletoTrade / Math.Abs((int)(settings.MaxNumberofStockstoBuy / 2) - stockTracker.Count());
+            //decimal? perStockSet = availiabletoTrade / Math.Abs((int)(settings.MaxNumberofStockstoBuy / 2) - stockTracker.Count());
+            var availiableStockForPlatform = (settings.MaxNumberofStockstoBuy / 2) - stockTracker.Count();
+            var pricePerStock = availiabletoTrade / availiableStockForPlatform;
             var stockList = new List<BuySellCommodity>(BuySellStockList);
             foreach (var item in stockList)
             {
@@ -1454,14 +1457,15 @@ namespace TMD.PricePrediction
                 //var direction = item.Value;
                 var result = item.Results;
                 var direction = item.Direction;
-                var lastPrice = Convert.ToDecimal(result?["lastPrice"]?.ToString());
+                var lastPrice = (decimal?)Convert.ToDecimal(result?["lastPrice"]?.ToString());
                 //var qty = Convert.ToInt32(perStockSet / lastPrice);
-                var qty = Math.Abs((Convert.ToInt32(perStockSet / lastPrice) > settings.MaxNumberofSharesPerStock) ? (int)settings.MaxNumberofSharesPerStock : Convert.ToInt32(perStockSet / lastPrice));
+                //var qty = Math.Abs((Convert.ToInt32(perStockSet / lastPrice) > settings.MaxNumberofSharesPerStock) ? (int)settings.MaxNumberofSharesPerStock : Convert.ToInt32(perStockSet / lastPrice));
+                var qty = (Convert.ToInt32(pricePerStock / lastPrice) < settings.MaxNumberofSharesPerStock) ? Convert.ToInt32(pricePerStock / lastPrice) : settings.MaxNumberofSharesPerStock;
                 if (qty >= 2 && lastPrice >= 5m)
                 {
-                    //BuySellStock(null, result, direction, qty, false, services);
-                    if(!alreadyQueuedStock.Where(x => x.Symbol == result["Symbol"].ToString()).Any())
-                        QueueStocktoBuy(result, platform, direction, qty);
+                    BuySellStock(null, result, direction, (int)qty, false, services);
+                    //if(!alreadyQueuedStock.Where(x => x.Symbol == result["Symbol"].ToString()).Any())
+                    //    QueueStocktoBuy(result, platform, direction, qty);
                     stockCnt++;
                     BuySellStockList.Remove(item);
                 }
@@ -1527,38 +1531,38 @@ namespace TMD.PricePrediction
             }
             return true;
         }
-        void QueueStocktoBuy(dynamic order, Platform platform, TradeDirection direction, int qty)
-        {
-            SaveStockTracker(null, platform, direction, qty, false, order, "QUEUED" , _logger);
-        }
-        public void CheckforQueuedStock(RulesEngine settings, Platform platform)
-        {
-            int? longCnt = 0;
-            int? shortCnt = 0;
-            var queuedStock = ctx.StockTracker2.Where(x => x.Status == "QUEUED" && x.TradePlatform == (int)platform).ToList();
-            foreach (var stock in queuedStock)
-            {
-                dynamic? results = services.GetQuote(stock.Symbol);
-                CalculatePoints(results, /*false, true,*/ ref shortCnt, ref longCnt);
-                if (longCnt >= settings.StockLongCount || (shortCnt >= settings.StockShortCount && (bool)settings.ShortEnabled))
-                {
-                    switch(platform)
-                    {
-                        case Platform.CharlesSchwab:
-                            BuySellStock(stock, results, (TradeDirection)stock.TradeDirection, stock.Quantity, false, services/*, true*/);
-                            break;
-                        case Platform.ETrade:
-                            BuySellStock(stock, results, (TradeDirection)stock.TradeDirection, stock.Quantity, false, services2/*, true*/);
-                            break;
-                    }
-                    //BuySellStock(stock, results, (TradeDirection)stock.TradeDirection, stock.Quantity, false, services/*, true*/);
-                }
-                else
-                {
-                    SaveStockTracker(stock, platform, (TradeDirection)stock.TradeDirection, stock.Quantity, false, results, "CANCEL", _logger);
-                }
-            }
-        }
+        //void QueueStocktoBuy(dynamic order, Platform platform, TradeDirection direction, int qty)
+        //{
+        //    SaveStockTracker(null, platform, direction, qty, false, order, "QUEUED" , _logger);
+        //}
+        //public void CheckforQueuedStock(RulesEngine settings, Platform platform)
+        //{
+        //    int? longCnt = 0;
+        //    int? shortCnt = 0;
+        //    var queuedStock = ctx.StockTracker2.Where(x => x.Status == "QUEUED" && x.TradePlatform == (int)platform).ToList();
+        //    foreach (var stock in queuedStock)
+        //    {
+        //        dynamic? results = services.GetQuote(stock.Symbol);
+        //        CalculatePoints(results, /*false, true,*/ ref shortCnt, ref longCnt);
+        //        if (longCnt >= settings.StockLongCount || (shortCnt >= settings.StockShortCount && (bool)settings.ShortEnabled))
+        //        {
+        //            switch(platform)
+        //            {
+        //                case Platform.CharlesSchwab:
+        //                    BuySellStock(stock, results, (TradeDirection)stock.TradeDirection, stock.Quantity, false, services/*, true*/);
+        //                    break;
+        //                case Platform.ETrade:
+        //                    BuySellStock(stock, results, (TradeDirection)stock.TradeDirection, stock.Quantity, false, services2/*, true*/);
+        //                    break;
+        //            }
+        //            //BuySellStock(stock, results, (TradeDirection)stock.TradeDirection, stock.Quantity, false, services/*, true*/);
+        //        }
+        //        else
+        //        {
+        //            SaveStockTracker(stock, platform, (TradeDirection)stock.TradeDirection, stock.Quantity, false, results, "CANCEL", _logger);
+        //        }
+        //    }
+        //}
         //public bool ReverseStock(StockTracker stock, JsonObject? results, dynamic services)
         //{
         //    //reverse stock

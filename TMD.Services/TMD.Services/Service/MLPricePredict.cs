@@ -1,4 +1,5 @@
 ﻿using Microsoft.ML;
+using Microsoft.ML.TorchSharp;
 using Microsoft.ML.Transforms.TimeSeries;
 using System.Text.Json.Nodes;
 using TMDInvestment.Models;
@@ -8,7 +9,7 @@ namespace TMD.Services.Service
 {
     public sealed class MLPricePredict
     {
-        private int horizon = 2;
+        private int horizon = 10;
         private int horizonCnt = 1;
         public MLPricePredict()
         {
@@ -23,11 +24,11 @@ namespace TMD.Services.Service
                 var forecastingPipeline = mlContext.Forecasting.ForecastBySsa(
                     outputColumnName: "ForecastedPriceDifference",
                     inputColumnName: "close",
-                    windowSize: /*(inputs.Count <= 14) ? (int)Math.Round((decimal)inputs.Count / 2, 0) :*/ 2,
+                    windowSize: /*(inputs.Count <= 14) ? (int)Math.Round((decimal)inputs.Count / 2, 0) :*/ horizon,
                     seriesLength: 30,//21,
                     trainSize: /*365*/inputs.Count,
                     horizon: horizon,
-                    confidenceLevel: 0.95f,
+                    confidenceLevel: 0.96f,
                     confidenceLowerBoundColumn: "LowerBoundPriceDifference",
                     confidenceUpperBoundColumn: "UpperBoundPriceDifference");
 
@@ -76,11 +77,11 @@ namespace TMD.Services.Service
                 var forecastingPipeline = mlContext.Forecasting.ForecastBySsa(
                     outputColumnName: "ForecastedPriceDifference",
                     inputColumnName: "Close",
-                    windowSize: /*(inputs.Count <= 14) ? (int)Math.Round((decimal)inputs.Count / 2, 0) :*/ 2,
+                    windowSize: /*(inputs.Count <= 14) ? (int)Math.Round((decimal)inputs.Count / 2, 0) :*/ horizon,
                     seriesLength: 30,//21,
                     trainSize: /*365*/inputs.Count,
                     horizon: horizon,
-                    confidenceLevel: 0.95f,
+                    confidenceLevel: 0.96f,
                     confidenceLowerBoundColumn: "LowerBoundPriceDifference",
                     confidenceUpperBoundColumn: "UpperBoundPriceDifference");
 
@@ -118,6 +119,42 @@ namespace TMD.Services.Service
                 results.Add($"Forecast Bound Price Difference", 0);
             }
         }
+        public void TestTextCategoryTrainer()
+        {
+            // Initialize MLContext
+            var mlContext = new MLContext();
+
+            // Load your data into a strongly-typed collection
+            var reviews = new[]
+            {
+                new { Text = "This is a bad steak", Sentiment = "Negative" },
+                new { Text = "I really like this restaurant", Sentiment = "Positive" },
+                new { Text = "The food was okay, but the service was slow", Sentiment = "Negative" },
+                new { Text = "Amazing experience, definitely coming back!", Sentiment = "Positive" }
+            };
+            var reviewsDV = mlContext.Data.LoadFromEnumerable(reviews);
+
+            // Define your training pipeline
+            var pipeline = mlContext.Transforms.Conversion.MapValueToKey("Label", "Sentiment")
+                .Append(mlContext.MulticlassClassification.Trainers.TextClassification(/*numberOfClasses: 2,*/ sentence1ColumnName: "Text"))
+                .Append(mlContext.Transforms.Conversion.MapKeyToValue("PredictedLabel")); // Map the predicted key back to a string label
+
+            // Train the model (Fit the pipeline to the data)
+            var model = pipeline.Fit(reviewsDV);
+
+            // Create a prediction engine for making predictions
+            var predEngine = mlContext.Model.CreatePredictionEngine<SentimentData, SentimentPrediction>(model);
+
+            // Test the trained model with new data
+            var input = new SentimentData { Text = "The meal was fantastic!" };
+            var result = predEngine.Predict(input);
+
+            Console.WriteLine($"Text: {input.Text}");
+            Console.WriteLine($"Prediction: {result.PredictedLabel}");
+
+
+        }
+
         //public void Calculat2(List<CandleItems> inputs, ref JsonObject results) 
         //{
         //// Inside Main method:
@@ -189,11 +226,11 @@ namespace TMD.Services.Service
     //    public float CurrentPrice { get; set; }
     //}
     // 2. Define the prediction output model
-    public class PricePrediction
-    {
-        // ML.NET convention for the predicted value
-        public float Score { get; set; }
-    }
+    //public class PricePrediction
+    //{
+    //    // ML.NET convention for the predicted value
+    //    public float Score { get; set; }
+    //}
     //Key Steps Explained
     //MLContext: This is the starting point for all ML.NET operations and serves as a catalog of components and operations.
     //Data Models: The input (HousingData) and output (PricePrediction) classes define the schema for your data. The output Score property is a standard ML.NET convention for regression results.

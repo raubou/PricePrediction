@@ -81,7 +81,7 @@ namespace TMD.PricePrediction.Classes
 
             //Checked for queued crypto adn see if direction is the same
             helper.Log(_logger, LogLevel.Information, $"Check for queued crypto");
-            CheckforQueuedCrypto(); 
+            //CheckforQueuedCrypto(); 
 
             //Get Crypto already in trade being tracked.
             cryptoTracker = ctx.CryptoTracker2.Where(x => x.PriceSold == null && x.DateSold == null && (x.BuyStatus.ToLower() == "filled" /*|| x.BuyStatus.ToLower() == "open" || x.BuyStatus.ToLower() == "pending"*/)).ToList();
@@ -90,7 +90,7 @@ namespace TMD.PricePrediction.Classes
 
             decimal cash = portfolios.Sum(x => Convert.ToDecimal(x.Portfolio_balances.total_cash_equivalent_balance.value));
             decimal cryptoBalance = portfolios.Sum(x => Convert.ToDecimal(x.Portfolio_balances.total_crypto_balance.value));
-            var totalAvailiableforLongTrade = Math.Round((cash * .89m), 5); //2% fee set aside
+            var totalAvailiableforLongTrade = Math.Truncate((cash * .89m)); //2% fee set aside
             //var totalAvailiableforLongTrade = Math.Round(cash, 2);
             //totalAvailiableforLongTrade = 180m;
 
@@ -152,7 +152,10 @@ namespace TMD.PricePrediction.Classes
                     //Status = online
                     //TradingDisabled = false
                     //ViewOnly = false
+                    //if(crypto.Coin == "BTC-USD")
+                    //{
 
+                    //}
                     var product = products.Where(x => x.DisplayName == crypto.Coin).FirstOrDefault();
                     if (product == null)
                     {
@@ -345,33 +348,33 @@ namespace TMD.PricePrediction.Classes
                     AnalyiseOwnedCrypto(st, results, products);
             }
         }
-        void QueueCryptotoBuy(dynamic order, TradeDirection direction, decimal amount)
-        {
-            string symbol = order["Symbol"].ToString();
-            var duplicateQueue = ctx?.CryptoTracker2.Where(x => x.Coin == symbol && x.BuyStatus == "QUEUED").FirstOrDefault();
-            if (duplicateQueue != null)
-                return;
-            SaveCryptoTracker(null, direction, amount, order, null, "QUEUED");
-        }
-        void CheckforQueuedCrypto()
-        {
-            int? longCnt = 0;
-            int? shortCnt = 0;
-            var queuedCrypto = ctx.CryptoTracker2.Where(x => x.BuyStatus == "QUEUED").ToList();
-            foreach (var crypto in queuedCrypto)
-            {
-                JsonObject? results = services.GetQuote(crypto.Coin);
-                helper.CalculatePoints(results, /*false, true,*/ ref shortCnt, ref longCnt);
-                if (longCnt >= settings.CryptoLongCount /*|| shortCnt >= settings.CryptoShortCount*/)
-                {
-                    BuySellCrypto(crypto, results,(TradeDirection)crypto.TradeDirection, crypto.Amount ?? 0m, services, products, false/*, true*/);
-                }
-                else
-                {
-                    SaveCryptoTracker(crypto, (TradeDirection)crypto.TradeDirection, crypto.Amount ?? 0m, results, null, "CANCEL"/*, true*/);
-                }
-            }
-        }
+        //void QueueCryptotoBuy(dynamic order, TradeDirection direction, decimal amount)
+        //{
+        //    string symbol = order["Symbol"].ToString();
+        //    var duplicateQueue = ctx?.CryptoTracker2.Where(x => x.Coin == symbol && x.BuyStatus == "QUEUED").FirstOrDefault();
+        //    if (duplicateQueue != null)
+        //        return;
+        //    SaveCryptoTracker(null, direction, amount, order, null, "QUEUED");
+        //}
+        //void CheckforQueuedCrypto()
+        //{
+        //    int? longCnt = 0;
+        //    int? shortCnt = 0;
+        //    var queuedCrypto = ctx.CryptoTracker2.Where(x => x.BuyStatus == "QUEUED").ToList();
+        //    foreach (var crypto in queuedCrypto)
+        //    {
+        //        JsonObject? results = services.GetQuote(crypto.Coin);
+        //        helper.CalculatePoints(results, /*false, true,*/ ref shortCnt, ref longCnt);
+        //        if (longCnt >= settings.CryptoLongCount /*|| shortCnt >= settings.CryptoShortCount*/)
+        //        {
+        //            BuySellCrypto(crypto, results,(TradeDirection)crypto.TradeDirection, crypto.Amount ?? 0m, services, products, false/*, true*/);
+        //        }
+        //        else
+        //        {
+        //            SaveCryptoTracker(crypto, (TradeDirection)crypto.TradeDirection, crypto.Amount ?? 0m, results, null, "CANCEL"/*, true*/);
+        //        }
+        //    }
+        //}
         bool BuySellCrypto(CryptoTracker2 cryptoTracker, dynamic results, TradeDirection direction, decimal amount, CoinBaseService service, List<PublicProduct> publicProducts, bool sellShort)
         {
             string symbol = (results["Symbol"].ToString().Substring((results["Symbol"].ToString().Length - 1), 1) == "C") ? results["Symbol"].ToString().Substring(0, (results["Symbol"].ToString().Length - 1)) : results["Symbol"].ToString();
@@ -681,12 +684,13 @@ namespace TMD.PricePrediction.Classes
        
         void CalculatePurchaseAmount(decimal? availiabletoTrade, List<PublicProduct> products, List<CryptoTracker2> cryptoTracker, ref List<BuySellCommodity> BuySellCryptoList)
         {
-            var alreadyQueuedStock = ctx?.CryptoTracker2?.Where(x => x.BuyStatus == "QUEUED").ToList();
+            //var alreadyQueuedStock = ctx?.CryptoTracker2?.Where(x => x.BuyStatus == "QUEUED").ToList();
             if (cryptoTracker.Count() >= settings.MaxNumberofCryptotoBuy)
                 return;
             int cryptoCnt = 0;
-
-            decimal ? perCrypto = (availiabletoTrade / BuySellCryptoList.Count()) > settings.MaxDollarAmountPerCrypto ? (availiabletoTrade < settings.MaxDollarAmountPerCrypto) ? availiabletoTrade : settings.MaxDollarAmountPerCrypto : (availiabletoTrade / BuySellCryptoList.Count());
+            var totalCanBuy = (BuySellCryptoList.Count() > (settings.MaxNumberofCryptotoBuy - cryptoTracker.Count())) ? (settings.MaxNumberofCryptotoBuy - cryptoTracker.Count()) : BuySellCryptoList.Count();
+            //decimal? perCrypto = (availiabletoTrade / BuySellCryptoList.Count()) > settings.MaxDollarAmountPerCrypto ? (availiabletoTrade < settings.MaxDollarAmountPerCrypto) ? availiabletoTrade : settings.MaxDollarAmountPerCrypto : (availiabletoTrade / BuySellCryptoList.Count());
+            decimal? perCrypto = (availiabletoTrade / totalCanBuy) > settings.MaxDollarAmountPerCrypto ? (availiabletoTrade < settings.MaxDollarAmountPerCrypto) ? availiabletoTrade : settings.MaxDollarAmountPerCrypto : (availiabletoTrade / totalCanBuy);
             foreach (var item in BuySellCryptoList)
             {
                 if ((cryptoTracker.Count() + cryptoCnt) >= settings.MaxNumberofCryptotoBuy)
@@ -697,9 +701,9 @@ namespace TMD.PricePrediction.Classes
                 bool sellShort = (direction == TradeDirection.SELL_SHORT) ? true : false;
                 if (perCrypto >= 5)
                 {
-                    //BuySellCrypto(null, result, direction,Math.Round((decimal)perCrypto, 5), services, products, sellShort);
-                    if (!alreadyQueuedStock.Where(x => x.Coin == result["Symbol"].ToString()).Any())
-                        QueueCryptotoBuy(result, direction, Math.Round((decimal)perCrypto, 5));
+                    BuySellCrypto(null, result, direction,Math.Round((decimal)perCrypto, 5), services, products, sellShort);
+                    //if (!alreadyQueuedStock.Where(x => x.Coin == result["Symbol"].ToString()).Any())
+                    //    QueueCryptotoBuy(result, direction, Math.Round((decimal)perCrypto, 5));
                     cryptoCnt++;
                 }
             }

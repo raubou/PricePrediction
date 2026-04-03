@@ -212,6 +212,7 @@ namespace TraderGo.Controllers
         {
             services = new SchwabServices(_logger, _settings, _factory);
             var results = services.GetQuote(symbol, true);
+            System.Threading.Thread.Sleep(250);
             return Ok(results);
         }
         [HttpGet, Route("GetPriceHistory/{symbol}/{periodType}/{period}/{frequencyType}/{frequency}/{startDate}/{endDate}")]

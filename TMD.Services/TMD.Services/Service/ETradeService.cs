@@ -49,7 +49,7 @@ namespace TMD.Services.Service
         }
         public dynamic Quote(string symbol, bool skipCalculation = false)
         {
-            IndicesCalculator indicesCalculator = new IndicesCalculator(_logger, _settings, _factory);
+            IndicesCalculatorV2 indicesCalculator = new IndicesCalculatorV2(_logger, _settings, _factory);
             dynamic output = null;
             string url = $"v1/market/quote/{symbol}";
             var param = "detailFlag=ALL&";
@@ -60,8 +60,8 @@ namespace TMD.Services.Service
             client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
             XElement results = client.Get(_settings.baseURL, url, authorization);
             if (!skipCalculation)
-                output = polygonService.GetIndicators(symbol, DateTime.Now, "day", 14, 12, 26, 9, results);
-            //output = indicesCalculator.CalculateV2(symbol, results);
+                //output = polygonService.GetIndicators(symbol, DateTime.Now, "day", 14, 12, 26, 9, results);
+            output = indicesCalculator.CalculateV2(symbol, results);
             return output;
         }
 

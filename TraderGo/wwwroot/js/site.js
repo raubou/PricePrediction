@@ -952,4 +952,7 @@ let addURL = '';
             $("#" + itemName).val(false);
         $("#" + form).submit();
     }
+    objContext.sleep = function (ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
 }) (objContext)

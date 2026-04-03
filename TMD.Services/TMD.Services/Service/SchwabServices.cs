@@ -132,11 +132,11 @@ namespace TMDInvestments.Services
                 }
                 if (result.ValueKind == JsonValueKind.Object && result.TryGetProperty("errors", out JsonElement value))
                 {
-                    //if (fetchRetry == 3)
-                    //{
-                    //    return results;
-                    //}
-                    //fetchRetry++;
+                    if (cnt == 3)
+                    {
+                        return results;
+                    }
+                    cnt++;
                     FetchToken("", ref success, true);
                     //return GetMovers(market);
                     _token = ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
@@ -677,25 +677,25 @@ namespace TMDInvestments.Services
             client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
             try
             {
-                if (periodType != "day")
-                {
-                    results = client.Get($"marketdata/v1/pricehistory?symbol={symbol}&periodType={periodType}&period={1}&frequencyType={frequencyType}&frequency={frequency}&startDate={start}&endDate={end}", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
-                }
-                else
-                {
-                    results = client.Get($"marketdata/v1/pricehistory?symbol={symbol}&periodType={periodType}&period={1}&frequencyType={frequencyType}&frequency={frequency}", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
-                }
+                //if (periodType != "day")
+                //{
+                //    results = client.Get($"marketdata/v1/pricehistory?symbol={symbol}&periodType={periodType}&period={1}&frequencyType={frequencyType}&frequency={frequency}&startDate={start}&endDate={end}", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
+                //}
+                //else
+                //{
+                   results = client.Get($"marketdata/v1/pricehistory?symbol={symbol}&periodType={periodType}&period={1}&frequencyType={frequencyType}&frequency={frequency}", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
+                //}
             }
             catch (Exception ex)
             {
                 client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
                 //if (periodType != "day")
                 //{
-                    results = client.Get($"marketdata/v1/pricehistory?symbol={symbol}&periodType={periodType}&period={1}&frequencyType={frequencyType}&frequency={frequency}&startDate={start}&endDate={end}", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
+                //    results = client.Get($"marketdata/v1/pricehistory?symbol={symbol}&periodType={periodType}&period={1}&frequencyType={frequencyType}&frequency={frequency}&startDate={start}&endDate={end}", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
                 //}
                 //else
                 //{
-                //    results = client.Get($"marketdata/v1/pricehistory?symbol={symbol}&periodType={periodType}&period={1}&frequencyType={frequencyType}&frequency={frequency}", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
+                    results = client.Get($"marketdata/v1/pricehistory?symbol={symbol}&periodType={periodType}&period={1}&frequencyType={frequencyType}&frequency={frequency}", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
                 //}
                 return results;
             }
