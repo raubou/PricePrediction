@@ -368,20 +368,20 @@ namespace TMD.Services
             manager.MoveAdvertisingQueue();
         }
 
-        public void LoadStockData(IHttpClientFactory client)
-        {
+        //public void LoadStockData(IHttpClientFactory client)
+        //{
 
-            TraderGoService tg = new TraderGoService(yfapi, _log, client, _isAzureFunction);
-            try
-            {
-                tg.StartRequests();
-            }
-            catch (Exception ex)
-            {
-                _log.LogError(ex.Message);
-            }
+        //    TraderGoService tg = new TraderGoService(yfapi, _log, client, _isAzureFunction);
+        //    try
+        //    {
+        //        tg.StartRequests();
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _log.LogError(ex.Message);
+        //    }
 
-        }
+        //}
 
         public static string SetCategory(string title, List<Category> Category)
         {

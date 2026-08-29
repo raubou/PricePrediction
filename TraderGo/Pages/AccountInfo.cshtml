@@ -1,16 +1,16 @@
 ﻿@page
 @using System.Text.Json
+@using TMDInvestments.Models;
 @model TraderGo.Pages.AccountInfoModel
 @{
-    ViewData["Title"] = "Tradergo.com - Account Info";
-    string status = string.Empty;
-    string bold = string.Empty;
-    dynamic? quote = null;
-    int stockCnt = 1;
+    //ViewData["Title"] = "Tradergo.com - Account Info";
+    // string? status = string.Empty;
+    // string? bold = string.Empty;
+    //dynamic? quote = null;
+    //int? stockCnt = 1;
+    //StockTracker2 stock = new StockTracker2();
+    //int caca = 0;
 }
-
-@if (!string.IsNullOrEmpty(Model?.AccountInfo?.securitiesAccount?.accountNumber))
-{
 
     <h4 style="color:#006699;">Schwab/Etrade Account Info</h4>
     <div class="row">
@@ -19,7 +19,7 @@
         </div>
     </div>
     <div class="border border-1 border-primary rounded-3 overflow-hidden w-100 h-75 p-2 m-2">
-        <h6 style="color:#006699;">Balances</h6>
+        <h6 style="color:#006699;">Schwab Balances</h6>
 
         <div class='row bg-info text-light p-0' style="font-size:11px;">
             <div class='col fw-bold border border-1 border-light'>Account Number</div>
@@ -34,16 +34,16 @@
             <div class='col fw-bold border border-1 border-light'>Equity Percentage</div>
         </div>
         <div class="row  p-0" style="font-size:11px;">
-            <div class='col border border-1 border-info'>@Model.AccountInfo.securitiesAccount.accountNumber</div>
-            <div class='col border border-1 border-info'>@Model.AccountInfo.securitiesAccount.InitialBalances.equity</div>
-            <div class='col border border-1 border-info'>@Model.AccountInfo.securitiesAccount.InitialBalances.cashBalance</div>
-            <div class='col border border-1 border-info'>@Model.AccountInfo.securitiesAccount.InitialBalances.availableFundsNonMarginableTrade</div>
-            <div class="col border border-1 border-info">@Model.AccountInfo.securitiesAccount.InitialBalances.maintenanceRequirement</div>
-            <div class='col border border-1 border-info'>@Model.AccountInfo.securitiesAccount.InitialBalances.longMarginValue</div>
-            <div class='col border border-1 border-info'>@Model.AccountInfo.securitiesAccount.InitialBalances.longStockValue</div>
-            <div class='col border border-1 border-info'>@Model.AccountInfo.securitiesAccount.InitialBalances.shortMarginValue</div>
-            <div class='col border border-1 border-info'>@Model.AccountInfo.securitiesAccount.InitialBalances.shortStockValue</div>
-            <div class='col border border-1 border-info'>@Model.AccountInfo.securitiesAccount.InitialBalances.equityPercentage</div>
+            <div class='col border border-1 border-info'>@Model?.AccountInfo?.securitiesAccount?.accountNumber</div>
+            <div class='col border border-1 border-info'>@Model?.AccountInfo?.securitiesAccount?.currentBalances?.equity</div>
+        <div class='col border border-1 border-info'>@Model?.AccountInfo?.securitiesAccount?.currentBalances?.cashBalance</div>
+        <div class='col border border-1 border-info'>@Model?.AccountInfo?.securitiesAccount?.currentBalances?.availableFundsNonMarginableTrade</div>
+        <div class="col border border-1 border-info">@Model?.AccountInfo?.securitiesAccount?.currentBalances?.maintenanceRequirement</div>
+            <div class='col border border-1 border-info'>@Model?.AccountInfo?.securitiesAccount?.currentBalances?.longMarginValue</div>
+            <div class='col border border-1 border-info'>@Model?.AccountInfo?.securitiesAccount?.currentBalances?.longStockValue</div>
+            <div class='col border border-1 border-info'>@Model?.AccountInfo?.securitiesAccount?.currentBalances?.shortMarginValue</div>
+            <div class='col border border-1 border-info'>@Model?.AccountInfo?.securitiesAccount?.currentBalances?.shortStockValue</div>
+            <div class='col border border-1 border-info'>@Model?.AccountInfo?.securitiesAccount?.currentBalances?.equityPercentage</div>
         </div>
 
     </div>
@@ -60,7 +60,7 @@ Place holder token
     <div class="border border-1 border-primary rounded-3 overflow-hidden w-100 h-75 p-2 m-2">
         <h6 style="color:#006699;">Schwab Positions</h6>
         <div class="row fw-bold p-0" style="font-size:11px;">&nbsp;</div>
-        <div class="row fw-bold bg-info text-light p-0" style="font-size:11px;    font-size: 11px;">
+        <div class="row fw-bold bg-info text-light p-0" style="font-size: 11px;">
             <div class='col border border-1 border-light text-center'>Number</div>
             <div class='col border border-1 border-light text-center'>Symbol</div>
             <div class='col border border-1 border-light text-center'>Quantity</div>
@@ -77,29 +77,24 @@ Place holder token
             <div class="col border border-1 border-light text-center">Date Purchased</div>
             <div class="col border border-1 border-light text-center">&nbsp;</div>
         </div>
-
-        @foreach (var item in Model.AccountInfo.securitiesAccount.Positions)
+    @if (Model?.AccountInfo != null && Model?.AccountInfo?.securitiesAccount != null && Model?.AccountInfo?.securitiesAccount?.Positions != null)
+        @foreach (var item in Model?.AccountInfo?.securitiesAccount?.Positions)
         {
-            try
+            Model.stock = Model.StockTracker.Where(x => x.Symbol == item.Instruments.symbol).FirstOrDefault();
+            if (Model.stock == null)
             {
-                quote = Model.services.GetQuote(item.Instruments.symbol);
-            }
-            catch (Exception ex)
-            {
-                Html.Raw(ex.Message);
-            }
-
-
-            if (quote is not System.Text.Json.Nodes.JsonObject || Convert.ToDecimal(quote?["lastPrice"]?.ToString()) <= 0)
-            {
-                Html.Raw("Cannot Get Quote");
                 continue;
-                
             }
-            var stock = Model.StockTracker.Where(x => x.Symbol == item?.Instruments?.symbol).FirstOrDefault();
-            <div class="row" style="font-size:13px;">
-                <div class='col border border-1 border-info'>@stockCnt</div>
-                @try{
+            <script type="text/javascript">
+                $(function() {
+                    $(".overlay").hide();
+                    objContext.GetQuoteStupid('@Model.stock?.PricePurchased','@Model.stock?.LastPrice','@item.Instruments.symbol','#lastPrice_@Model.stockCnt','#priceDiffPurchased_@Model.stockCnt','#priceDiffCurrent_@Model.stockCnt');
+                });
+            </script>
+            <div class="row" style="font-size:11px;">
+                <div class='col border border-1 border-info'>@Model.stockCnt</div>
+                @try
+                {
                     //
                     <div class='col border border-1 border-info'><a rel="canonical" href="javascript:objContext.GetQuote('@item?.Instruments?.symbol','')" style="color:#006699;text-decoration:none;">@item?.Instruments?.symbol</a></div>
                     @if (Convert.ToDecimal(item?.shortQuantity) > 0)
@@ -135,79 +130,16 @@ Place holder token
                         </div>
                     }
                     <div class='col border border-1 border-info'>$@item.marketValue</div>
-                    <div class="col border border-1">
-                        @try
-                        {
-                            Html.Raw("$"); quote?["lastPrice"]?.ToString();
-
-                        }
-                        catch (Exception)
-                        {
-                            Html.Raw("&nbsp;");
-                        }
-
-                        </div>
-                    <div class="col border border-1">$@stock?.LastPrice</div>
-                    <div class="col border border-1">$@stock?.PricePurchased</div>
-                    @try
-                    {
-                        status = string.Empty;
-                        if (stock?.PricePurchased > Convert.ToDecimal(quote?["lastPrice"]?.ToString()))
-                        {
-                            status = "text-danger";
-                        }
-                        else
-                        {
-                            status = "text-success";
-                        }
-                    }
-                    catch (Exception)
-                    {
-                        Html.Raw("&nbsp;");
-                    }
-
-                    <div class="col border border-1 @status">
-                        @try
-                        {
-                            @Math.Round(Math.Abs((((decimal)stock?.PricePurchased - Convert.ToDecimal(quote?["lastPrice"]?.ToString())) / (((decimal)stock?.PricePurchased + Convert.ToDecimal(quote?["lastPrice"]?.ToString())) / 2)) * 100), 5);
-                            Html.Raw("%");
-                        }
-                        catch (Exception)
-                        {
-                            Html.Raw("&nbsp;");
-                        }
-
+                    <div id="lastPrice_@Model.stockCnt" class="col border border-1">
                     </div>
-                    @try
-                    {
-                        status = string.Empty;
-                        if (stock?.LastPrice > Convert.ToDecimal(quote?["lastPrice"]?.ToString()))
-                        {
-                            status = "text-danger";
-                        }
-                        else
-                        {
-                            status = "text-success";
-                        }
-                    }
-                    catch (Exception)
-                    {
-                        Html.Raw("&nbsp;");
-                    }
-
-                    <div class="col border border-1 @status">
-                        @try
-                        {
-                            @Math.Round(Math.Abs((((decimal)stock?.LastPrice - Convert.ToDecimal(quote?["lastPrice"]?.ToString())) / (((decimal)stock?.LastPrice + Convert.ToDecimal(quote?["lastPrice"]?.ToString())) / 2)) * 100), 5);
-                            Html.Raw("%");
-                        }
-                        catch (Exception)
-                        {
-                            Html.Raw("&nbsp;");
-                        }
-
+                    <div class="col border border-1">$@Model.stock?.LastPrice</div>
+                    <div class="col border border-1">$@Model.stock?.PricePurchased</div>
+                    <div id="priceDiffPurchased_@Model.stockCnt" class="col border border-1 @Model.status">
                     </div>
-                    <div class='col border border-1 border-info'>@stock.DatePurchased</div>
+                    <div id="priceDiffCurrent_@Model.stockCnt" class="col border border-1 @Model.status">
+                    </div>
+
+                    <div class='col border border-1 border-info'>@Model.stock.DatePurchased</div>
                     <div class='col border border-1 border-info'>
                         <form method="post">
                             @Html.AntiForgeryToken()
@@ -224,7 +156,7 @@ Place holder token
                 }
             </div>
 
-            ++stockCnt;
+            ++Model.stockCnt;
         }
 
         <div class="border border-1 border-primary rounded-3 overflow-hidden w-100  p-2 m-2">
@@ -258,9 +190,36 @@ Place holder token
         <hr />
         <div id="orderResults" class="container-fluid"></div>
         </div> *@
-        }
-@* @if (Model?.AccountInfo2?.AccountPortfolio != null)
-{ *@
+        @* } *@
+<div class="border border-1 border-primary rounded-3 overflow-hidden w-100 h-75 p-2 m-2">
+    <h6 style="color:#006699;">ETrade Balances</h6>
+
+    <div class='row bg-info text-light p-0' style="font-size:11px;">
+        <div class='col fw-bold border border-1 border-light'>Account Number</div>
+        <div class='col fw-bold border border-1 border-light'>Equity</div>
+        <div class='col fw-bold border border-1 border-light'>Cash Balance</div>
+        <div class='col fw-bold border border-1 border-light'>Available Funds Non Marginable Trade</div>
+        <div class="col fw-bold border border-1 border-light">Maintenance Requirement</div>
+        <div class='col fw-bold border border-1 border-light'>Long Margin Value</div>
+        <div class='col fw-bold border border-1 border-light'>Long Stock Value</div>
+        <div class='col fw-bold border border-1 border-light'>Short Margin Value</div>
+        <div class='col fw-bold border border-1 border-light'>Short Stock Value</div>
+        <div class='col fw-bold border border-1 border-light'>Equity Percentage</div>
+    </div>
+    <div class="row  p-0" style="font-size:11px;">
+        <div class='col border border-1 border-info'>@Model?.AccountInfo3?.accountId</div>
+        <div class='col border border-1 border-info'>@Model?.AccountInfo3?.Computed?.regtEquity</div>
+        <div class='col border border-1 border-info'>@Model?.AccountInfo3?.Computed?.cashAvailableForWithdrawal</div>
+        <div class='col border border-1 border-info'>@Model?.AccountInfo3?.Computed?.cashAvailableForInvestment</div>
+        <div class="col border border-1 border-info">0.00</div>
+        <div class='col border border-1 border-info'>@Model?.AccountInfo3?.Computed?.dtMarginBuyingPower</div>
+        <div class='col border border-1 border-info'>@Model?.AccountInfo3?.Computed?.RealTimeValues?.netMvLong</div>
+        <div class="col border border-1 border-info">0.00</div>
+        <div class='col border border-1 border-info'>@Model?.AccountInfo3?.Computed?.RealTimeValues?.netMvShort</div>
+        <div class='col border border-1 border-info'>100.00</div>
+    </div>
+
+</div>
     <div class="border border-1 border-primary rounded-3 overflow-hidden w-100 h-75 p-2 m-2">
         <h6 style="color:#006699;">E-trade Positions</h6>
         <div class="row fw-bold bg-info text-light p-0" style="font-size:11px;">
@@ -281,150 +240,60 @@ Place holder token
             <div class="col border border-1 border-light text-center">&nbsp;</div>
         </div>
         @{
-            stockCnt = 1;
-            //var positions2 = Model.AccountInfo2?.Element("AccountPortfolio")?.Elements("Position").ToList();
-            var positions2 = (Model.AccountInfo2 != null) ? Model.AccountInfo2.AccountPortfolio?.Positions : null;
-            if (positions2 != null)
-                foreach (var position in positions2)
+        Model.stockCnt = 1;
+        var positions2 = (Model.AccountInfo2 != null) ? Model.AccountInfo2.AccountPortfolio?.Positions : null;
+        if (positions2 != null)
+            foreach (var position in positions2)
+            {
+                Model.stock = Model.StockTracker.Where(x => x.Symbol == position.Product.symbol).FirstOrDefault();
+                if (Model.stock == null)
                 {
-                    try
-                    {
-                        quote = Model.services.GetQuote(position?.Product.symbol);
-                        if (quote is not System.Text.Json.Nodes.JsonObject || Convert.ToDecimal(quote?["lastPrice"]?.ToString()) <= 0)
-                        {                            
-                            Html.Raw("Cannot Get Quote");
-                            continue;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        //continue;
-                        Html.Raw(ex.Message);
-                    }
-
-                    var stock = Model.StockTracker.Where(x => x.Symbol == position?.Product?.symbol).FirstOrDefault();
-                    if (stock == null)
-                    {
-                        continue;
-                    }
-                    <div class="row" style="font-size:13px;">
-                        <div class='col border border-1 border-info'>@stockCnt</div>
-                        <div class='col border border-1 border-info'><a rel="canonical" href="javascript:objContext.GetQuote('@position?.Product?.symbol','')" style="color:#006699;text-decoration:none;">@position?.Product?.symbol</a></div>
-                        @* <div class='col border border-1 border-info'>@position?.Element("Quick")?.Element("lastTrade")?.Value</div>*@
-                        <div class='col border border-1 border-info'>@position?.quantity</div>
-                        <div class='col border border-1 border-info'>$@position?.pricePaid</div>
-                        <div class='col border border-1 border-info'>$@position?.daysGain</div>
-                        <div class='col border border-1 border-info'>@position?.daysGainPct%</div>
-                        <div class='col border border-1 border-info'>$@position?.totalGain</div>
-                        <div class='col border border-1 border-info'>$@position?.marketValue</div>
-                        <div class="col border border-1">$
-                        @try
-                            {
-                                @quote?["lastPrice"]?.ToString()
-                            }
-                            catch (Exception)
-                            {
-                                Html.Raw("&nbsp;");
-                            }
-
-                        </div>
-                        <div class="col border border-1">$@stock?.LastPrice</div>
-                        <div class="col border border-1">$@stock?.PricePurchased</div>
-                        @{
-                            try
-                            {
-                                status = string.Empty;
-                                if (stock?.PricePurchased > Convert.ToDecimal(quote?["lastPrice"]?.ToString()))
-                                {
-                                    status = "text-danger";
-                                }
-                                else
-                                {
-                                    status = "text-success";
-                                }
-                            }
-                            catch (Exception)
-                            {
-                                Html.Raw("&nbsp;");
-                            }
-
-                        }
-                        <div class="col border border-1 @status">
-                            @try
-                            {
-                                @Math.Round(Math.Abs((((decimal)stock?.PricePurchased - Convert.ToDecimal(quote?["lastPrice"]?.ToString())) / (((decimal)stock?.PricePurchased + Convert.ToDecimal(quote["lastPrice"].ToString())) / 2)) * 100), 5)
-                                Html.Raw("%");
-                            }
-                            catch (Exception)
-                            {
-                                Html.Raw("&nbsp;");
-                            }
-
-                        </div>
-                        @{
-                            try
-                            {
-                                status = string.Empty;
-                                if (stock?.LastPrice > Convert.ToDecimal(quote?["lastPrice"]?.ToString()))
-                                {
-                                    status = "text-danger";
-                                }
-                                else
-                                {
-                                    status = "text-success";
-                                }
-                            }
-                            catch (Exception)
-                            {
-                                Html.Raw("&nbsp;");
-                            }
-
-                        }
-                        <div class="col border border-1 @status">
-                        @try
-                            {
-                                @Math.Round(Math.Abs((((decimal)stock?.LastPrice - Convert.ToDecimal(quote?["lastPrice"]?.ToString())) / (((decimal)stock?.LastPrice + Convert.ToDecimal(quote?["lastPrice"]?.ToString())) / 2)) * 100), 5)
-                                Html.Raw("%");
-                            }
-                            catch (Exception)
-                            {
-                                Html.Raw("&nbsp;");
-                            }
-
-                        </div>
-                        <div class='col border border-1 border-info'>@stock.DatePurchased</div>
-                        <div class='col border border-1 border-info'>
-                            <form id="etradeform" name="etradeform" method="post">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" id="btn_@position?.Product.symbol" name="symbol" value="@position?.Product.symbol" />
-                                <input type="hidden" id="platform_@position?.Product.symbol" name="platform" value="2" />
-                                <input id="btnSubmit2" name="btnSubmit2" type="submit" class="btn btn-success" value="Sell" />
-                            </form>
-                        </div>
-                    </div>
-                    ++stockCnt;
+                    continue;
                 }
+                <script type="text/javascript">
+                    $(function() {
+                        $(".overlay").hide();
+                        objContext.GetQuoteStupid('@Model.stock?.PricePurchased','@Model.stock?.LastPrice','@position?.Product.symbol','#lastPrice2_@Model.stockCnt','#priceDiffPurchased2_@Model.stockCnt','#priceDiffCurrent2_@Model.stockCnt');
+                    });
+                </script>
+
+                <div class="row" style="font-size:13px;">
+                    <div class='col border border-1 border-info'>@Model.stockCnt</div>
+                    <div class='col border border-1 border-info'><a rel="canonical" href="javascript:objContext.GetQuote('@position?.Product?.symbol','')" style="color:#006699;text-decoration:none;">@position?.Product?.symbol</a></div>
+                    <div class='col border border-1 border-info'>@position?.quantity</div>
+                    <div class='col border border-1 border-info'>$@position?.pricePaid</div>
+                    <div class='col border border-1 border-info'>$@position?.daysGain</div>
+                    <div class='col border border-1 border-info'>@position?.daysGainPct%</div>
+                    <div class='col border border-1 border-info'>$@position?.totalGain</div>
+                    <div class='col border border-1 border-info'>$@position?.marketValue</div>
+                    <div id="lastPrice2_@Model.stockCnt" class="col border border-1">
+                    </div>
+                    <div class="col border border-1">$@Model.stock?.LastPrice</div>
+                    <div class="col border border-1">$@Model.stock?.PricePurchased</div>
+
+                    <div id="priceDiffPurchased2_@Model.stockCnt" class="col border border-1 @Model.status">
+                    </div>
+
+                    <div id="priceDiffCurrent2_@Model.stockCnt" class="col border border-1 @Model.status">
+                    </div>
+                    <div class='col border border-1 border-info'>@Model.stock.DatePurchased</div>
+                    <div class='col border border-1 border-info'>
+                        <form id="etradeform" name="etradeform" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" id="btn_@position?.Product.symbol" name="symbol" value="@position?.Product.symbol" />
+                            <input type="hidden" id="platform_@position?.Product.symbol" name="platform" value="2" />
+                            <input id="btnSubmit2" name="btnSubmit2" type="submit" class="btn btn-success" value="Sell" />
+                        </form>
+                    </div>
+                </div>
+                ++Model.stockCnt;
+            }
         }
         <div class="border border-1 border-primary rounded-3 overflow-hidden w-100  p-2 m-2">
             <p>
                 <a target="_blank" href="/ETradeAuth">Authorize ETrade</a>
             </p>
         </div>
-@*         <div class="border border-1 border-primary rounded-3 overflow-hidden w-100  p-2 m-2">
-            <p><a target="_blank" href="https://api.schwabapi.com/v1/oauth/authorize?response_type=code&client_id=@Uri.EscapeDataString(Model.clientSecret)&scope=readonly&redirect_uri=https://127.0.0.1/SchwabAPICallBack">Authorize Schwab</a></p>
-        </div>  *@
-    </div>
-@* } *@
-@* else
-{
-    <h4 style="color:#006699;">Message</h4>
-    <div class="border border-1 border-primary rounded-3 overflow-hidden w-100  p-2 m-2">
-        <p>
-            <a target="_blank" href="/ETradeAuth">Authorize ETrade</a>
-        </p>
-    </div>
-    <div class="border border-1 border-primary rounded-3 overflow-hidden w-100  p-2 m-2">
 
-        <p><a target="_blank" href="https://api.schwabapi.com/v1/oauth/authorize?response_type=code&client_id=@Uri.EscapeDataString(Model.clientSecret)&scope=readonly&redirect_uri=https://127.0.0.1/SchwabAPICallBack">Authorize Schwab</a></p>
     </div>
-} *@
+

@@ -60,7 +60,7 @@ namespace TMD.Services.Service
             "}";
             try
             {
-                client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+                client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
                 results = client.Post("bulk",payload,null, new Dictionary<string, object>(), "application/json");
                 JsonElement value = new JsonElement();
                 if (results.Value.ValueKind == JsonValueKind.Object && !results.Value.TryGetProperty("errors", out value))

@@ -1,4 +1,10 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using GraphQLParser;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+//using System.Data.Entity;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -18,78 +24,130 @@ namespace TMD.PricePrediction.Classes
         SchwabSettings? _settings2;
         TaAPISettings? _taapiSettings;
         IHttpClientFactory? _httpClientFactory;
-        ETradeService? services = null;
+        ETradeService? eTradeService = null;
         SchwabServices? services2 = null;
-        TmdContext? ctx = null;
+        TmdContext? _ctx = null;
         RulesEngine? settings;
         List<StockTracker2> stockTracker = null;
-        TaAPIService? taapiService = null;
-        //decimal totalAvailiableforLongTrade = 0m;
-        Helper? helper = null;
-        public ExecStockPricePredictionETrade(ILogger logger, ETradeSettings settings, IHttpClientFactory httpClientFactory)
-        {
-            _httpClientFactory = httpClientFactory;
-            _logger = logger;
-            _settings = settings;
-            services = new ETradeService(_logger, _settings, _httpClientFactory);
-            ctx = new TmdContext();
-            helper = new Helper(_logger, _settings2, _settings, _httpClientFactory);
-        }
-        public ExecStockPricePredictionETrade(ILogger logger, ETradeSettings settings, SchwabSettings settings2, IHttpClientFactory httpClientFactory)
+        //TaAPIService? taapiService = null;
+        ServiceProvider? _serviceProvider = null;
+        Helper? _helper = null;
+        IDbContextFactory<TmdContext> _contextFactory;
+        public ExecStockPricePredictionETrade(ILogger logger, ETradeSettings settings, SchwabSettings settings2, IHttpClientFactory httpClientFactory, IDbContextFactory<TmdContext> contextFactory)
         {
             _httpClientFactory = httpClientFactory;
             _logger = logger;
             _settings = settings;
             _settings2 = settings2;
-            services = new ETradeService(_logger, _settings, _httpClientFactory);
-            services2 = new SchwabServices(_logger, _settings2, _httpClientFactory);
-            ctx = new TmdContext();
-            helper = new Helper(_logger, _settings2, _settings, _httpClientFactory);
+            _contextFactory = contextFactory;
+            //_ctx = ctx;
+            //_helper = helper;
+            //ctx = new TmdContext();
+            //IConfigurationBuilder builder = new ConfigurationBuilder()
+            //    .AddJsonFile("appsettings.json");
+            //IConfigurationRoot config = builder.Build();
+            //var ConnectionStrings = config.GetSection("ConnectionStrings").Get<ConnectionSettings>();
+            //var services = new ServiceCollection();
+            //var serviceProvider = services.BuildServiceProvider();
+            var ctx = contextFactory.CreateDbContext();
+            _ctx = ctx;
+            //using (var scope = serviceProvider.CreateScope())
+            //{
+            //    var ctxFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<TmdContext>>();
+            //    var context = ctxFactory.CreateDbContext();
+            //    _ctx = context;
+            //}
+            _helper = new Helper(_logger, _settings2, _settings, null, contextFactory);
+            eTradeService = new ETradeService(_logger, _settings, _httpClientFactory, contextFactory);
+            services2 = new SchwabServices(_logger, _settings2, _httpClientFactory, _contextFactory);
         }
-        public ExecStockPricePredictionETrade(ILogger logger, ETradeSettings settings, SchwabSettings settings2,TaAPISettings taAPISettings, IHttpClientFactory httpClientFactory)
+        //public ExecStockPricePredictionETrade(ILogger logger, ETradeService service, IHttpClientFactory httpClientFactory/*, Helper helper*/)
+        //{
+        //    _httpClientFactory = httpClientFactory;
+        //    _logger = logger;
+        //    //_settings = settings;
+        //    this.services = service;
+        //    //_helper = helper;
+        //    //services = new ETradeService(_logger, _settings, _httpClientFactory, new Helper(ctx));
+        //    ctx = new TmdContext();
+        //    //helper = new Helper(_logger, _settings2, _settings, _httpClientFactory);
+        //}
+        //public ExecStockPricePredictionETrade(ILogger logger, ETradeSettings settings, SchwabSettings settings2, IHttpClientFactory httpClientFactory, Helper helper, ServiceProvider serviceProvider)
+        //public ExecStockPricePredictionETrade(ILogger logger, ETradeService service, SchwabServices service2, IHttpClientFactory httpClientFactory/*, Helper helper*/, ServiceProvider serviceProvider)
+        //{
+        //    _httpClientFactory = httpClientFactory;
+        //    _logger = logger;
+        //    //_settings = settings;
+        //    this.services = service;
+        //    this.services2 = service2;
+        //    //_helper = helper;
+        //    //services = new ETradeService(_logger, _settings, _httpClientFactory, new Helper(ctx));
+        //    //services2 = new SchwabServices(_logger, _settings2, _httpClientFactory);
+        //    ctx = new TmdContext();
+        //    //helper = new Helper(_logger, _settings2, _settings, _httpClientFactory);
+        //}
+        //public ExecStockPricePredictionETrade(ILogger logger, ETradeSettings settings, SchwabSettings settings2,TaAPISettings taAPISettings, IHttpClientFactory httpClientFactory, Helper helper)
+        //public ExecStockPricePredictionETrade(ILogger logger, ETradeService service, SchwabServices service2, TaAPISettings taAPISettings, IHttpClientFactory httpClientFactory, Helper helper)
+        //{
+        //    _httpClientFactory = httpClientFactory;
+        //    _logger = logger;
+        //    //_settings = settings;
+        //    //_settings2 = settings2;
+        //    this.services = service;
+        //    this.services2 = service2;
+        //    _taapiSettings = taAPISettings;
+        //    _helper = helper;
+        //    //services = new ETradeService(_logger, _settings, _httpClientFactory, new Helper(ctx));
+        //    //services2 = new SchwabServices(_logger, _settings2, _httpClientFactory);
+        //    //taapiService = new TaAPIService(_logger, _taapiSettings, _httpClientFactory);
+        //    ctx = new TmdContext();
+        //    //helper = new Helper(_logger, _settings2, _settings, _httpClientFactory);
+        //}
+        public void Exec(decimal totalAvailiableforLongTrade, CancellationToken token, ref List<BuySellCommodity>? BuySellStockList)
         {
-            _httpClientFactory = httpClientFactory;
-            _logger = logger;
-            _settings = settings;
-            _settings2 = settings2;
-            _taapiSettings = taAPISettings;
-            services = new ETradeService(_logger, _settings, _httpClientFactory);
-            services2 = new SchwabServices(_logger, _settings2, _httpClientFactory);
-            taapiService = new TaAPIService(_logger, _taapiSettings, _httpClientFactory);
-            ctx = new TmdContext();
-            helper = new Helper(_logger, _settings2, _settings, _httpClientFactory);
-        }
-        public void Exec(decimal totalAvailiableforLongTrade, ref List<BuySellCommodity>? BuySellStockList)
-        {
-            helper.Log(_logger, LogLevel.Information, $"Get account info for Charles Etrade");
-            Run(totalAvailiableforLongTrade, ref BuySellStockList);
+            Helper.Log(_logger, LogLevel.Information, $"Get account info for Charles Etrade");
+            //do
+            //{
+                // 5. Regularly poll the cancellation request status
+                if (token.IsCancellationRequested)
+                {
+                    Helper.Log(_logger, LogLevel.Information, "Cleaning up resources within the thread...");
+                    // Perform thread-specific cleanup here
+                    _ctx.Dispose();
+                    _ctx = null;
+                    //httpClientFactory = null;
+                    return;
+                }
+                Run(totalAvailiableforLongTrade, ref BuySellStockList);
+            //    System.Threading.Thread.Sleep(5000);
+            //} while (true);            
         }
 
         private void Run(decimal totalAvailiableforLongTrade, ref List<BuySellCommodity>? BuySellStockList)
         {
 
-            settings = ctx.RulesEngine.FirstOrDefault();
-            helper.Log(_logger, LogLevel.Information, $"Get settings for ETrade");
+            settings = _ctx.RulesEngine.FirstOrDefault();
+            Helper.Log(_logger, LogLevel.Information, $"Get settings for ETrade");
 
             //Update Prices
-            helper.Log(_logger, LogLevel.Information, $"Updating Latest Prices on Tracker");
-            UpdatePrices();
+            Helper.Log(_logger, LogLevel.Information, $"Updating Latest Prices on Tracker");
+            UpdatePrices(_logger);
 
             //Checked for queued crypto adn see if direction is the same
-            helper.Log(_logger, LogLevel.Information, $"Check for queued stock");
-            //helper.CheckforQueuedStock(settings, Platform.ETrade);
+            //Helper.Log(_logger, LogLevel.Information, $"Check for queued stock");
+            //_helper.CheckforQueuedStock(settings, Platform.ETrade);
 
-            if (totalAvailiableforLongTrade > 100 && (bool)settings.EtradeAnalysisTradeEnabled)
+            if (totalAvailiableforLongTrade > 5 && (bool)settings.EtradeAnalysisTradeEnabled)
             {
                 if (BuySellStockList.Count > 0)
                 {
-                    var stockTrackerBuy = ctx.StockTracker2.Where(x => x.PriceSold == null && x.DateSold == null && x.Status == "Filled" && x.TradePlatform == (int)Platform.ETrade).ToList();
-                    var numOfNeededStock = (int)((settings.MaxNumberofStockstoBuy / 2) - stockTrackerBuy.Count);
+                    var stockTrackerBuy = _ctx.StockTracker2.AsNoTracking().Where(x => x.PriceSold == null && x.DateSold == null && x.Status == "Filled" && x.TradePlatform == (int)Platform.ETrade);//.ToList();
+                    var numOfNeededStock = (int)((settings.MaxNumberofStockstoBuy / 2) - stockTrackerBuy.Count());
                     if (numOfNeededStock > 0)
                     {
                         List<BuySellCommodity> BuySellStockListLong = BuySellStockList.Where(x => x.Direction == TradeDirection.BUY).OrderByDescending(x => x.Points).ThenBy(x => Convert.ToDecimal(x.Results["RSI"].ToString()))/*.Take(numOfNeededStock)*/.ToList();
                         List<BuySellCommodity> BuySellStockListShort = new List<BuySellCommodity>();
-                        if ((numOfNeededStock - BuySellStockListLong.Count()) > 0)
+                        //if ((numOfNeededStock - BuySellStockListLong.Count()) > 0)
                             BuySellStockListShort = BuySellStockList.Where(x => x.Direction == TradeDirection.SELL_SHORT).OrderByDescending(x => x.Points).ThenByDescending(x => Convert.ToDecimal(x.Results["RSI"].ToString()))/*.Take((numOfNeededStock - BuySellStockListLong.Count()))*/.ToList();
                         //CalculatePurchaseAmount(totalAvailiableforLongTrade, ref BuySellStockList);
                         List<BuySellCommodity> BuySellStockListTotal = new List<BuySellCommodity>();
@@ -97,56 +155,56 @@ namespace TMD.PricePrediction.Classes
                         BuySellStockListTotal.AddRange(BuySellStockListShort);
                         BuySellStockList = BuySellStockListTotal;
                         //helper.CalculatePurchaseAmount(totalAvailiableforLongTrade, ref BuySellStockListTotal, settings, Platform.CharlesSchwab);
-                        helper.CalculatePurchaseAmount(totalAvailiableforLongTrade, ref BuySellStockList, settings, Platform.ETrade);
+                        _helper.CalculatePurchaseAmount(totalAvailiableforLongTrade, ref BuySellStockList, settings, Platform.ETrade);
                     }
                 }
                 else
-                    helper.Log(_logger, LogLevel.Warning, "No Stock was found to trade matching setting or 24h hold");
+                    Helper.Log(_logger, LogLevel.Warning, "No Stock was found to trade matching setting or 24h hold");
             }
             else
             {
-                helper.Log(_logger, LogLevel.Warning, $"Cash and margin balance below threshold ${totalAvailiableforLongTrade}  or trading disabled.");
+                Helper.Log(_logger, LogLevel.Warning, $"Cash and margin balance below threshold ${totalAvailiableforLongTrade}  or trading disabled.");
             }
         }
-        void UpdatePrices()
+        void UpdatePrices(ILogger _logger)
         {
             dynamic results = null;
             //Re-Get stock already in trade being tracked.
-            stockTracker = ctx.StockTracker2.Where(x => x.PriceSold == null && x.DateSold == null && x.TradePlatform == (int)Platform.ETrade && x.Status.Trim() == "Filled").ToList();
+            stockTracker = _ctx.StockTracker2.AsNoTracking().Where(x => x.PriceSold == null && x.DateSold == null && x.TradePlatform == (int)Platform.ETrade && x.Status.Trim() == "Filled").ToList();
             //Loop through current stock and evaluate
-            helper.Log(_logger, LogLevel.Information, $"Checking current brought/shorted stock");
+            Helper.Log(_logger, LogLevel.Information, $"Checking current brought/shorted stock");
             foreach (var stock in stockTracker)
             {
                 var st = stock;
                 //var st = ctx.StockTracker.Where(x => x.Symbol == stock.Symbol).FirstOrDefault();
-                helper.Log(_logger, LogLevel.Information, $"Checking {stock.Symbol} - ({stock.Name})");
+                Helper.Log(_logger, LogLevel.Information, $"Checking {stock.Symbol} - ({stock.Name})");
                 try
                 {
-                    results = services2.GetQuote(stock.Symbol);
-                    if (!helper.CheckMarketIndexes(results))
+                    results = services2.GetQuoteAsync(stock.Symbol).Result;
+                    if (!_helper.CheckMarketIndexes(results))
                     {
-                        helper.Log(_logger, LogLevel.Error, $"Error in quote lookup Update Prices {results.GetProperty("errors").ToString()}");
+                        Helper.Log(_logger, LogLevel.Error, $"Error in quote lookup Update Prices {results.GetProperty("errors").ToString()}");
                         continue;
                     }
                 }
                 catch (Exception ex)
                 {
-                    helper.Log(_logger, LogLevel.Error, $"Error in quote lookup Update Prices {ex.Message}");
+                    Helper.Log(_logger, LogLevel.Error, $"Error in quote lookup Update Prices {ex.Message}");
                     continue;
                 }
                
-                if (!(bool)settings.EtradeDayTradeEnabled)
+                if ((bool)settings.EtradeDayTradeEnabled || (Helper.easternTime - stock.DatePurchased.Value).TotalDays > 1)
                 {
-                    if ((helper.easternTime - stock.DatePurchased.Value).TotalDays > 1)
-                    {
+                    //if ((_helper.easternTime - stock.DatePurchased.Value).TotalDays > 1)
+                    //{
                         //trade after 24 hrs
                         try
                         {
-                            helper.Log(_logger, LogLevel.Warning, $"Stock {stock.Symbol} - ({stock.Name}) Time since traded Past 24 hrs {Math.Round(((helper.easternTime - stock.DatePurchased.Value).TotalHours - 24), 2)}. Traded Price ${stock.PricePurchased} traded direction {Enum.GetName(typeof(TradeDirection), stock.TradeDirection)} stock current price {Convert.ToDecimal(results["lastPrice"].ToString())}");
+                            Helper.Log(_logger, LogLevel.Warning, $"Stock {stock.Symbol} - ({stock.Name}) Time since traded Past 24 hrs {Math.Round(((Helper.easternTime - stock.DatePurchased.Value).TotalHours - 24), 2)}. Traded Price ${stock.PricePurchased} traded direction {Enum.GetName(typeof(TradeDirection), stock.TradeDirection)} stock current price {Convert.ToDecimal(results["lastPrice"].ToString())}");
                         }
                         catch (Exception ex)
                         {
-                            helper.Log(_logger, LogLevel.Error, $"Error in quote lookup Update Prices {ex.Message} {results.ToString()}");
+                            Helper.Log(_logger, LogLevel.Error, $"Error in quote lookup Update Prices {ex.Message} {results.ToString()}");
                             continue;
                         }
                         try
@@ -155,7 +213,7 @@ namespace TMD.PricePrediction.Classes
                         }
                         catch (Exception ex)
                         {
-                            helper.Log(_logger, LogLevel.Error, $"Error in AnalyiseOwnedStock {ex.Message}-{ex.StackTrace}-{st.ToString()}-{results.ToString()}");
+                            Helper.Log(_logger, LogLevel.Error, $"Error in AnalyiseOwnedStock {ex.Message}-{ex.StackTrace}-{st.ToString()}-{results.ToString()}");
                         }
 
                     }
@@ -164,22 +222,22 @@ namespace TMD.PricePrediction.Classes
                         //not pass 24h period
                         try
                         {
-                            helper.Log(_logger, LogLevel.Warning, $"Stock {stock.Symbol} - ({stock.Name}) Cannot be transacted on before 24h period when day trade is disabled. Time til tradeable hrs {Math.Round((24 - (helper.easternTime - stock.DatePurchased.Value).TotalHours), 2)}. Traded Price ${stock.PricePurchased} traded direction {Enum.GetName(typeof(TradeDirection), stock.TradeDirection)} stock current price {Convert.ToDecimal(results["lastPrice"].ToString())}");
+                            Helper.Log(_logger, LogLevel.Warning, $"Stock {stock.Symbol} - ({stock.Name}) Cannot be transacted on before 24h period when day trade is disabled. Time til tradeable hrs {Math.Round((24 - (Helper.easternTime - stock.DatePurchased.Value).TotalHours), 2)}. Traded Price ${stock.PricePurchased} traded direction {Enum.GetName(typeof(TradeDirection), stock.TradeDirection)} stock current price {Convert.ToDecimal(results["lastPrice"].ToString())}");
                         }
                         catch (Exception ex)
                         {
-                            helper.Log(_logger, LogLevel.Error, $"Error in quote lookup Update Prices {ex.Message} {results.ToString()}");
+                            Helper.Log(_logger, LogLevel.Error, $"Error in quote lookup Update Prices {ex.Message} {results.ToString()}");
                             continue;
                         }
                         UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref st);
                     }
-                }
-                else
-                {
-                    //just trade
-                    helper.Log(_logger, LogLevel.Warning, $"Stock {stock.Symbol} - ({stock.Name}) Time since traded hrs {Math.Abs(Math.Round(((helper.easternTime - stock.DatePurchased.Value).TotalHours - 24), 2))}. Traded Price ${stock.PricePurchased} traded direction {Enum.GetName(typeof(TradeDirection), stock.TradeDirection)} stock current price ${Convert.ToDecimal(results["lastPrice"].ToString())}");
-                    AnalyiseOwnedStock(st, results);
-                }
+                //}
+                //else
+                //{
+                //    //just trade
+                //    _helper.Log(_logger, LogLevel.Warning, $"Stock {stock.Symbol} - ({stock.Name}) Time since traded hrs {Math.Abs(Math.Round(((_helper.easternTime - stock.DatePurchased.Value).TotalHours - 24), 2))}. Traded Price ${stock.PricePurchased} traded direction {Enum.GetName(typeof(TradeDirection), stock.TradeDirection)} stock current price ${Convert.ToDecimal(results["lastPrice"].ToString())}");
+                //    AnalyiseOwnedStock(st, results);
+                //}
             }
         }
         //bool BuySellStock(StockTracker stocktracker, dynamic order, TradeDirection direction, int qty, bool IsReversed, ETradeService service)
@@ -242,7 +300,7 @@ namespace TMD.PricePrediction.Classes
 
         bool UpdateLastPrice(decimal lastPrice, ref StockTracker2 stockTracker)
         {
-            ctx = new TmdContext();
+            //ctx = new TmdContext();
             if ((stockTracker.TradeDirection == (int)TradeDirection.BUY && (lastPrice > stockTracker.LastPrice && lastPrice > stockTracker.PricePurchased)) || stockTracker.LastPrice is null)
             {
                 stockTracker.LastPrice = lastPrice;
@@ -251,17 +309,17 @@ namespace TMD.PricePrediction.Classes
             {
                 stockTracker.LastPrice = lastPrice;
             }
-            stockTracker.DateUpdated = helper.easternTime;
+            stockTracker.DateUpdated = Helper.easternTime;
             try
             {
-                ctx.Entry(stockTracker).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+                _ctx.Entry(stockTracker).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
                 System.Threading.Thread.Sleep(200);
-                ctx.SaveChanges();
-                ctx.Entry(stockTracker).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                _ctx.SaveChanges();
+                _ctx.Entry(stockTracker).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
             }
             catch (Exception ex)
             {
-                helper.Log(_logger, LogLevel.Error, $"Price Update Failed! {ex.Message}");
+                Helper.Log(_logger, LogLevel.Error, $"Price Update Failed! {ex.Message}");
             }
             return true;
         }
@@ -281,96 +339,116 @@ namespace TMD.PricePrediction.Classes
             }
             catch (Exception ex)
             {
-                helper.Log(_logger, LogLevel.Error, $"{ex.Message} at AnalyiseOwnedStock Percent Diff. Setting to zero.");
+                Helper.Log(_logger, LogLevel.Error, $"{ex.Message} at AnalyiseOwnedStock Percent Diff. Setting to zero.");
             }
 
             if (stock.TradeDirection == (int)TradeDirection.SELL_SHORT) //selling short
             {
-                if (currentPrice > pricePurchased)
+                //if (currentPrice > pricePurchased)
+                //if (currentPrice > lastPrice && percentDiffLastPrice >= settings.StopLossPercentPurchasedStock && percentDiffPricePurchased >= 3.5m)
+                //if ((currentPrice > lastPrice) && (pricePurchased > lastPrice) && (pricePurchased > currentPrice) && (percentDiffLastPrice >= settings.StopLossPercentLastPriceCrypto && percentDiffPricePurchased >= 3.5m))
+                //if (((currentPrice > lastPrice) && (percentDiffLastPrice >= settings.StopLossPercentLastPriceStock)) ||
+                //    ((currentPrice > pricePurchased) && (percentDiffPricePurchased >= settings.StopLossPercentPurchasedStock)) ||
+                //    (pricePurchased > lastPrice) && (pricePurchased > currentPrice) && percentDiffPricePurchased >= 3.5m)
+                if (((currentPrice > lastPrice) &&
+                    (pricePurchased > currentPrice) &&
+                    (percentDiffPricePurchased >= 3.5m)) ||
+                    ((pricePurchased > currentPrice) && (percentDiffPricePurchased >= settings.StopLossPercentPurchasedStock))
+                    )
                 {
-                    if (percentDiffPricePurchased > settings.StopLossPercentPurchasedStock)
-                    {
+                    //if (percentDiffPricePurchased > settings.StopLossPercentPurchasedStock)
+                    //{
                         //buy to cover
-                        helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentDiffPricePurchased, 4)}% since price purchased. Buying to cover.");
-                        helper.BuySellStock(stock, results, TradeDirection.BUY_TO_COVER, stock.Quantity, false, services);
+                        Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentDiffPricePurchased, 4)}% since price purchased. Buying to cover.");
+                        //_helper.BuySellStock(stock, results, TradeDirection.BUY_TO_COVER, stock.Quantity, false, eTradeService);
                         //Attempt to reverse stock
                         //if (stock.IsReversed != null && !(bool)stock.IsReversed)
                         //    ReverseStock(stock, results);
-                    }
-                    else
-                    {
-                        //Update Price
-                        helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentDiffPricePurchased, 4)}% tolerance since price purchased. Updating last Price.");
-                        UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
-                    }
+                    //}
+                    //else
+                    //{
+                    //    //Update Price
+                    //    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentDiffPricePurchased, 4)}% tolerance since price purchased. Updating last Price.");
+                    //    UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
+                    //}
                 }
-                else
-                if (currentPrice > lastPrice)
-                {
-                    if (percentDiffLastPrice > settings.StopLossPercentLastPriceStock)
-                    {
-                        //buy to cover
-                        helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentDiffLastPrice, 4)}% since last price. Buying to cover.");
-                        UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
-                        helper.BuySellStock(stock, results, TradeDirection.BUY_TO_COVER, stock.Quantity, false, services);
-                    }
-                    else
-                    {
-                        //Update Price
-                        //helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentDiffLastPrice, 4)}% tolerance since last price. Updating last Price.");
-                        //UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
-                    }
-                }
+                //else
+                //if (currentPrice > lastPrice)
+                //{
+                //    if (percentDiffLastPrice > settings.StopLossPercentLastPriceStock)
+                //    {
+                //        //buy to cover
+                //        Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentDiffLastPrice, 4)}% since last price. Buying to cover.");
+                //        UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
+                //        _helper.BuySellStock(stock, results, TradeDirection.BUY_TO_COVER, stock.Quantity, false, eTradeService);
+                //    }
+                //    else
+                //    {
+                //        //Update Price
+                //        //_helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentDiffLastPrice, 4)}% tolerance since last price. Updating last Price.");
+                //        //UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
+                //    }
+                //}
                 //else if (currentPrice <= pricePurchased)
                 else //if (currentPrice <= lastPrice)
                 {
                     //update price
-                    helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentDiffLastPrice, 4)}% tolerance since purchase. Updating last Price.");
+                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentDiffLastPrice, 4)}% tolerance since purchase. Updating last Price.");
                     UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
                 }
             }
             else //Going Long
             {
-                if (currentPrice < pricePurchased)
+                //if (currentPrice < pricePurchased)
+                //if (currentPrice < lastPrice && percentDiffLastPrice >= settings.StopLossPercentPurchasedStock && percentDiffPricePurchased >= 3.5m)
+                //if ((currentPrice < lastPrice) && (pricePurchased < lastPrice) && (pricePurchased < currentPrice) && (percentDiffLastPrice >= settings.StopLossPercentLastPriceCrypto && percentDiffPricePurchased >= 3.5m))
+                //if (((currentPrice < lastPrice) && (percentDiffLastPrice >= settings.StopLossPercentLastPriceStock)) ||
+                //    ((currentPrice < pricePurchased) && (percentDiffPricePurchased >= settings.StopLossPercentPurchasedStock)) ||
+                //    (pricePurchased < lastPrice) && (pricePurchased < currentPrice) && percentDiffPricePurchased >= 3.5m)
+                if (((currentPrice < lastPrice) &&
+                    (pricePurchased < currentPrice) &&
+                    (percentDiffPricePurchased >= 3.5m)) ||
+                    ((pricePurchased < currentPrice) && (percentDiffPricePurchased >= settings.StopLossPercentPurchasedStock))
+                    )
                 {
-                    if (percentDiffPricePurchased > settings.StopLossPercentPurchasedStock)
-                    {
-                        //buy to cover
-                        helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentDiffPricePurchased, 4)}% since price purchased. Buying to cover.");
+                    //if (percentDiffPricePurchased > settings.StopLossPercentPurchasedStock)
+                    //{
+                    //buy to cover
+                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentDiffPricePurchased, 4)}% since price purchased. Buying to cover.");
                         UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
-                        helper.BuySellStock(stock, results, TradeDirection.SELL, stock.Quantity, false, services);
+                        //_helper.BuySellStock(stock, results, TradeDirection.SELL, stock.Quantity, false, eTradeService);
                         //Attempt to reverse stock
                         //if (stock.IsReversed != null && !(bool)stock.IsReversed)
                         //    ReverseStock(stock, results);
-                    }
-                    else
-                    {
+                    //}
+                    //else
+                    //{
                         //Update Price
-                        helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentDiffPricePurchased, 4)}% tolerance since price purchased. Updating last Price.");
-                        UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
-                    }
-                }
-                else
-                if (currentPrice < lastPrice)
-                {
-                    if (percentDiffLastPrice > settings.StopLossPercentLastPriceStock)
-                    {
-                        //sell
-                        helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentDiffLastPrice, 4)}% since last price. Buying to cover.");
-                        UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
-                        helper.BuySellStock(stock, results, TradeDirection.SELL, stock.Quantity, false, services);
-                    }
-                    else
-                    {
-                        //Update Price
-                        //helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentDiffLastPrice, 4)}% tolerance since last price. Updating last Price.");
+                        //Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentDiffPricePurchased, 4)}% tolerance since price purchased. Updating last Price.");
                         //UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
-                    }
+                    //}
                 }
+                //else
+                //if (currentPrice < lastPrice)
+                //{
+                //    if (percentDiffLastPrice > settings.StopLossPercentLastPriceStock)
+                //    {
+                //        //sell
+                //        Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentDiffLastPrice, 4)}% since last price. Buying to cover.");
+                //        UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
+                //        _helper.BuySellStock(stock, results, TradeDirection.SELL, stock.Quantity, false, eTradeService);
+                //    }
+                //    else
+                //    {
+                //        //Update Price
+                //        //_helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentDiffLastPrice, 4)}% tolerance since last price. Updating last Price.");
+                //        //UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
+                //    }
+                //}
                 else //if (currentPrice >= lastPrice)
                 {
                     //update price
-                    helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentDiffLastPrice, 4)}% tolerance since purchase. Updating last Price.");
+                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentDiffLastPrice, 4)}% tolerance since purchase. Updating last Price.");
                     UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
                 }
             }
@@ -407,9 +485,9 @@ namespace TMD.PricePrediction.Classes
         //}
         ~ExecStockPricePredictionETrade()
         {
-            ctx?.Dispose();
-            ctx = null;
-            helper = null;
+            _ctx?.Dispose();
+            _ctx = null;
+            _helper = null;
         }
     }
 }

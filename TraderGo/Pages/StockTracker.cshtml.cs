@@ -7,6 +7,8 @@ using TMD.Database.Connect.Managers;
 using TMD.Services.Service;
 using TMDInvestments.Models;
 using TMDInvestments.Services;
+using TMDInvestments.Context;
+using Microsoft.EntityFrameworkCore;
 
 namespace TraderGo.Pages
 {
@@ -21,15 +23,15 @@ namespace TraderGo.Pages
         SchwabServices services;
         [BindProperty] public List<StockTracker2?> StockTracker {  get; set; } 
         [BindProperty] public int Total { get; set; }
-        public StockTrackerModel(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<MailSettings> mailSettings, IHttpClientFactory factory, ILogger<StockTrackerModel> logger, IOptions<SchwabSettings> settings) //: base(connectionSettings, connectionSettings2, mailSettings)
+        public StockTrackerModel(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<MailSettings> mailSettings, IHttpClientFactory factory, ILogger<StockTrackerModel> logger, IOptions<SchwabSettings> settings, IDbContextFactory<TmdContext> contextFactory) //: base(connectionSettings, connectionSettings2, mailSettings)
         {
             _logger = logger;
             _settings = settings.Value;
             _factory = factory;
             //_httpClient = _factory.CreateClient();
             _mgr = new Manager(connectionSettings?.Value?.Connection, "", null);
-            _traderGoService = new TraderGoService(null, _logger, _factory, false);
-            services = new SchwabServices(_logger, _settings, _factory);
+            _traderGoService = new TraderGoService(null, _logger, _factory, false, contextFactory);
+            services = new SchwabServices(_logger, _settings, _factory, contextFactory);
         }
         public override IActionResult Execute()
         {

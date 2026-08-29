@@ -57,9 +57,9 @@ namespace TMDInvestment.Models
         public float close { get; set; }
         public long volume { get; set; }
         public long datetime { get { return new DateTimeOffset(time).ToUnixTimeMilliseconds(); } set { time = DateTimeOffset.FromUnixTimeMilliseconds(value).DateTime; } }
-        public DateTime time;// { get; set; }
-        public float change { get; set; }
-        public float percent { get; set; }
+        public DateTime time { get; set; }// { get { return new DateTimeOffset(time).DateTime; } set; }
+        public float opChange { get { return close - open; } set; }
+        public float opPercent { get { return (close - open) / ((close + open) / 2) * 100; } set; }
     }
 
     //public class Quote

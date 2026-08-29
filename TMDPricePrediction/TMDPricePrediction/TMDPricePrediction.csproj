@@ -8,7 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UserSecretsId>da3059f2-eccf-4284-8b9c-2639a1d48493</UserSecretsId>
-    <Version>2.6.9.3</Version>
+    <Version>2.7.3.0</Version>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="ExecCryptoPricePrediction.cs" />
@@ -24,6 +24,8 @@
     <PackageReference Include="Azure.Storage.Blobs" Version="12.23.0" />
     <PackageReference Include="Azure.Storage.Files.Shares" Version="12.21.0" />
     <PackageReference Include="Azure.Storage.Queues" Version="12.21.0" />
+    <PackageReference Include="log4net" Version="3.3.1" />
+    <PackageReference Include="MailKit" Version="4.16.0" />
     <PackageReference Include="Microsoft.ApplicationInsights.WorkerService" Version="2.22.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Extensions" Version="1.1.0" />
     <!-- Application Insights isn't enabled by default. See https://aka.ms/AAt8mw4. -->
@@ -35,9 +37,10 @@
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Storage.Queues" Version="5.5.1" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Timer" Version="4.3.1" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="2.0.0" />
+    <PackageReference Include="Microsoft.Bcl.Memory" Version="9.0.14" />
     <PackageReference Include="Microsoft.Extensions.Azure" Version="1.9.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="9.0.1" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.16" />
     <PackageReference Include="System.Runtime.InteropServices" Version="4.3.0" />
     <!--<PackageReference Include="Microsoft.NET.Sdk.Functions" Version="4.6.0" />-->
 

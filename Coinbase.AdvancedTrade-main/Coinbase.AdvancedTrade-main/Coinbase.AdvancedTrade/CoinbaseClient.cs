@@ -12,36 +12,36 @@ namespace Coinbase.AdvancedTrade
         /// <summary>
         /// Gets the accounts manager, responsible for account-related operations.
         /// </summary>
-        public IAccountsManager Accounts { get; }
+        public IAccountsManager? Accounts { get; }
         /// <summary>
         /// 
         /// </summary>
-        public IPortfolioManager Portfolio { get; }
+        public IPortfolioManager? Portfolio { get; }
 
         /// <summary>
         /// Gets the products manager, responsible for product-related operations.
         /// </summary>
-        public IProductsManager Products { get; }
+        public IProductsManager? Products { get; }
 
         /// <summary>
         /// Gets the orders manager, responsible for order-related operations.
         /// </summary>
-        public IOrdersManager Orders { get; }
+        public IOrdersManager? Orders { get; }
 
         /// <summary>
         /// Gets the fees manager, responsible for fee-related operations.
         /// </summary>
-        public IFeesManager Fees { get; }
+        public IFeesManager? Fees { get; }
 
         /// <summary>
         /// Gets the public manager, responsible for public-related operations.
         /// </summary>
-        public IPublicManager Public { get; }
+        public IPublicManager? Public { get; }
 
         /// <summary>
         /// Gets the WebSocket manager, responsible for managing WebSocket connections.
         /// </summary>
-        public WebSocketManager WebSocket { get; }
+        public WebSocketManager? WebSocket { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CoinbaseClient"/> class for interacting with the Coinbase API.

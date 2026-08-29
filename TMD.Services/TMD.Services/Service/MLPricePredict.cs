@@ -1,15 +1,21 @@
 ﻿using Microsoft.ML;
 using Microsoft.ML.TorchSharp;
+
+//using Microsoft.ML.TorchSharp;
 using Microsoft.ML.Transforms.TimeSeries;
+using NewsAggregator.models.returnModel;
+using Org.BouncyCastle.Crypto.Engines;
+using System.ServiceModel.Syndication;
 using System.Text.Json.Nodes;
 using TMDInvestment.Models;
 using TMDInvestments.Models;
+using TMDInvestments.Models.Models.Polygon;
 
 namespace TMD.Services.Service
 {
     public sealed class MLPricePredict
     {
-        private int horizon = 10;
+        private int horizon = 3;
         private int horizonCnt = 1;
         public MLPricePredict()
         {
@@ -59,11 +65,11 @@ namespace TMD.Services.Service
             }
             catch (Exception)
             {
-                results.Add($"Upper Bound Price Difference", 0);
+                results.Add($"Upper Bound Price Difference Average", 0);
 
-                results.Add($"Lower Bound Price Difference", 0);
+                results.Add($"Lower Bound Price Difference Average", 0);
 
-                results.Add($"Forecast Bound Price Difference", 0);
+                results.Add($"Forecast Bound Price Difference Average", 0);
             }
 
         }
@@ -112,48 +118,210 @@ namespace TMD.Services.Service
             }
             catch (Exception)
             {
-                results.Add($"Upper Bound Price Difference", 0);
+                results.Add($"Upper Bound Price Difference Average", 0);
 
-                results.Add($"Lower Bound Price Difference", 0);
+                results.Add($"Lower Bound Price Difference Average", 0);
 
-                results.Add($"Forecast Bound Price Difference", 0);
+                results.Add($"Forecast Bound Price Difference Average", 0);
             }
         }
-        public void TestTextCategoryTrainer()
+        /// <summary>
+        /// Main Category prediction function. It trains a model using the provided categories and then creates a prediction engine that can be used
+        /// to predict the category of new items based on their text (e.g., title or description). The model is trained using a text featurization
+        /// step followed by a multiclass classification trainer. The predicted category is then mapped back to its original string value for easier
+        /// interpretation.
+        /// </summary>
+        /// <param name="categories"></param>
+        /// <returns></returns>
+        public PredictionEngine<ModelInput, ModelOutput> InitTextCategoryPredict(IEnumerable<ModelInput> categories)
         {
             // Initialize MLContext
-            var mlContext = new MLContext();
-
-            // Load your data into a strongly-typed collection
-            var reviews = new[]
+            var _mlContext = new MLContext(seed: 0)
             {
-                new { Text = "This is a bad steak", Sentiment = "Negative" },
-                new { Text = "I really like this restaurant", Sentiment = "Positive" },
-                new { Text = "The food was okay, but the service was slow", Sentiment = "Negative" },
-                new { Text = "Amazing experience, definitely coming back!", Sentiment = "Positive" }
-            };
-            var reviewsDV = mlContext.Data.LoadFromEnumerable(reviews);
+                FallbackToCpu = true,
+                GpuDeviceId = 0
+            }
+                ;
 
-            // Define your training pipeline
-            var pipeline = mlContext.Transforms.Conversion.MapValueToKey("Label", "Sentiment")
-                .Append(mlContext.MulticlassClassification.Trainers.TextClassification(/*numberOfClasses: 2,*/ sentence1ColumnName: "Text"))
-                .Append(mlContext.Transforms.Conversion.MapKeyToValue("PredictedLabel")); // Map the predicted key back to a string label
+            // 1. Load data
+            var existingCategoryData = _mlContext.Data.LoadFromEnumerable(categories/*, schema*/);
 
-            // Train the model (Fit the pipeline to the data)
-            var model = pipeline.Fit(reviewsDV);
+            // 2. Build pipeline
+
+            // var pipeline = /*_mlContext.Transforms.Conversion.MapValueToKey(outputColumnName: "PredictedLabel", inputColumnName: "Title");*/
+            ///*//.Append(*/_mlContext.Transforms.Text.FeaturizeText(inputColumnName: "Title", outputColumnName: "PredictedLabel");/*)*/
+            //.Append(_mlContext.MulticlassClassification.Trainers.SdcaMaximumEntropy("Label", "Features"))
+            //.Append(_mlContext.Transforms.Conversion.MapKeyToValue(outputColumnName: "PredictedLabel"));
+
+            //var pipeline = _mlContext.Transforms.Conversion.MapValueToKey("Label", nameof(ModelInput.SubCategoryName))
+            //    .Append(_mlContext.MulticlassClassification.Trainers.TextClassification(
+            //        labelColumnName: "Label",
+            //        sentence1ColumnName: nameof(ModelOutput.SubCategoryName)))
+            //    .Append(_mlContext.Transforms.Conversion.MapKeyToValue("PredictedLabel"));
+
+            // 1. Define the data-processing pipeline
+            //var pipeline = _mlContext.Transforms.Conversion.MapValueToKey("Label", nameof(ModelInput.KeyWords))
+            //    .Append(_mlContext.Transforms.Text.FeaturizeText("Features", nameof(ModelInput.KeyWords)))
+            var pipeline = _mlContext.Transforms.Conversion.MapValueToKey("Label", nameof(ModelInput.SubCategoryName))
+                .Append(_mlContext.Transforms.Text.FeaturizeText("Features", nameof(ModelInput.SubCategoryName)))
+                //.Append(_mlContext.MulticlassClassification.Trainers.SdcaMaximumEntropy("Label", "Features"))
+                .Append(_mlContext.MulticlassClassification.Trainers.LbfgsMaximumEntropy("Label", "Features"))
+                //.Append(_mlContext.MulticlassClassification.Trainers.LightGbm("Label", "Features")) //maybe
+                //.Append(_mlContext.MulticlassClassification.Trainers.NaiveBayes("Label", "Features"))
+                .Append(_mlContext.Transforms.Conversion.MapKeyToValue("PredictedLabel"));
+
+            var model = pipeline.Fit(existingCategoryData);
 
             // Create a prediction engine for making predictions
-            var predEngine = mlContext.Model.CreatePredictionEngine<SentimentData, SentimentPrediction>(model);
-
-            // Test the trained model with new data
-            var input = new SentimentData { Text = "The meal was fantastic!" };
-            var result = predEngine.Predict(input);
-
-            Console.WriteLine($"Text: {input.Text}");
-            Console.WriteLine($"Prediction: {result.PredictedLabel}");
-
-
+            var predEngine = _mlContext.Model.CreatePredictionEngine<ModelInput, ModelOutput>(model);
+            return predEngine;
         }
+        public void predictCategory(PredictionEngine<ModelInput, ModelOutput> predEngine, IEnumerable<ModelInput> categories, ref CJModel results) 
+        {
+            // Test the trained model with new data
+            string word = string.Empty;
+            foreach (var item in results.products.ResultList)
+            {
+                var wordArray = item?.itemListName?.Split('>');
+                if (wordArray?.Length >= 2)
+                    word = wordArray[1].Trim();
+                else
+                    word = item.title;
+                //foreach (var word in wordArray)
+                //{
+                //var input = new ModelInput { KeyWords = item.title };
+                var input = new ModelInput { SubCategoryName = word };
+                var result = predEngine.Predict(input);
+
+                Console.WriteLine($"Text: {input.SubCategoryName}");
+                Console.WriteLine($"Prediction: {result.PredictedLabel}");
+                //var category = categories.Where(x => x.KeyWords == result.PredictedLabel).FirstOrDefault();
+                var category = categories.Where(x => x.SubCategoryName == result.PredictedLabel).FirstOrDefault();
+                if (category != null)
+                {
+                    item.SubCategoryId = category.SubCategoryId;
+                    item.SubCategoryName = category.SubCategoryName;
+                }
+                //}
+            }
+        }
+        public void predictCategory(PredictionEngine<ModelInput, ModelOutput> predEngine, IEnumerable<ModelInput> categories, ref IEnumerable<RakutenModelItems> results)
+        {
+            // Test the trained model with new data
+            foreach (var item in results)
+            {
+                //var wordArray = item.productname.Split(' ');
+                //foreach (var word in wordArray)
+                //{
+                    var input = new ModelInput { SubCategoryName = item?.categories[0]?.secondary/*, Description = item.description[0]._short */ };
+                    //var input = new ModelInput { KeyWords = item.productname/*, Description = item.description[0]._short */ };
+                    //var input = new ModelInput { SubCategoryName = word/*, Description = item.description[0]._short */ };
+                    var result = predEngine.Predict(input);
+
+                    Console.WriteLine($"Text: {input.SubCategoryName}");
+                    Console.WriteLine($"Prediction: {result.PredictedLabel}");
+                    //var category = categories.Where(x => x.KeyWords == result.PredictedLabel).FirstOrDefault();
+                    var category = categories.Where(x => x.SubCategoryName == result.PredictedLabel).FirstOrDefault();
+                    if (category != null)
+                    {
+                        item.SubCategoryId = category.SubCategoryId;
+                        item.SubCategoryName = category.SubCategoryName;
+                    }
+                //}   
+            }
+        }
+        public void predictCategory(PredictionEngine<ModelInput, ModelOutput> predEngine, IEnumerable<ModelInput> categories, ref SyndicationFeed results)
+        {
+            // Test the trained model with new data
+            foreach (var item in results.Items)
+            {
+                var input = new ModelInput { KeyWords = item.Title.Text };
+                var result = predEngine.Predict(input);
+
+                Console.WriteLine($"Text: {input.SubCategoryName}");
+                Console.WriteLine($"Prediction: {result.PredictedLabel}");
+                var category = categories.Where(x => x.KeyWords == result.PredictedLabel).FirstOrDefault();
+                if (category != null)
+                {
+                    item.Categories.Add(new SyndicationCategory(category.SubCategoryName, null, category.SubCategoryId.ToString()));
+                }
+            }
+        }
+        //public void SetCategory(IEnumerable<ModelInput> categories, ref IEnumerable<RakutenModelItems> results)
+        //{
+            
+        //    foreach (var item in results)
+        //    {
+        //        var itemArray = item.productname.Split(' ');
+        //       Dictionary<string, int> categoryDict = new Dictionary<string, int>();
+        //        foreach (var category in categories)
+        //        {
+        //            foreach (var word in itemArray)
+        //            {
+
+        //                if (category.Description.Contains(word))
+        //                {
+        //                    if (categoryDict.ContainsKey(category.CategoryName))
+        //                    {
+        //                        categoryDict[category.CategoryName] += 1;
+        //                    }
+        //                    else
+        //                    {
+        //                        categoryDict.Add(category.CategoryName, 1);
+        //                    }
+        //                }
+        //            }
+        //        }
+        //        // greatest key
+        //        var maxKey = categoryDict.Values.Max(); // "number"
+        //        var selectCategory = categoryDict.Where(x => x.Value == maxKey).FirstOrDefault().Key; // "word"
+        //        var categorySelect = categories.Where(x => x.CategoryName == selectCategory).FirstOrDefault();
+        //        if (categorySelect != null)
+        //        {
+        //            item.CategoryId = categorySelect.CategoryId;
+        //            item.Category = categorySelect.CategoryName;
+        //        }
+        //    }
+        //}
+        //public void TestTextCategoryTrainer(IEnumerable<ModelInput> categories, ref CJModel results)
+        //{
+        //    // Initialize MLContext
+        //    var mlContext = new MLContext();
+
+        //    // 1. Load data
+        //    var existingCategoryData = mlContext.Data.LoadFromEnumerable(categories);
+
+        //    // 2. Build pipeline
+        //    var pipeline = mlContext.Transforms.Conversion.MapValueToKey("Label", nameof(ModelInput.CategoryName))
+        //        //.Append(mlContext.Transforms.Text.FeaturizeText("Features", nameof(ModelInput.Description)))
+        //        //.Append(mlContext.MulticlassClassification.Trainers.SdcaMaximumEntropy("Label", "Features"))
+        //        .Append(mlContext.MulticlassClassification.Trainers.TextClassification(sentence1ColumnName: nameof(ModelInput.Description)))
+        //        .Append(mlContext.Transforms.Conversion.MapKeyToValue("PredictedLabel"));
+
+        //    // Train the model (Fit the pipeline to the data)
+        //    var model = pipeline.Fit(existingCategoryData);
+
+        //    // Create a prediction engine for making predictions
+        //    var predEngine = mlContext.Model.CreatePredictionEngine<ModelInput, ModelOutput>(model);
+
+        //    // Test the trained model with new data
+        //    foreach (var item in results.products.ResultList)
+        //    {
+        //        var input = new ModelInput { Description = item.description };
+        //        var result = predEngine.Predict(input);
+
+        //        Console.WriteLine($"Text: {input.Description}");
+        //        Console.WriteLine($"Prediction: {result.Category}");
+
+        //        var category = categories.Where(x => x.CategoryName == result.Category).FirstOrDefault();
+        //        if (category != null)
+        //        {
+        //            //item.CategoryId = category.CategoryId;
+        //            item.Category = category.CategoryName;
+        //        }
+        //    }
+
+        //}
 
         //public void Calculat2(List<CandleItems> inputs, ref JsonObject results) 
         //{

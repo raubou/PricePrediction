@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Reflection;
+using System.Security.Policy;
 using System.Text;
 using System.Text.Json;
 using System.Xml.Linq;
@@ -21,10 +22,10 @@ namespace TMD.Services
     {
         private readonly IHttpClientFactory? _factory;
         private HttpClient _httpClient;
-        private readonly ILogger? _logger;
+        //private readonly ILogger? _logger;
         private readonly dynamic? _settings;
         HttpResponseMessage? results;
-        public HttpClientServices(IHttpClientFactory factory, dynamic settings, ILogger logger) {
+        public HttpClientServices(IHttpClientFactory factory, dynamic settings/*, ILogger logger*/) {
             _factory = factory;
             //_httpClient = (_factory != null) ?_factory.CreateClient() : new HttpClient();
             if(_factory == null)
@@ -35,7 +36,13 @@ namespace TMD.Services
 
                 };
 
-                _httpClient = new HttpClient(handler); 
+                _httpClient = new HttpClient(handler)
+                {
+                    //// Set the default version to 2.0
+                    //DefaultRequestVersion = HttpVersion.Version20,
+                    //// Specify if 2.0 is required or just preferred
+                    //DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower
+                };
             }
             else
             {
@@ -43,11 +50,11 @@ namespace TMD.Services
             }
 
             _settings = settings;
-            _logger = logger;
+            //_logger = logger;
             _httpClient.DefaultRequestVersion = HttpVersion.Version20;
             _httpClient.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
         }
-        public HttpClientServices(IHttpClientFactory factory, ILogger logger)
+        public HttpClientServices(IHttpClientFactory factory/*, ILogger logger*/)
         {
             _factory = factory;
             //_httpClient = (_factory != null) ?_factory.CreateClient() : new HttpClient();
@@ -59,14 +66,20 @@ namespace TMD.Services
 
                 };
 
-                _httpClient = new HttpClient(handler);
+                _httpClient = new HttpClient(handler)
+                {
+                    // Set the default version to 2.0
+                    //DefaultRequestVersion = HttpVersion.Version20,
+                    //// Specify if 2.0 is required or just preferred
+                    //DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower
+                };
             }
             else
             {
                 _httpClient = _factory.CreateClient();
             }
 
-            _logger = logger;
+            //_logger = logger;
             _httpClient.DefaultRequestVersion = HttpVersion.Version20;
             _httpClient.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
         }
@@ -146,10 +159,10 @@ namespace TMD.Services
                 return default(P);
             }
         }
-        public dynamic Get(string url)
+        public dynamic Get(string url, string path)
         {
             //_httpClient.BaseAddress = new Uri(baseUrl);
-            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url);
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url + path);
             //var request = GetAuthorization(ref _httpClient, HttpMethod.Get, url, authorization, null, "", "");
             results = _httpClient
                 .SendAsync(request).Result;
@@ -171,8 +184,8 @@ namespace TMD.Services
                     //return default(P);
                     return error;
                 }
-                error = JsonSerializer.SerializeToElement(error);
-                return error;
+                //error = JsonSerializer.SerializeToElement(error);
+                //return error;
             }
             try
             {
@@ -182,16 +195,25 @@ namespace TMD.Services
                 //P deserializedObject = (P)serializer.Deserialize(stringReader);
                 //return deserializedObject;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 //return results.Content.ReadAsStringAsync().Result;
-                return default(P);
+                //return default(P);
+                try
+                {
+                    return results.Content.ReadFromJsonAsync<P?>().Result;
+                }
+                catch (Exception)
+                {
+
+                    return default(P);
+                }
             }
         }
-        public P? GetModel(string baseUrl, string url, string authorization)
+        public P? GetModel(string baseUrl, string url, string authorization, Dictionary<string, object> additionalHeaders = null)
         {
             _httpClient.BaseAddress = new Uri(baseUrl);
-            var request = GetAuthorization(ref _httpClient, HttpMethod.Get, url, authorization, null, "", "");
+            var request = GetAuthorization(ref _httpClient, HttpMethod.Get, url, authorization, additionalHeaders, "", "");
             results = _httpClient
                 .SendAsync(request).Result;
             //.GetAsync($"{url}").Result;
@@ -210,13 +232,11 @@ namespace TMD.Services
                     error.errors.Details = results.Content.ReadAsStringAsync().Result;
                     return default(P);
                 }
-                error = JsonSerializer.SerializeToElement(error);
-                return error;
             }
             try
             {
                 //return XElement.Parse(results.Content.ReadAsStringAsync().Result);
-                XmlSerializer serializer = new XmlSerializer(typeof(EtradeAccountInfo));
+                XmlSerializer serializer = new XmlSerializer(typeof(P));
                 using var stringReader = new StringReader(results.Content.ReadAsStringAsync().Result);
                 P deserializedObject = (P)serializer.Deserialize(stringReader);
                 return deserializedObject;
@@ -227,15 +247,15 @@ namespace TMD.Services
                 return default(P);
             }
         }
-        public P Get(string url, string authorization, Dictionary<string, object> additionalHeaders)
+        public async Task<P> Get(string url, string authorization, Dictionary<string, object> additionalHeaders)
         {
             //var output = Activator.CreateInstance<P>();
             //var output = new P();
             //string baseUrl = (_settings?.Url == null) ? _settings.sandBoxURL : _settings.Url;
             _httpClient.BaseAddress = new Uri($"https://{_settings?.Url}");
             var request = GetAuthorization(ref _httpClient, HttpMethod.Get, url, authorization, additionalHeaders, "", "");
-            results = _httpClient
-                .SendAsync(request).Result;
+            results = await _httpClient
+                .SendAsync(request);
             //.GetAsync($"{url}").Result;
             if (results.StatusCode != System.Net.HttpStatusCode.OK)
             {
@@ -244,7 +264,7 @@ namespace TMD.Services
                 error.errors.StatusCode = results.StatusCode;
                 try
                 {
-                    error.errors.Details = results.Content.ReadFromJsonAsync<dynamic>().Result;
+                    error.errors.Details = await results.Content.ReadFromJsonAsync<dynamic>();
                 }
                 catch (Exception)
                 {
@@ -260,10 +280,10 @@ namespace TMD.Services
                 //}
                 //return output;
             }
-            var a = results.Content.ReadAsStringAsync().Result;
+            var a = await results.Content.ReadAsStringAsync();
             try
             {
-                var response = results.Content.ReadFromJsonAsync<P>().Result;
+                var response = await results.Content.ReadFromJsonAsync<P>();
                 return response;
             }
             catch (Exception)
@@ -310,6 +330,82 @@ namespace TMD.Services
                 return output;
             }
         }
+        public P? SendRequest(HttpMethod method, string url, string path, string payLoad, string authorization, Dictionary<string, object> additionalHeaders, string contentType)
+        {
+            _httpClient.BaseAddress = new Uri($"{url}");
+            var request = GetAuthorization(ref _httpClient, method, path, authorization, additionalHeaders, payLoad, contentType);
+            //HttpContent content = new StringContent(payLoad, Encoding.UTF8, contentType);
+            if(!string.IsNullOrEmpty(payLoad))
+                request.Content = new StringContent(payLoad,
+                                        Encoding.UTF8,
+                                        contentType);//CONTENT-TYPE header
+            results = _httpClient
+            .SendAsync(request).Result;
+            if (results.StatusCode != System.Net.HttpStatusCode.OK && results.StatusCode != HttpStatusCode.Created)
+            {
+                dynamic error = new ExpandoObject();
+                error.errors = new ExpandoObject();
+                error.errors.StatusCode = results.StatusCode;
+                try
+                {
+                    error.errors.Details = results.Content.ReadFromJsonAsync<dynamic>().Result;
+                }
+                catch (Exception)
+                {
+
+                }
+                error = JsonSerializer.SerializeToElement(error);
+                return error;
+            }
+            else
+            {
+                return results.Content.ReadFromJsonAsync<P?>().Result;
+            }
+            //if (results.StatusCode != HttpStatusCode.Created)
+            //    return results.Content.ReadFromJsonAsync<P?>().Result;
+            //else
+            //{
+            //    dynamic output = new ExpandoObject();
+            //    output.status = "Created";
+            //    return output;
+            //}
+        }
+        public P? SendRequest2(HttpMethod method, string url, string path, string payLoad, string authorization, Dictionary<string, object> additionalHeaders, string contentType)
+        {
+            _httpClient.BaseAddress = new Uri($"{url}");
+            HttpRequestMessage request = new HttpRequestMessage(method, url + path);
+            //HttpContent content = new StringContent(payLoad, Encoding.UTF8, contentType);
+            results = _httpClient
+            .SendAsync(request).Result;
+            if (results.StatusCode != System.Net.HttpStatusCode.OK && results.StatusCode != HttpStatusCode.Created)
+            {
+                dynamic error = new ExpandoObject();
+                error.errors = new ExpandoObject();
+                error.errors.StatusCode = results.StatusCode;
+                try
+                {
+                    error.errors.Details = results.Content.ReadFromJsonAsync<dynamic>().Result;
+                }
+                catch (Exception)
+                {
+
+                }
+                error = JsonSerializer.SerializeToElement(error);
+                return error;
+            }
+            else
+            {
+                return results.Content.ReadFromJsonAsync<P?>().Result;
+            }
+            //if (results.StatusCode != HttpStatusCode.Created)
+            //    return results.Content.ReadFromJsonAsync<P?>().Result;
+            //else
+            //{
+            //    dynamic output = new ExpandoObject();
+            //    output.status = "Created";
+            //    return output;
+            //}
+        }
         public P? Post(string baseUrl, string url, string payLoad, string authorization, string contentType = "application/x-www-form-urlencoded")
         {
             _httpClient.BaseAddress = new Uri(baseUrl);
@@ -355,16 +451,35 @@ namespace TMD.Services
         }
         private HttpRequestMessage GetAuthorization(ref HttpClient httpClient, HttpMethod method, string url, string authorization, Dictionary<string,object> additionalHeaders, string content, string mediaType) {
             //if (authorization != null)
-        //        httpClient.DefaultRequestHeaders.Authorization = 
-        //new AuthenticationHeaderValue("Authorization", authorization);
-        if(!string.IsNullOrEmpty(authorization))
+            //        httpClient.DefaultRequestHeaders.Authorization = 
+            //new AuthenticationHeaderValue("Authorization", authorization);
+            HttpRequestMessage request = new HttpRequestMessage(method, url);
+            if (!string.IsNullOrEmpty(authorization))
             httpClient.DefaultRequestHeaders.Add("Authorization", authorization);
             if (additionalHeaders != null) {
-                foreach (var header in additionalHeaders) { 
-                    httpClient.DefaultRequestHeaders.Add(header.Key, header.Value.ToString());
+                foreach (var header in additionalHeaders) {
+                    try
+                    {
+                        request.Headers.Add(header.Key, header.Value.ToString());
+                    }
+                    catch (Exception)
+                    {
+                        request.Headers.TryAddWithoutValidation(header.Key, header.Value.ToString());
+                    }
+                    try
+                    {
+                        httpClient.DefaultRequestHeaders.Add(header.Key, header.Value.ToString());
+                    }
+                    catch (Exception)
+                    {
+                        httpClient.DefaultRequestHeaders.TryAddWithoutValidation(header.Key, header.Value.ToString());
+                    }
+
                 }
             }
-            HttpRequestMessage request = new HttpRequestMessage(method, url);
+            //request.Headers.Host = "www.bartergora.com";
+            //httpClient.DefaultRequestHeaders.Host = "www.bartergora.com";
+
             if (content != null && method == HttpMethod.Post)
             {
                 request.Content = new StringContent(content,

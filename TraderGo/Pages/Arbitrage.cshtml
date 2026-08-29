@@ -1,15 +1,59 @@
 ﻿@page
 @using System.Text.Json
-@model TraderGo.Pages.AccountInfoModel
+@model TraderGo.Pages.ArbitrageModel
 @{
     ViewData["Title"] = "Tradergo.com - Arbitrage Info";
+    int stockCnt = 1;
+    string textColor = string.Empty;
 }
 <h4 style="color:#006699;">Arbitrage Info</h4>
-    <div class="row">
-        <div class="col">
-            @await Html.PartialAsync("~/Pages/Partial/_StockMenu.cshtml")
-        </div>
+<div class="row">
+    <div class="col">
+        @await Html.PartialAsync("~/Pages/Partial/_StockMenu.cshtml")
     </div>
-    <div class="border border-1 border-primary rounded-3 overflow-hidden w-100 h-75 p-2 m-2">
-        <h6 style="color:#006699;">SPOT Products</h6>
-        </div>
+</div>
+<div class="border border-1 border-primary rounded-3 overflow-hidden w-100 h-75 p-2 m-2">
+    <h6 style="color:#006699;">Movers</h6>
+</div>
+<div class="row fw-bold bg-info text-light p-0" style="font-size: 11px;">
+    <div class="col border border-1 border-light text-center">&nbsp;</div>
+    <div class='col border border-1 border-light text-center'>Symbol</div>
+    <div class='col border border-1 border-light text-center'>Name</div>
+    <div class='col border border-1 border-light text-center'>Exchange</div>
+    <div class='col border border-1 border-light text-center'>Last Price</div>
+    <div class='col border border-1 border-light text-center'>Last Open</div>
+    <div class='col border border-1 border-light text-center'>Last Close</div>
+    <div class='col border border-1 border-light text-center'>Last Change</div>
+    <div class='col border border-1 border-light text-center'>Last Change Percent</div>
+    <div class='col border border-1 border-light text-center'>Percent Higher</div>
+    <div class='col border border-1 border-light text-center'>Percent Lower</div>
+    <div class='col border border-1 border-light text-center'>Short Count</div>
+    <div class='col border border-1 border-light text-center'>Long Count</div>
+</div>
+@foreach (var item in Model?.movers)
+{
+    if (item == null) { continue; }
+    if (Convert.ToDecimal(item["lastopChange"].ToString()) < 0){
+        textColor = "text-danger";
+    }
+    else
+    {
+        textColor = "text-success";
+    }
+    <div class="row p-0" style="font-size:11px;">
+        <div class="col border border-1 border-info">@stockCnt</div>
+        <div class='col border border-1 border-info'><a rel="canonical" href="javascript:objContext.GetQuote('@item["Symbol"].ToString()','')" style="color:#006699;text-decoration:none;">@item["Symbol"].ToString()</a></div>
+        <div class='col border border-1 border-info'>@item["Name"].ToString()</div>
+        <div class='col border border-1 border-info'>@item["Exchange"].ToString()</div>
+        <div class='col border border-1 border-info'>$@Math.Round(Convert.ToDecimal(item["lastPrice"].ToString()), 2)</div>
+        <div class='col border border-1 border-info'>$@Math.Round(Convert.ToDecimal(item["lastOpen"].ToString()), 2)</div>
+        <div class='col border border-1 border-info'>$@Math.Round(Convert.ToDecimal(item["lastClose"].ToString()), 2)</div>
+        <div class='col border border-1 border-info @textColor'>$@Math.Round(Convert.ToDecimal(item["lastopChange"].ToString()), 2)</div>
+        <div class='col border border-1 border-info @textColor'>%@Math.Round(Convert.ToDecimal(item["lastopChangePercent"].ToString()), 2)</div>
+        <div class='col border border-1 border-info'>%@Math.Round(Convert.ToDecimal(item["PercentHigher"].ToString()), 2)</div>
+        <div class='col border border-1 border-info'>%@Math.Round(Convert.ToDecimal(item["PercentLower"].ToString()), 2)</div>
+        <div class='col border border-1 border-info'>@item["shortCnt"].ToString()</div>
+        <div class='col border border-1 border-info'>@item["longCnt"].ToString()</div>
+    </div>
+    ++stockCnt;
+}

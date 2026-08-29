@@ -1,15 +1,16 @@
 ﻿using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Options;
 using System.Dynamic;
-using System.Text.Json.Serialization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using TMD.Database.Connect.Managers;
 using TMD.Services.Service;
 using TMDInvestments.Context;
 using TMDInvestments.Models;
 using TMDInvestments.Services;
-using TMD.PricePrediction;
 
 
 namespace TraderGo.Controllers
@@ -33,7 +34,10 @@ namespace TraderGo.Controllers
         TraderGoService _traderGoService;
         HttpClient _client;
         TmdContext ctx = null;
-        public TraderGoAPIController(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<FinnHub> finnHub, IOptions<Polygon> polycon, IHttpClientFactory? httpClientFactory, ILogger<TraderGoAPIController> logger, IOptions<SchwabSettings> settings)
+        IDbContextFactory<TmdContext> _contextFactory;
+
+
+        public TraderGoAPIController(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<FinnHub> finnHub, IOptions<Polygon> polycon, IHttpClientFactory? httpClientFactory, ILogger<TraderGoAPIController> logger, IOptions<SchwabSettings> settings, IDbContextFactory<TmdContext> contextFactory)
         {
             _connectionSettings = connectionSettings;
             _connectionSettings2 = connectionSettings2;
@@ -42,9 +46,10 @@ namespace TraderGo.Controllers
             _logger = logger;
             _settings = settings.Value;
             _factory = httpClientFactory;
+            _contextFactory = contextFactory;
             //_client = _httpClientFactory.CreateClient();
             //_client = httpClientFactory?.CreateClient();
-            _traderGoService = new TraderGoService(null, _logger, httpClientFactory, false);
+            _traderGoService = new TraderGoService(null, _logger, httpClientFactory, false, contextFactory);
         }
         [HttpGet("Init")]
         public string Init()
@@ -203,22 +208,22 @@ namespace TraderGo.Controllers
         [HttpGet, Route("SearchSchwab/{name}")]
         public IActionResult SearchSchwab(string name)
         {
-            services = new SchwabServices(_logger, _settings, _factory);
+            services = new SchwabServices(_logger, _settings, _factory, _contextFactory);
             var results = services.Search(name.ToUpper());
             return Ok(results);
         }
         [HttpGet, Route("GetQuote/{symbol}")]
-        public IActionResult GetQuote(string symbol)
+        public async Task<IActionResult> GetQuote(string symbol)
         {
-            services = new SchwabServices(_logger, _settings, _factory);
-            var results = services.GetQuote(symbol, true);
-            System.Threading.Thread.Sleep(250);
+            services = new SchwabServices(_logger, _settings, _factory, _contextFactory);
+            var results = await services.GetQuoteAsync(symbol, true);
+           //System.Threading.Thread.Sleep(250);
             return Ok(results);
         }
         [HttpGet, Route("GetPriceHistory/{symbol}/{periodType}/{period}/{frequencyType}/{frequency}/{startDate}/{endDate}")]
         public IActionResult GetPriceHistory(string symbol, string periodType, string period, string frequencyType, int frequency, DateTime startDate, DateTime endDate)
         {
-            services = new SchwabServices(_logger, _settings, _factory);
+            services = new SchwabServices(_logger, _settings, _factory, _contextFactory);
             var results = services.GetPriceHistory(symbol, periodType, period, frequencyType, frequency, startDate, endDate);
             //var elfenreponce = System.Text.Json.JsonSerializer.Deserialize(results);
             return Ok(results);
@@ -226,7 +231,7 @@ namespace TraderGo.Controllers
         [HttpGet, Route("GetPriceHistory/{symbol}/{periodType}/{period}/{frequencyType}/{frequency}")]
         public IActionResult GetPriceHistory(string symbol, string periodType, string period, string frequencyType, int frequency)
         {
-            services = new SchwabServices(_logger, _settings, _factory);
+            services = new SchwabServices(_logger, _settings, _factory, _contextFactory);
             var results = services.GetPriceHistory(symbol, periodType, period, frequencyType, frequency, null, null);
             //var elfenreponce = System.Text.Json.JsonSerializer.Deserialize(results);
             return Ok(results);

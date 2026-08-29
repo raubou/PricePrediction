@@ -4,6 +4,8 @@ using Microsoft.Extensions.Options;
 using TMD.Database.Connect.Managers;
 using TMD.Services.Service;
 using TMDInvestments.Models;
+using TMDInvestments.Context;
+using Microsoft.EntityFrameworkCore;
 
 namespace TraderGo.Pages
 {
@@ -16,12 +18,12 @@ namespace TraderGo.Pages
         [BindProperty] public List<CryptoList>? CryptoLists { get; set; }
         [BindProperty] public CryptoList? CryptoList { get; set; } = new CryptoList();
         [BindProperty] public int Total { get; set; }
-        public CryptoListModel(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<MailSettings> mailSettings, IHttpClientFactory _factory, ILogger<StockListModel> logger) //: base(connectionSettings, connectionSettings2, mailSettings)
+        public CryptoListModel(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<MailSettings> mailSettings, IHttpClientFactory _factory, ILogger<StockListModel> logger, IDbContextFactory<TmdContext> contextFactory) //: base(connectionSettings, connectionSettings2, mailSettings)
         {
             _logger = logger;
             //_httpClient = _factory.CreateClient();
             _mgr = new Manager(connectionSettings?.Value?.Connection, "", null);
-            _traderGoService = new TraderGoService(null, _logger, _factory, false);
+            _traderGoService = new TraderGoService(null, _logger, _factory, false, contextFactory);
         }
         public override IActionResult Execute()
         {

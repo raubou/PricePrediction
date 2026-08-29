@@ -7,6 +7,7 @@ using TMD.Services;
 using TMD.Services.Service;
 using TMDInvestments.Context;
 using TMDInvestments.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace TraderGo.Pages
 {
@@ -20,13 +21,14 @@ namespace TraderGo.Pages
         RequestTokenInfo tokenInfo;
         TmdContext ctx;
         AuthenicationHelper authenicationHelper = null;
-        public EtradeAPICallBackModel(ILogger<IndexModel> logger, IOptions<ETradeSettings> settings, IHttpClientFactory factory)
+        public EtradeAPICallBackModel(ILogger<IndexModel> logger, IOptions<ETradeSettings> settings, IHttpClientFactory factory, IDbContextFactory<TmdContext> contextFactory)
         {
             _logger = logger;
             _settings = settings.Value;
             _factory = factory;
             ctx = new TmdContext();
             authenicationHelper = new AuthenicationHelper();
+            services = new ETradeService(_logger, _settings, _factory, contextFactory);
         }
         public async Task<IActionResult> OnGet()
         {
@@ -38,7 +40,6 @@ namespace TraderGo.Pages
             }
             var RequestToken = HttpContext.Session.GetString("RequestToken");
             var RequestTokenSecret = HttpContext.Session.GetString("RequestTokenSecret");
-            services = new ETradeService(_logger, _settings, _factory);
             tokenInfo = new RequestTokenInfo() { RequestToken = Uri.UnescapeDataString(RequestToken),RequestTokenSecret = Uri.UnescapeDataString(RequestTokenSecret) };
             var accessToken = services.GetAuthorizationToken(tokenInfo, code).Result;
             if (accessToken.AccessToken != null)

@@ -17,6 +17,7 @@ using System.Text;
 using MongoDB.Driver.Core.Operations;
 using TMDInvestments.Models.Models.Polygon;
 using TMDInvestments.Models.Models.FInhub;
+using System.Linq;
 
 namespace TMD.Database.Connect.Managers
 {
@@ -451,31 +452,36 @@ namespace TMD.Database.Connect.Managers
             return IPOs;
         }
 
-        public List<dynamic> GetEarnings()
+        public IEnumerable<DataRow> GetEarnings(ref int Total)
         {
-            List<dynamic> Earnings = new List<dynamic>();
-            dynamic Earning;
+            IEnumerable<DataRow> Earnings = null;// = new IQueryable<dynamic>();
+            //dynamic Earning;
             _con = new SqlConnection(_connectionString); _con.Open();
             _repository = new Repository(_con, _log);
             var results = _repository.GetData("[dbo].[GetEarnings]");
-            if (results != null && results.Tables["Results"] != null && results.Tables["Results"].Rows.Count > 0)
-                foreach (DataRow row in results.Tables["Results"].Rows)
-                {
-                    Earning = new ExpandoObject();
-                    Earning.date = row["date"];
-                    Earning.epsActual = row["epsActual"];
-                    Earning.epsEstimate = row["epsEstimate"];
-                    Earning.hour = row["hour"];
-                    Earning.quarter = row["quarter"];
-                    Earning.revenueActual = row["revenueActual"];
-                    Earning.revenueEstimate = row["revenueEstimate"];
-                    Earning.symbol = row["symbol"];
-                    Earning.name = row["name"];
-                    Earning.year = row["year"];
-                    Earning.datecreated = row["datecreated"];
-                    Earning.LastEarningDate = row["LastEarningDate"];
-                    Earnings.Add(Earning);
-                }
+            //if (results != null && results.Tables["Results"] != null && results.Tables["Results"].Rows.Count > 0)
+            Total = results.Tables["Results"].Rows.Count;
+            //Earnings = results.Tables["Results"].Rows.AsQueryable();//.Rows.GetEnumerator()
+            Earnings = results.Tables["Results"].AsEnumerable();//.AsQueryable();
+            //IEnumerable<DataRow> rows = results.Tables["Results"].AsEnumerable();
+            //var caca = results.Tables["Results"].Rows.Cast<DataRow>().Select(dr => dr[0]);
+            //foreach (DataRow row in results.Tables["Results"].Rows)
+            //{
+            //    Earning = new ExpandoObject();
+            //    Earning.date = row["date"];
+            //    Earning.epsActual = row["epsActual"];
+            //    Earning.epsEstimate = row["epsEstimate"];
+            //    Earning.hour = row["hour"];
+            //    Earning.quarter = row["quarter"];
+            //    Earning.revenueActual = row["revenueActual"];
+            //    Earning.revenueEstimate = row["revenueEstimate"];
+            //    Earning.symbol = row["symbol"];
+            //    Earning.name = row["name"];
+            //    Earning.year = row["year"];
+            //    Earning.datecreated = row["datecreated"];
+            //    Earning.LastEarningDate = row["LastEarningDate"];
+            //    Earnings.Add(Earning);
+            //}
             return Earnings;
         }
 

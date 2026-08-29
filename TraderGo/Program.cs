@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Configuration;
 using System.Text.Json.Serialization;
+using TMDInvestments.Context;
 using TMDInvestments.Models;
 using static Org.BouncyCastle.Math.EC.ECCurve;
 
@@ -89,6 +91,8 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration = true;
 });
 
+builder.Services.AddDbContextFactory<TmdContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetSection("ConnectionStrings").GetSection("connection").Value));
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

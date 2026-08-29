@@ -1,146 +1,108 @@
+using GraphQLParser;
+using log4net.Repository.Hierarchy;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
+using Microsoft.Extensions.Options;
+using Newtonsoft.Json.Linq;
 using TMD.PricePrediction;
 using TMD.PricePrediction.Classes;
 using TMD.Services.Service;
+using TMDInvestments.Context;
 using TMDInvestments.Models;
 
 namespace TMD.EquitiesPrediction.Service
 {
     public class Worker : BackgroundService
     {
-        private readonly ILogger<Worker> _logger;
-
-        public Worker(ILogger<Worker> logger)
+        private readonly ILogger<Worker>? _logger;
+        private readonly KalshiSettings? _kalshiSettings;
+        private readonly IHttpClientFactory? _httpClientFactory;
+        private IDbContextFactory<TmdContext>? _contextFactory;
+        CoinBaseSettings? _coinBaseSettings;
+        ExecKalshiPricePrediction? execKalshiPricePrediction = null;
+        KalshiBalanceAndBuy kalshiBalanceAndBuy = null;
+        Helper? _helper = null;
+        Task? task1 = null;
+        TmdContext? ctx = null;
+        public Worker(IOptions<KalshiSettings> kalshiSettings, IOptions<CoinBaseSettings> coinBaseSettings, IHttpClientFactory httpClientFactory, IDbContextFactory<TmdContext> contextFactory, ILogger<Worker> logger)
         {
             _logger = logger;
+            _httpClientFactory = httpClientFactory;
+            _kalshiSettings = kalshiSettings.Value;
+            _coinBaseSettings = coinBaseSettings.Value;
+            _contextFactory = contextFactory;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            Helper.Log(_logger, LogLevel.Information, "Technical Analysis! Version " + GetAssemblyVersion());
+            kalshiBalanceAndBuy = new KalshiBalanceAndBuy(_logger, _httpClientFactory, _contextFactory);
+            var context = await _contextFactory.CreateDbContextAsync();
+                                                                       
+            ctx = context;
+            //task1 = new Task(() =>
+            //{
+
+            //    kalshiBalanceAndBuy.Exec(stoppingToken);
+
+            //}, stoppingToken, TaskCreationOptions.LongRunning);
+            //Task.Run(() => task1.Start());
+            _helper = new Helper(_logger, null, null, null, _contextFactory);
+            execKalshiPricePrediction = new ExecKalshiPricePrediction(_logger, _coinBaseSettings, _httpClientFactory, _helper, _contextFactory);
+            KalshiBalanceAndBuy(stoppingToken);
+
             while (!stoppingToken.IsCancellationRequested)
             {
-                if (_logger.IsEnabled(LogLevel.Information))
+                try
                 {
+
+                    //if (_logger.IsEnabled(LogLevel.None))
+                    //{
                     _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-                    Start();
+
+
+
+
+                    execKalshiPricePrediction.Exec(stoppingToken);
+                    //execKalshiPricePrediction = null;
+                    //_helper = null;
+                    //}
+                    await Task.Delay(250, stoppingToken);
+                    if (task1.Status == TaskStatus.RanToCompletion || task1.Status == TaskStatus.Faulted || task1.Status == TaskStatus.Canceled)
+                    {
+                        KalshiBalanceAndBuy(stoppingToken);
+                    }
                 }
-                await Task.Delay(1000, stoppingToken);
+                catch (Exception ex)
+                {
+                    Helper.Log(_logger, LogLevel.Error, $"Source: {ex.Source} stack trace: {ex.StackTrace} inner exception {ex?.InnerException?.Message ?? ""} error: {ex.Message}");
+                }
             }
+
         }
-        void Start()
+        private void KalshiBalanceAndBuy(CancellationToken token)
         {
-            //Console.WriteLine("Loading Account Info, StockkList, IPO's, and Earnings");
-            var builder = new ConfigurationBuilder();
-            builder.SetBasePath(Directory.GetCurrentDirectory())
-                   .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
-
-            IConfiguration config = builder.Build();
-
-            var ConnectionStrings = config.GetSection("ConnectionStrings").Get<ConnectionSettings>();
-            var MailSettings = config.GetSection("MailSettings").Get<MailSettings>();
-            var FinnHub = config.GetSection("finnhub").Get<FinnHub>();
-            var Polygon = config.GetSection("polygon").Get<Polygon>();
-            var SchwabSettings = config.GetSection("SchwabAPI").Get<SchwabSettings>();
-            var CoinBaseSettings = config.GetSection("CoinBase").Get<CoinBaseSettings>();
-            var ETadeSettings = config.GetSection("ETradeAPI").Get<ETradeSettings>();
-            var TaAPISettings = config.GetSection("TaApi").Get<TaAPISettings>();
-            var yfapiSettings = config.GetSection("yfapi").Get<yfapiSettings>();
-
-            var loggerFactory = LoggerFactory.Create(builder =>
+            task1 = new Task(() =>
             {
-                builder.AddConsole();
-                //builder.AddDebugOutput();
-                builder.SetMinimumLevel(LogLevel.Trace);
-            }
-            );
-
-            var logger = loggerFactory.CreateLogger("Price Prediction");
-            Versioning versioning = new Versioning();
-
-            //var serviceProvider = new ServiceCollection().AddHttpClient().BuildServiceProvider();
-            //var httpClientFactory = serviceProvider.GetService<IHttpClientFactory>();
-
-            var client = new ServiceCollection().AddHttpClient("TMD")
-        .UseSocketsHttpHandler((handler, _) =>
-            handler.PooledConnectionLifetime = TimeSpan.FromMinutes(7)) // Recreate connection every 2 minutes
-        .SetHandlerLifetime(Timeout.InfiniteTimeSpan); // Disable rotation, as it is handled by PooledConnectionLifetime
-            var serviceProvider = client.Services.BuildServiceProvider();
-            var httpClientFactory = serviceProvider.GetService<IHttpClientFactory>();
-
-            ExecStockPricePredictionSchwab? exec1 = null;
-            ExecStockPricePredictionETrade? exec3 = null;
-            ExecCryptoPricePrediction? exec2 = null;
-            Helper? helper = null;
-            List<BuySellCommodity>? BuySellStockList = new List<BuySellCommodity>();
-            decimal totalAvailiableforLongTradeSchwab = 0m;
-            decimal totalAvailiableforLongTradeETrade = 0m;
-            do
-            {
-                logger.LogInformation("Technical Analysis! Version " + versioning.GetAssemblyVersion());
-                logger.LogInformation($"Run Time {DateTime.Now}");
-                exec1 = new ExecStockPricePredictionSchwab(logger, SchwabSettings, TaAPISettings, httpClientFactory);
-                exec3 = new ExecStockPricePredictionETrade(logger, ETadeSettings, SchwabSettings, httpClientFactory);
-                exec2 = new ExecCryptoPricePrediction(logger, CoinBaseSettings, TaAPISettings, httpClientFactory);
-                helper = new Helper(logger, SchwabSettings, ETadeSettings, yfapiSettings, httpClientFactory);
-                try
-                {
-                    //if (helper.IsNotHolidayorWeekend())
-                    //{
-                    //helper.UnloadAgingStocks();
-                    //helper.CheckSchwabOrderStatus(ref totalAvailiableforLongTradeSchwab);
-                    //helper.CheckETradeOrderStatus(ref totalAvailiableforLongTradeETrade);
-
-                    //    if (totalAvailiableforLongTradeSchwab > 100 || totalAvailiableforLongTradeETrade > 100)
-                    //BuySellStockList = helper.GetQuoteList();
-
-                    //    if (totalAvailiableforLongTradeSchwab > 100)
-                    //exec1.Exec(totalAvailiableforLongTradeSchwab, ref BuySellStockList);
-                    //    else
-                    //        logger.LogInformation($"Not enough buying power in Schwab account to make a trade. ${totalAvailiableforLongTradeSchwab}");
-                    //}
-                    //else
-                    //{
-                    //    logger.LogError("Time is outside of trading window.");
-                    //    goto ExecCrypto;
-                    //}
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError($"Source: {ex.Source} stack trace: {ex.StackTrace} inner exception {ex?.InnerException?.Message ?? ""} error: {ex.Message}");
-                }
-                try
-                {
-                    //if (totalAvailiableforLongTradeETrade > 100)
-                    //exec3.Exec(totalAvailiableforLongTradeETrade, ref BuySellStockList);
-                    //else
-                    //    logger.LogInformation($"Not enough buying power in ETrade account to make a trade. ${totalAvailiableforLongTradeETrade}");
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError($"Source: {ex.Source} stack trace: {ex.StackTrace} inner exception {ex?.InnerException?.Message ?? ""} error: {ex.Message}");
-                }
-            ExecCrypto:
-                try
-                {
-                    exec2.Exec();
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError($"Source: {ex.Source} stack trace: {ex.StackTrace} inner exception {ex?.InnerException?.Message ?? ""} error: {ex.Message}");
-                }
-                logger.LogInformation($"Stop Time {DateTime.Now}");
-                exec1 = null;
-                exec2 = null;
-                exec3 = null;
-                System.Threading.Thread.Sleep(300000); //five minutes
-            } while (true);
-
+                kalshiBalanceAndBuy.Exec(token);
+            }, token, TaskCreationOptions.LongRunning);
+            task1.Start();
         }
-    }
-    public class Versioning
-    {
-        public string GetAssemblyVersion()
+        private string GetAssemblyVersion()
         {
             return GetType().Assembly.GetName().Version.ToString();
         }
+        ~Worker()
+        {
+            execKalshiPricePrediction = null;
+            kalshiBalanceAndBuy = null;
+            _helper = null;
+            task1 = null;
+            ctx.Dispose();
+            ctx = null;
+            _contextFactory = null;
+        }
     }
+
 }
+

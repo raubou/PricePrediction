@@ -20,7 +20,7 @@ namespace TMDInvestments.Models
         public bool isClosingOnlyRestricted { get; set; }
         public bool pfcbFlag { get; set; }
         public List<Positions> Positions { get; set; }
-        public InitialBalances InitialBalances { get; set; }
+        public CurrentBalances currentBalances { get; set; }
     }
     public sealed class Positions
     {
@@ -52,7 +52,7 @@ namespace TMDInvestments.Models
         public decimal netChange { get; set; }
     }
 
-    public sealed class InitialBalances
+    public sealed class CurrentBalances
     {
         public decimal accruedInterest { get; set; }
         public decimal availableFundsNonMarginableTrade { get; set; }

@@ -4,16 +4,19 @@ using GraphQL.Client.Serializer.Newtonsoft;
 using log4net;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using NewsAggregator.models.returnModel;
 using Newtonsoft.Json.Linq;
 using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Dynamic;
+using System.Net.Http;
 using System.Text;
+using System.Text.Json.Nodes;
 using System.Xml.Linq;
-using TMDInvestments.PricePrediction.Helpers;
 using TMD.Database.Connect.Managers;
 using TMDInvestments.Models;
+using TMDInvestments.PricePrediction.Helpers;
 using WikiNews2._0.helpers;
 
 namespace TMD.Services
@@ -38,6 +41,67 @@ namespace TMD.Services
         //private static SqlConnection? _connection;
         string? conn = string.Empty;
         string? mongoConn = string.Empty;
+        //HttpClient? _httpClient;
+        public CommissionJunctionService(ILogger log, IHttpClientFactory factory, bool isAzureFunction)
+        {
+            _log = log;
+            //_client = client;
+            timer = new Stopwatch();
+            if (!isAzureFunction)
+            {
+                IConfigurationBuilder builder = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json");
+                IConfigurationRoot configuration = builder.Build();
+                CommissionJunctionAPI = configuration.GetSection("CommissionJunction");
+                MongoDb = configuration.GetSection("Mondodb");
+                connection = configuration.GetSection("ConnectionStrings");
+                if (CommissionJunctionAPI != null)
+                {
+                    //_baseUrl = CommissionJunctionAPI.GetSection("baseUrl").Value;
+                    _baseGraphUrl = CommissionJunctionAPI.GetSection("baseGraphUrl").Value;
+                    _token = CommissionJunctionAPI.GetSection("token").Value;
+                    _affiliateid = CommissionJunctionAPI.GetSection("affiliateId").Value;
+                    _websiteId = CommissionJunctionAPI.GetSection("websiteId").Value;
+                    _merchantUrl = CommissionJunctionAPI.GetSection("merchantUrl").Value;
+                    //conn = connection.GetSection("connection").Value;
+                    //mongoConn = MongoDb.GetSection("connection").Value;
+                }
+                if (connection != null)
+                    conn = connection.GetSection("connection").Value;
+                if (mongoConn != null)
+                    mongoConn = MongoDb.GetSection("connection").Value;
+                //manager = new Manager(connection.GetSection("connection").Value, MongoDb.GetSection("connection").Value, _log);
+            }
+            else
+            {
+                //_baseUrl = Environment.GetEnvironmentVariable("CommissionJunctionBaseUrl");
+                _baseGraphUrl = Environment.GetEnvironmentVariable("CommissionJunctionBaseGraphUrl");
+                _token = Environment.GetEnvironmentVariable("CommissionJunctionToken");
+                _affiliateid = Environment.GetEnvironmentVariable("CommissionJunctionAffiliateId");
+                _websiteId = Environment.GetEnvironmentVariable("CommissionJunctionWebsiteId");
+                _merchantUrl = Environment.GetEnvironmentVariable("CommissionJunctionMerchantUrl");
+                conn = Environment.GetEnvironmentVariable("ConnectionString");
+                mongoConn = Environment.GetEnvironmentVariable("MondodbConnection");
+                //manager = new Manager(Environment.GetEnvironmentVariable("ConnectionString"), Environment.GetEnvironmentVariable("MondodbConnection"), _log);
+            }
+            //_connection = new SqlConnection(conn);
+            //_connection.Open();
+            if (factory == null)
+            {
+                var handler = new SocketsHttpHandler
+                {
+                    PooledConnectionLifetime = TimeSpan.FromMinutes(7), // Recreate every 15 minutes
+
+                };
+
+                _client = new HttpClient(handler);
+            }
+            else
+            {
+                _client = factory.CreateClient();
+            }
+            manager = new Manager(conn, mongoConn, _log);
+        }
         public CommissionJunctionService(ILogger log, HttpClient client, bool isAzureFunction)
         {
             _log = log;
@@ -130,25 +194,28 @@ namespace TMD.Services
         //    _client = client;
         //}
 
-        public dynamic GetProductsGraphQL(List<Category> categories)
+        public CJModel GetProductsGraphQL(/*List<Category> categories*/)
         {
             timer.Start();
             //GetSettings(client);
             RssModel rss;// = new RssModel() { title = "CJ", source = 4848};
-            dynamic results;
+            CJModel results = new CJModel();
             char quote = '"';
             var request = new GraphQLRequest
             {
                 //Query = @"{products(companyId:" + _affiliateid + ",partnerStatus:JOINED,limit:10000){resultList{advertiserId,advertiserName,catalogId,id,title,description,price{amount,currency}linkCode(pid:" + _websiteId +"){clickUrl,imageUrl,html{LinkType:image}}}}}"
-                Query = @"{products(companyId:" + _affiliateid + ",partnerStatus:JOINED,limit:10000){resultList{advertiserId,advertiserName,catalogId,id,title,description,price{amount,currency}linkCode(pid:" + _websiteId + "){clickUrl }}}}"
+                Query = @"{products(companyId:" + _affiliateid + ",partnerStatus:JOINED,limit:10000){resultList{advertiserId,advertiserName,advertiserCountry,catalogId,id,title,description,brand,itemListName,customLabel0,customLabel1,customLabel2,customLabel3,customLabel4,price{amount,currency},salePrice{amount,currency},sourceFeedType,linkCode(pid:" + _websiteId + "){clickUrl,imageUrl }}}}"
                 //Query = @"{products(companyId:" + _affiliateid + ",partnerStatus:JOINED,limit:10000){resultList{advertiserId,advertiserName,catalogId,id,title,description,price{amount,currency}linkCode{clickUrl }}}}"
                 //Query = @"{ products(companyId:" + quote + _affiliateid + quote + ") {resultList { advertiserId, catalogId, id, title, description, price {amount,currency} linkCode(pid: " + quote + _websiteId + quote + ") {clickUrl } } } }"
             };
 
             var graphQLClient = new GraphQLHttpClient(_baseGraphUrl, new NewtonsoftJsonSerializer());
             graphQLClient.HttpClient.DefaultRequestHeaders.Add("Authorization", "bearer " + _token);
-            results = graphQLClient.SendQueryAsync<dynamic>(request).Result;
-
+            results = graphQLClient.SendQueryAsync<CJModel>(request).Result.Data;
+            //var results2 = graphQLClient.SendQueryAsync<JsonObject>(request).Result.Data;
+            var itemListName = results.products.ResultList.Where(x => x.itemListName != null).ToList();
+            var customFields = results.products.ResultList.Where(x => x.customLabel0 != null || x.customLabel1 != null || x.customLabel2 != null || x.customLabel3 != null || x.customLabel4 != null).ToList();
+            var brands = results.products.ResultList.Where(x => (x.brand != null && x.brand != "" && x.brand != "not specified")).ToList();
             //_log.LogInformation($"Total Products for CJ {results.Data.products.resultList.Count}");
             //rss = LoadGraphProduct(categories, results.Data, _log);
             //_log.LogInformation("Total Commision Junction verified to save: " + rss.items.Count());

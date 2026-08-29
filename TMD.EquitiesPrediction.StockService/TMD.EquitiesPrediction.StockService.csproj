@@ -4,16 +4,13 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <InvariantGlobalization>true</InvariantGlobalization>
-    <PublishAot>true</PublishAot>
-    <UserSecretsId>dotnet-TMD.EquitiesPrediction.Service-6d26d9d7-518a-4103-b5da-092b6943a9fc</UserSecretsId>
-	  <Version>2.6.6.9</Version>
+    <UserSecretsId>dotnet-TMD.EquitiesPrediction.StockService-79a5d95d-60f0-40c7-aec8-bceb45c15080</UserSecretsId>
+	<Version>2.7.9.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.12" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.19" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.19" />
   </ItemGroup>
 
   <ItemGroup>

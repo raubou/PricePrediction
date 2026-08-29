@@ -25,7 +25,7 @@ namespace TMDInvestments.Models
         [XmlElement("productname")]
         public string productname { get; set; }
         [XmlElement("category")]
-        public List<RakutenModelCategory> category = new List<RakutenModelCategory>();
+        public List<RakutenModelCategory> categories = new List<RakutenModelCategory>();
         [XmlElement("price")]
         public string price { get; set; }
         [XmlElement("saleprice")]
@@ -40,5 +40,8 @@ namespace TMDInvestments.Models
         public string linkurl { get; set; }
         [XmlElement("imageurl")]
         public string imageurl { get; set; }
+
+        public int? SubCategoryId { get; set; }
+        public string? SubCategoryName { get; set; }
     }
 }

@@ -1,21 +1,34 @@
-﻿using Coinbase.AdvancedTrade.Enums;
+﻿using Bartergora2._0.Models;
+using Coinbase.AdvancedTrade.Enums;
+using Coinbase.AdvancedTrade.Models;
+using Coinbase.AdvancedTrade.Models.Public;
+using HtmlAgilityPack;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML;
-using Microsoft.ML.TorchSharp;
 using MongoDB.Driver;
+using NewsAggregator.models.returnModel;
+using System.Diagnostics;
 using System.Globalization;
-using System.Net.Http;
+using System.ServiceModel.Syndication;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using System.Xml.Linq;
 using TMD.Database.Connect.Managers;
+using TMD.PricePrediction;
 using TMD.Services;
 using TMD.Services.Service;
 using TMDInvestments.Context;
 using TMDInvestments.Models;
+using TMDInvestments.Models.Models.Commerce;
 using TMDInvestments.Models.Models.Polygon;
 using TMDInvestments.Services;
+using static Microsoft.ML.Data.SchemaDefinition;
+using static MongoDB.Driver.WriteConcern;
+
 
 namespace PricePredictionTest
 {
@@ -26,6 +39,7 @@ namespace PricePredictionTest
         CoinBaseSettings? _settings;
         CoinBaseService services = null;
         TmdContext ctx = null;
+        BartergoraDBContext ctx2 = null;
         SchwabServices SchwabService = null;
         SchwabSettings? _settings2;
         TaAPISettings? _taApiSettings;
@@ -36,22 +50,31 @@ namespace PricePredictionTest
         yfapiSettings? yfapiSettings = null;
         StackCommerceService? stackCommerceService = null;
         RakutenService? rakutenService = null;
+        CommissionJunctionService? commissionJunctionService = null;
         TraderGoService _traderGoService = null;
         Manager manager = null;
         MailSettings mailSettings = null;
         MLPricePredict ml = null;
-
+        BartergoraDataLoadService bartergoraDataLoadService = null;
+        DataMuseService dataMuseService = null;
+        //KalshiService kalshiService = null;
+        Helper helper = null;
+        RulesEngine settings = null;
+        public UnitTest()
+        {
+        }
         [TestInitialize]
         public void GetSettings()
         {
             ctx = new TmdContext();
+            ctx2 = new BartergoraDBContext();
             var builder = new ConfigurationBuilder();
             builder.SetBasePath(Directory.GetCurrentDirectory())
                    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 
             IConfiguration config = builder.Build();
 
-            //var ConnectionStrings = config.GetSection("ConnectionStrings").Get<ConnectionSettings>();
+            var ConnectionStrings = config.GetSection("ConnectionStrings").Get<ConnectionSettings>();
             mailSettings = config.GetSection("MailSettings").Get<MailSettings>();
             //var FinnHub = config.GetSection("finnhub").Get<FinnHub>();
             //var Polygon = config.GetSection("polygon").Get<Polygon>();
@@ -68,14 +91,32 @@ namespace PricePredictionTest
                 builder.SetMinimumLevel(LogLevel.Trace);
             }
             );
+            
             _logger = loggerFactory.CreateLogger<UnitTest>();
-            services = new CoinBaseService(_logger, _settings, _taApiSettings, httpClientFactory);
-            SchwabService = new SchwabServices(_logger, _settings2, _taApiSettings, httpClientFactory);
-            ETradeService = new ETradeService(_logger, _settings3, httpClientFactory);
+            var client = new ServiceCollection().AddHttpClient("TMD")
+                .UseSocketsHttpHandler((handler, _) =>
+                handler.PooledConnectionLifetime = TimeSpan.FromMinutes(7)) // Recreate connection every 2 minutes
+                .SetHandlerLifetime(Timeout.InfiniteTimeSpan); // Disable rotation, as it is handled by PooledConnectionLifetime
+
+            client.Services.AddDbContextFactory<TmdContext>(options =>
+            options.UseSqlServer(ConnectionStrings.Connection));
+            var serviceProvider = client.Services.BuildServiceProvider();
+            httpClientFactory = serviceProvider.GetService<IHttpClientFactory>();
+            var ctxFactory = serviceProvider.GetRequiredService<IDbContextFactory<TmdContext>>();
+            helper = new Helper(_logger, _settings2, _settings3, null, ctxFactory);
+            services = new CoinBaseService(_logger, _settings/*, _taApiSettings*/, httpClientFactory/*, helper*/);
+            SchwabService = new SchwabServices(_logger, _settings2/*, _polygon, _taApiSettings*/, httpClientFactory, ctxFactory);
+            ETradeService = new ETradeService(_logger, _settings3, httpClientFactory, ctxFactory);
             stackCommerceService = new StackCommerceService(_logger, httpClientFactory);
-            _traderGoService = new TraderGoService(yfapiSettings, _logger, httpClientFactory, false);
+            rakutenService = new RakutenService(_logger, httpClientFactory, false);
+            _traderGoService = new TraderGoService(yfapiSettings, _logger, httpClientFactory, false, ctxFactory);
+            commissionJunctionService = new CommissionJunctionService(_logger, httpClientFactory, false);
             manager = new Manager(_logger);
             ml = new MLPricePredict();
+            bartergoraDataLoadService = new BartergoraDataLoadService(_logger, httpClientFactory);
+            dataMuseService = new DataMuseService(_logger, httpClientFactory);
+            //kalshiService = new KalshiService(_logger, httpClientFactory);            
+            settings = ctx.RulesEngine.FirstOrDefault();
         }
         [TestMethod]
         public void SendMail()
@@ -85,9 +126,9 @@ namespace PricePredictionTest
         [TestMethod]
         public void TestCoinBaseQuote()
         {
-            //int? longCnt = 0; int? shortCnt = 0;
-            var results = services.GetQuote("ZRO-USD");
-            //Helper.CalculatePoints(results, ref shortCnt, ref longCnt);
+            int? longCnt = 0; int? shortCnt = 0;
+            var results = services.GetQuoteAsync("DOGE-USD").Result;
+            var emaToVwapDiff = helper.CalculatePoints(results, ref shortCnt, ref longCnt, .03m, true);
             Assert.IsNotNull(results);
         }
         [TestMethod]
@@ -96,7 +137,7 @@ namespace PricePredictionTest
             string coin = "INV-USD";
             decimal availiable = 36m;
             //string baseSize = string.Empty; 
-            var results = services.GetQuote(coin);
+            var results = services.GetQuoteAsync(coin).Result;
             decimal baseSize = Math.Round(availiable / Convert.ToDecimal(results["lastPrice"].ToString()), 3);
             decimal amount = Math.Round(Convert.ToDecimal(results["lastPrice"].ToString()) * baseSize, 2);
             var output = services.SetOrderLimit(coin, Coinbase.AdvancedTrade.Enums.OrderSide.BUY, baseSize.ToString(), amount);
@@ -118,13 +159,63 @@ namespace PricePredictionTest
         [TestMethod]
         public void TestCoinBaseSellOrder()
         {
-            var product = services.GetProducts().Where(x => x.DisplayName == "00-USD").FirstOrDefault();
-            var precision = product.BaseIncrement.Substring((product.BaseIncrement.IndexOf(".") + 1), (product.BaseIncrement.Length - (product.BaseIncrement.IndexOf(".") + 1)));
-            var currency = product.DisplayName.Split('-');
-            var account = services.GetAccounts().Where(x => x.Currency == currency[0]).FirstOrDefault();
-            var baseSize = Convert.ToDecimal(account.AvailableBalance.Value.Substring(0, (account.AvailableBalance.Value.IndexOf(".") + precision.Length)));
-            var results = services.SetOrder(product.DisplayName, Coinbase.AdvancedTrade.Enums.OrderSide.SELL, baseSize);
-            Assert.IsNotNull(results);
+            string symbol = "USDT-USD";
+            PublicProduct? product = services.GetProducts().Where(x => x.DisplayName == symbol).FirstOrDefault();
+            string precision = product.BaseIncrement.Substring((product.BaseIncrement.IndexOf(".") + 1), (product.BaseIncrement.Length - (product.BaseIncrement.IndexOf(".") + 1)));
+            string[] currency = product.DisplayName.Split('-');
+            var account = services.GetAccounts().Where(x => x.Currency == currency[0] && Convert.ToDecimal(x.AvailableBalance.Value) > 0m).FirstOrDefault();
+            decimal minSubtract = 0m;
+            decimal baseSize = 0m;
+            Order output = null;
+            switch (precision.Length)
+            {
+                case 1:
+                    minSubtract = .1m;
+                    break;
+                case 2:
+                    minSubtract = .01m;
+                    break;
+                case 3:
+                    minSubtract = .001m;
+                    break;
+                case 4:
+                    minSubtract = .0001m;
+                    break;
+                case 5:
+                    minSubtract = .00001m;
+                    break;
+                case 6:
+                    minSubtract = .000001m;
+                    break;
+                case 7:
+                    minSubtract = .0000001m;
+                    break;
+                case 8 or 9:
+                    minSubtract = .00000001m;
+                    break;
+                    //case 9:
+                    //    minSubtract = .000000001m;
+                    //    break;
+            }
+            baseSize = decimal.Round(Convert.ToDecimal(account.AvailableBalance.Value), precision.Length) - minSubtract;
+            output = services.SetOrder(product.DisplayName, Coinbase.AdvancedTrade.Enums.OrderSide.SELL, baseSize);
+            if (output == null)
+            {
+                baseSize = (int)Convert.ToDecimal(account.AvailableBalance.Value);
+                output = services.SetOrder(product.DisplayName, Coinbase.AdvancedTrade.Enums.OrderSide.SELL, baseSize);
+            }
+            if (output != null)
+            {
+                Helper.Log(_logger, LogLevel.Information, $"Crypto trade results for {symbol}, {output.Status}");
+            }
+            else
+            {
+                Helper.Log(_logger, LogLevel.Error, $"Crypto trade results order {symbol} failed.");
+            }
+
+            //if (output != null && (output.Status.ToLower() == "filled" || output.Status.ToLower() == "open" || output.Status.ToLower() == "pending"))
+            //    SaveCryptoTracker(cryptoTracker, direction, amount, results, output, output.Status);
+            Assert.IsNotNull(output);
         }
         [TestMethod]
         public void TestCoinBaseGetPortfolios()
@@ -372,13 +463,13 @@ namespace PricePredictionTest
             //{
             //    if (authRetry < 3)
             //    {
-            //        _logger.LogError("Authenication from schwab failed. Retrying");
+            //        _helper.Log(_logger, LogLevel.Error, "Authenication from schwab failed. Retrying");
             //        authRetry++;
             //        goto accountAuthRetry;
             //    }
             //    else
             //    {
-            //        _logger.LogError($"Authenication from schwab failed {authRetry} Retries. Exiting");
+            //        _helper.Log(_logger, LogLevel.Error, $"Authenication from schwab failed {authRetry} Retries. Exiting");
             //        return;
             //    }
 
@@ -420,9 +511,9 @@ namespace PricePredictionTest
             string[] productIds = new string[5] { "BTC-USD", "ETH-USD", "LTC-USD", "BCH-USD", "DASH-USD" };
             foreach (var productId in productIds)
             {
-                var quote = services.GetQuote(productId);
+                var quote = services.GetQuoteAsync(productId).Result;
                 var currentPrice = Convert.ToDecimal(quote["lastPrice"].ToString());
-                var candle90 = services.GetPriceHistory(productId, DateTime.Now.AddDays(-90), DateTime.Now, Granularity.ONE_DAY).OrderByDescending(x => x.StartDate).ToList();
+                var candle90 = services.GetPriceHistoryAsync(productId, DateTime.Now.AddDays(-90), DateTime.Now, Granularity.ONE_DAY).Result.OrderByDescending(x => x.StartDate).ToList();
                 var candle60 = candle90.Take(60).ToList();
                 var candle30 = candle90.Take(30).ToList();
                 var candle26 = candle90.Take(26).ToList();
@@ -598,9 +689,10 @@ namespace PricePredictionTest
             string[] symbols = { "$VIX", "$SPX", "IBM", "NFLX", "AMZN", "GOOGL", "META", "MSFT" };
             foreach (string symbol in symbols)
             {
-                var quote = SchwabService.GetQuote(symbol, true, true);
-                var currentPrice = Convert.ToDecimal(quote.GetProperty(symbol).GetProperty("quote").GetProperty("lastPrice").ToString());
-                var results = SchwabService.GetPriceHistory(symbol, "month", "1", "daily", 1, DateTime.Now.AddDays(-90), DateTime.Now);//.ToList();
+                var quote = SchwabService.GetQuoteAsync(symbol, true, true).Result;
+                //var currentPrice = Convert.ToDecimal(quote.GetProperty(symbol).GetProperty("quote").GetProperty("lastPrice").ToString());
+                var currentPrice = Convert.ToDecimal(quote?[symbol]?["quote"]?["lastPrice"]?.ToString());
+                var results = SchwabService.GetPriceHistory(symbol, "month", "1", "daily", 1, DateTime.Now.AddDays(-90), DateTime.Now).Result;//.ToList();
                 List<TMDInvestments.Models.Candles> candle90 = JsonSerializer.Deserialize<List<TMDInvestments.Models.Candles>>(JsonSerializer.Serialize(results.GetProperty("candles")));
                 var candle60 = candle90.Take(60).ToList();
                 var candle30 = candle90.Take(30).ToList();
@@ -775,7 +867,7 @@ namespace PricePredictionTest
         [TestMethod]
         public void GetMACD()
         {
-            var results = SchwabService.GetPriceHistory("AMZN", "day", "1", "minute", 15, DateTime.Now.AddDays(-1), DateTime.Now);//.ToList();
+            var results = SchwabService.GetPriceHistory("AMZN", "day", "1", "minute", 15, DateTime.Now.AddDays(-1), DateTime.Now).Result;//.ToList();
             var ser = JsonSerializer.Serialize(results.GetProperty("candles"));
             List<TMDInvestment.Models.CandleItems> candle90 = JsonSerializer.Deserialize<List<TMDInvestment.Models.CandleItems>>(ser);
             //var closes = new List<double> { 10, 12, 11, 13, 15, 14, 16, 18, 17, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30 };
@@ -789,7 +881,7 @@ namespace PricePredictionTest
         [TestMethod]
         public void GetSchwabQuote()
         {
-            var quote = SchwabService.GetQuote("AMZN", true, false);
+            var quote = SchwabService.GetQuoteAsync("VERF", true, false).Result;
             Assert.IsNotNull(quote);
         }
         [TestMethod]
@@ -808,23 +900,36 @@ namespace PricePredictionTest
         //    var results = testService.CalculateV2("ACON", quote);
         //    Assert.IsNotNull(quote);
         //}
-        //[TestMethod]
-        //public void GetSchwabQuotes()
-        //{
-        //    string[] quotes = { "CAR", "glue", "fcel", "domo", "ee", "dgly","dfh" };
-        //    JsonObject[] quote = SchwabService.GetQuotes(string.Join(",", quotes), true, false);
-        //    quote = quote.Where(item => item != null).ToArray();
-        //    foreach (var item in quote)
-        //    {
-        //        //var quoteData = ((JsonElement)quote).GetProperty(item.ToUpper());
-        //        var quoteData = item["RSI"];
-        //    }
-        //    Assert.IsNotNull(quote);
-        //}
+        [TestMethod]
+        public void GetSchwabQuotes()
+        {
+            string[] quotes = { "CAR", "glue", "fcel", "domo", "ee", "dgly", "dfh" };
+            JsonObject[] quote = SchwabService.GetQuotes(string.Join(",", quotes), true, false);
+            quote = quote.Where(item => item != null).ToArray();
+            foreach (var item in quote)
+            {
+                //var quoteData = ((JsonElement)quote).GetProperty(item.ToUpper());
+                var quoteData = item["RSI"];
+            }
+            Assert.IsNotNull(quote);
+        }
+        [TestMethod]
+        public void GetSchwabQuotesFromList()
+        {
+            string[] quotes = ctx.StockList.Select(x => x.Symbol).ToArray();
+            JsonObject[] quote = SchwabService.GetQuotes(string.Join(",", quotes), true, false);
+            quote = quote.Where(item => item != null).ToArray();
+            foreach (var item in quote)
+            {
+                //var quoteData = ((JsonElement)quote).GetProperty(item.ToUpper());
+                //var quoteData = item["RSI"];
+            }
+            Assert.IsNotNull(quote);
+        }
         [TestMethod]
         public void GetSchwabQuoteHistory()
         {
-            var results = SchwabService.GetPriceHistory("NEP", "month", "1", "daily", 1, DateTime.Now.AddDays(-90), DateTime.Now);
+            var results = SchwabService.GetPriceHistory("AAPL", "month", "1", "daily", 1, DateTime.Now.AddDays(-90), DateTime.Now);
             Assert.IsNotNull(results);
         }
         [TestMethod]
@@ -857,6 +962,12 @@ namespace PricePredictionTest
         public void GetETradeAccount()
         {
             var results = ETradeService.Account();
+            Assert.IsTrue(true);
+        }
+        [TestMethod]
+        public void GetETradeAccountModel()
+        {
+            var results = ETradeService.AccountModel();
             Assert.IsTrue(true);
         }
         [TestMethod]
@@ -926,58 +1037,446 @@ namespace PricePredictionTest
         [TestMethod]
         public void PlaceETradeOrder()
         {
-            var results = ETradeService.SetOrder("AAMI", 1, TradeDirection.BUY);
-            try
+            var order = SchwabService.GetQuoteAsync("TRCY", true, false).Result;
+            var results = ETradeService.SetOrder(order["Symbol"].ToString(), "MARKET", string.Empty, 1, TradeDirection.BUY);
+            var options = new JsonSerializerOptions
             {
-                var orderId = ((XElement)results)?.Element("OrderIds")?.Element("orderId")?.Value?.ToString();
-            }
-            catch (Exception)
+                ReferenceHandler = ReferenceHandler.Preserve
+            };
+            string output = System.Text.Json.JsonSerializer.Serialize(results, options);
+            if (output.Contains("errors"))
             {
-
+                //Log(_logger, LogLevel.Error, $"Stock trade failed {order["Symbol"].ToString()} {output}");
+                //Try limit order
+                string limitPrice = order["lastPrice"].ToString();
+                results = ETradeService.SetOrder(order["Symbol"].ToString(), "LIMIT", limitPrice, 1, TradeDirection.BUY);
+                if (output.Contains("errors"))
+                {
+                    //Log(_logger, LogLevel.Error, $"Stock trade failed {order["Symbol"].ToString()} {output}");
+                    //return false;
+                }
             }
-            try
-            {
-                var error = ((JsonObject)results)["errors"]?.ToString();
-            }
-            catch (Exception)
-            {
-
-            }
-            try
-            {
-                var error = ((JsonElement)results).GetProperty("errors");
-            }
-            catch (Exception)
-            {
-
-            }
+            //Log(_logger, LogLevel.Information, $"Stock trade results {order["Symbol"].ToString()} Success");
             Assert.IsTrue(true);
         }
         [TestMethod]
         public void GetStackCommerceFeed()
         {
-            //var httpClient = httpClientFactory.CreateClient();
-            //httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3");
+            Bartergora2._0.Models.ProductsToSubCategories productsToSubCategory = null;
+            Bartergora2._0.Models.Advertiser advertiser = null;
+            Bartergora2._0.Models.Product products = null;
+            Bartergora2._0.Models.ProductImage productImage = null;
+            decimal price = 0m;
+            string imageUrl = string.Empty;
 
-            XElement result = stackCommerceService.GetFeed();
-            var items = result?.Element("channel")?.Elements("item").ToList();
-            foreach (var item in items)
+            IEnumerable<CategoriesWithDescription> categories = null;
+
+            SyndicationFeed feed = stackCommerceService.GetFileFeed();
+
+            categories = ctx2.Database.SqlQueryRaw<CategoriesWithDescription>($"EXEC [tmd].[GetCategoriesWithDescription]");
+
+            List<ModelInput> categoryResults = new List<ModelInput>();
+            foreach (var item in categories)
             {
-                var title = item?.Element("title")?.Value;
-                var link = item?.Element("link")?.Value;
-                var description = item?.Element("description");
-                var img = description?.Element("img")?.Attribute("src")?.Value;
-                var pubDate = item?.Element("pubDate")?.Value;
+                categoryResults.Add(new ModelInput { SubCategoryId = item.SubCategoryId, SubCategoryName = item.SubCategoryName/*, Description = item.SubCategoryDefinition*/ });
             }
-            //var response = httpClient.GetAsync("https://stackcommerce.com/api/v1/deals/feed").Result;
-            //var content = response.Content.ReadAsStringAsync().Result;
-            //var feedItems = JsonSerializer.Deserialize<XElement>(result);
+            var predEngine = ml.InitTextCategoryPredict(categoryResults);
+
+            ml.predictCategory(predEngine, categoryResults, ref feed);
+
+            foreach (SyndicationItem item in feed.Items)
+            {
+                Console.WriteLine($"Title: {item.Title.Text}");
+                Console.WriteLine($"Summary: {item.Summary?.Text}");
+
+                //int priceStartIndex = item.Title?.Text.IndexOf("$") ?? -1;
+                //int titleLength = item.Title.Text.Length;
+                //try
+                //{
+                    //price = Convert.ToDecimal(item.Title.Text.Substring(priceStartIndex + 1, titleLength - (priceStartIndex + 1)));
+                    //string digitsOnly = new string(item.Title.Text.Where(char.IsDigit).ToArray());
+                    bool abstractDigit = false; 
+                    string digitsOnly = ""; 
+                    foreach (char c in item.Title.Text)
+                    {
+                        if(abstractDigit == true && char.IsDigit(c))
+                        {
+                            digitsOnly += c;
+                        }
+                        else
+                        {
+                            abstractDigit = false;
+                        }
+                        if (c == '$')
+                        {
+                            abstractDigit = true;
+                            digitsOnly = "";
+                        }
+                    }
+                    price = Convert.ToDecimal(digitsOnly);
+                //}
+                //catch (Exception ex)
+                //{
+                //    continue;
+                //}
+
+                var doc = new HtmlDocument();
+                doc.LoadHtml(item.Summary?.Text); // or item.Content
+                                                  // Find the first <img> tag
+                var imgNode = doc.DocumentNode.SelectSingleNode("//img");
+                if (imgNode != null)
+                {
+                    imageUrl = imgNode.GetAttributeValue("src", "");
+                    // Process the imageUrl (e.g., download, display)
+                }
+                Console.WriteLine($"Link: {item.Links[0].Uri}");
+                Console.WriteLine("----------------------------");
+
+                if(!Uri.TryCreate(imageUrl, UriKind.Absolute, out Uri uriResult)
+                    || !(uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps))
+                    continue;
+
+                advertiser = ctx2.Advertisers.Where(x => x.AdvertiserName.ToLower().Trim() == "Stack Commerce" && x.AdvertiserKey == 999).FirstOrDefault();
+                if (advertiser == null)
+                {
+                    advertiser = new Advertiser() { AdvertiserName = "Stack Commerce", AdvertiserKey = 999, DateCreated = DateTime.Now, Deleted = false };
+                    ctx2.Advertisers.Add(advertiser);
+                    ctx2.Entry(advertiser).State = Microsoft.EntityFrameworkCore.EntityState.Added;
+                    ctx2.SaveChanges();
+                    ctx2.Entry(advertiser).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                }
+                products = ctx2.Products.Where(x => x.Source == "Stack Commerce" && x.ProductName == item.Title.Text && x.Description == item.Summary.Text).FirstOrDefault();
+                if (products == null)
+                {
+                    products = new Bartergora2._0.Models.Product()
+                    {
+                        Source = "Stack Commerce",
+                        AdvertiserId = advertiser.AdvertiserId,
+                        ProductName = item.Title.Text,
+                        Description = item.Summary?.Text,
+                        Price = price,
+                        SalePrice = 0,
+                        SKU = "0",
+                        UPC = "0",
+                        linkURL = item.Links[0].Uri.ToString(),
+                        DateCreated = DateTime.Now,
+                        Deleted = false
+                    };
+                    ctx2.Products.Add(products);
+                    ctx2.Entry(products).State = Microsoft.EntityFrameworkCore.EntityState.Added;
+                    ctx2.SaveChanges();
+                    ctx2.Entry(products).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                }
+                productImage = ctx2.ProductImages.Where(x => x.ProductId == products.ProductId && x.ImageUrl == item.Links[0].Uri.ToString()).FirstOrDefault();
+                if (productImage == null)
+                {
+                    productImage = new ProductImage() { ProductId = products.ProductId, ImageUrl = item.Links[0].Uri.ToString(), DateCreated = DateTime.Now, Deleted = false };
+                    ctx2.ProductImages.Add(productImage);
+                    ctx2.Entry(productImage).State = Microsoft.EntityFrameworkCore.EntityState.Added;
+                    ctx2.SaveChanges();
+                    ctx2.Entry(productImage).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                }
+                productsToSubCategory = ctx2.ProductsToSubCategories.Where(x => x.SubCategoryId == Convert.ToInt32(item.Categories[0].Label) && x.ProductId == products.ProductId).FirstOrDefault();
+                if (productsToSubCategory == null)
+                {
+                    productsToSubCategory = new ProductsToSubCategories() { SubCategoryId = Convert.ToInt32(item.Categories[0].Label), ProductId = products.ProductId, DateCreated = DateTime.Now, Deleted = false };
+                    ctx2.ProductsToSubCategories.Add(productsToSubCategory);
+                    ctx2.Entry(productsToSubCategory).State = Microsoft.EntityFrameworkCore.EntityState.Added;
+                    ctx2.SaveChanges();
+                    ctx2.Entry(productsToSubCategory).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                }
+            }
             Assert.IsTrue(true);
         }
         [TestMethod]
         public void TestRakutenLoadMerchants()
         {
+            dynamic error = null;
             var merchants = RakutenService.LoadMerchants(_logger);
+            RakutenModel products = null;
+            List<RakutenModel> productsList = new List<RakutenModel>();
+            //Bartergora2._0.Models.Category category = null;
+            //Bartergora2._0.Models.SubCategory subCategory = null;   
+            int pageCount = 1;
+            IEnumerable<CategoriesWithDescription> categories = null;
+            //categories = ctx2.Set<GetCategoriesWithDescription>().FromSql($"EXEC [tmd].[GetCategoriesWithDescription]").ToList();
+            categories = ctx2.Database.SqlQueryRaw<CategoriesWithDescription>($"EXEC [tmd].[GetCategoriesWithDescription]");
+
+            List<ModelInput> categoryResults = new List<ModelInput>();
+            foreach (var item in categories)
+            {
+                categoryResults.Add(new ModelInput { SubCategoryId = item.SubCategoryId, SubCategoryName = item.SubCategoryName/*, Description = item.SubCategoryDefinition*/ });
+            }
+            var predEngine = ml.InitTextCategoryPredict(categoryResults);
+            foreach (var merchant in merchants.Items)
+            {
+               products = rakutenService.GetRakutenProducts(1,/*token,*/ merchant, ref error);
+               var totalMatches = Convert.ToInt32(products.TotalMatches);
+               var totalPages = /*(Convert.ToInt32(products.TotalPages) > maxPages) ? maxPages :*/ Convert.ToInt32(products.TotalPages);
+                if(totalPages > 0)
+                {
+                    LoadRakutenCategories(predEngine,categoryResults, products.items);
+                    productsList.Add(products);
+                    for (int i = 2; i < totalPages; i++)
+                    {
+                        products = rakutenService.GetRakutenProducts(i, /*token,*/ merchant, ref error);
+                        if(products == null || products.items == null || products.items.Count == 0)
+                        {
+                            continue;
+                        }
+                        LoadRakutenCategories(predEngine, categoryResults, products.items);
+                        productsList.Add(products);
+                        System.Threading.Thread.Sleep(1000);
+                    }
+                }
+                System.Threading.Thread.Sleep(1000);
+            }
+            Assert.IsTrue(true);
+        }
+        private void LoadRakutenCategories(PredictionEngine<ModelInput, ModelOutput> predEngine, List<ModelInput> categoryResults, IEnumerable<RakutenModelItems> items)
+        {
+            //Bartergora2._0.Models.Category category = null;
+            //Bartergora2._0.Models.SubCategory subCategory = null;
+            //Bartergora2._0.Models.SubCategoriesToCategories subCategoriesToCategory = null;
+            Bartergora2._0.Models.ProductsToSubCategories productsToSubCategory = null;
+            Bartergora2._0.Models.Advertiser advertiser = null;
+            Bartergora2._0.Models.Product products = null;
+            Bartergora2._0.Models.ProductImage productImage = null;
+
+            //IEnumerable<GetCategoriesWithDescription> categories = null;
+            ////categories = ctx2.Set<GetCategoriesWithDescription>().FromSql($"EXEC [tmd].[GetCategoriesWithDescription]").ToList();
+            //categories = ctx2.Database.SqlQueryRaw<GetCategoriesWithDescription>($"EXEC [tmd].[GetCategoriesWithDescription]");
+
+            //List<ModelInput> categoryResults = new List<ModelInput>();
+            //foreach(var item in categories)
+            //{
+            //    categoryResults.Add(new ModelInput { SubCategoryId = item.SubCategoryId, SubCategoryName = item.SubCategoryName, Description = item.SubCategoryDefinition });
+            //}
+            //var predEngine = ml.InitTextCategoryPredict(categoryResults);
+
+            ml.predictCategory(predEngine, categoryResults, ref items);
+            ///ml.SetCategory(categoryResults, ref items);
+
+            foreach (var item in items)
+            {
+                if (!Uri.TryCreate(item.imageurl, UriKind.Absolute, out Uri uriResult)
+                    || !(uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps))
+                    continue;
+                advertiser = ctx2.Advertisers.Where(x => x.AdvertiserName.ToLower().Trim() == item.merchantname.ToLower().Trim() && x.AdvertiserKey == Convert.ToInt32(item.mid)).FirstOrDefault();
+                if (advertiser == null)
+                {
+                    advertiser = new Advertiser() { AdvertiserName = item.merchantname, AdvertiserKey = Convert.ToInt32(item.mid), DateCreated = DateTime.Now, Deleted = false };
+                    ctx2.Advertisers.Add(advertiser);
+                    ctx2.Entry(advertiser).State = Microsoft.EntityFrameworkCore.EntityState.Added;
+                    ctx2.SaveChanges();
+                    ctx2.Entry(advertiser).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                }
+                products = ctx2.Products.Where(x => x.AdvertiserId == advertiser.AdvertiserId && x.ProductName == item.productname && x.Description == item.description[0].secondary).FirstOrDefault();
+                if (products == null)
+                {
+                    products = new Bartergora2._0.Models.Product()
+                    {
+                        Source = "Rakuten",
+                        AdvertiserId = advertiser.AdvertiserId,
+                        ProductName = item.productname,
+                        Description = item.description[0]._short,
+                        Price = Convert.ToDecimal(item.price),
+                        SalePrice = Convert.ToDecimal(item.saleprice),
+                        SKU = item.sku,
+                        UPC = item.upccode,
+                        linkURL = item.linkurl,
+                        DateCreated = DateTime.Now,
+                        Deleted = false
+                    };
+                    ctx2.Products.Add(products);
+                    ctx2.Entry(products).State = Microsoft.EntityFrameworkCore.EntityState.Added;
+                    ctx2.SaveChanges();
+                    ctx2.Entry(products).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                }
+                productImage = ctx2.ProductImages.Where(x => x.ProductId == products.ProductId && x.ImageUrl == item.imageurl).FirstOrDefault();
+                if (productImage == null)
+                {
+                    productImage = new ProductImage() { ProductId = products.ProductId, ImageUrl = item.imageurl, DateCreated = DateTime.Now, Deleted = false };
+                    ctx2.ProductImages.Add(productImage);
+                    ctx2.Entry(productImage).State = Microsoft.EntityFrameworkCore.EntityState.Added;
+                    ctx2.SaveChanges();
+                    ctx2.Entry(productImage).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                }
+                productsToSubCategory = ctx2.ProductsToSubCategories.Where(x => x.SubCategoryId == item.SubCategoryId && x.ProductId == products.ProductId).FirstOrDefault();
+                if (productsToSubCategory == null)
+                {
+                    productsToSubCategory = new ProductsToSubCategories() { SubCategoryId = item.SubCategoryId, ProductId = products.ProductId, DateCreated = DateTime.Now, Deleted = false };
+                    ctx2.ProductsToSubCategories.Add(productsToSubCategory);
+                    ctx2.Entry(productsToSubCategory).State = Microsoft.EntityFrameworkCore.EntityState.Added;
+                    ctx2.SaveChanges();
+                    ctx2.Entry(productsToSubCategory).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                }
+
+            }
+        }
+        [TestMethod]
+        public void TestCjProducts()
+        {
+            Bartergora2._0.Models.Advertiser advertiser = null;
+            Bartergora2._0.Models.Product products = null;
+            Bartergora2._0.Models.ProductImage productImage = null;
+            Bartergora2._0.Models.ProductsToSubCategories ProductsToSubCategories = null;
+            var response = commissionJunctionService.GetProductsGraphQL();
+
+            IEnumerable<CategoriesWithDescription> categories = null;
+            //categories = ctx2.Set<GetCategoriesWithDescription>().FromSql($"EXEC [tmd].[GetCategoriesWithDescription]").ToList();
+            categories = ctx2.Database.SqlQueryRaw<CategoriesWithDescription>("EXEC [tmd].[GetCategoriesWithDescription]");
+
+            List<ModelInput> categoryResults = new List<ModelInput>();
+            foreach (var item in categories)
+            {
+                categoryResults.Add(new ModelInput { SubCategoryId = item.SubCategoryId, SubCategoryName = item.SubCategoryName /*, Description = item.SubCategoryDefinition*/ });
+            }
+            var predEngine = ml.InitTextCategoryPredict(categoryResults);
+
+            ml.predictCategory(predEngine, categoryResults, ref response);
+
+            foreach (var item in response.products.ResultList)
+            {
+                if (!Uri.TryCreate(item.linkCode.imageUrl, UriKind.Absolute, out Uri uriResult)
+                    || !(uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps))
+                    continue;
+                advertiser = ctx2.Advertisers.Where(x => x.AdvertiserName.ToLower().Trim() == item.advertiserName.ToLower().Trim() && x.AdvertiserKey == Convert.ToInt32(item.advertiserId)).FirstOrDefault();
+                if (advertiser == null)
+                {
+                    advertiser = new Advertiser() { AdvertiserName = item.advertiserName, AdvertiserKey = Convert.ToInt32(item.advertiserId), DateCreated = DateTime.Now, Deleted = false };
+                    ctx2.Advertisers.Add(advertiser);
+                    ctx2.Entry(advertiser).State = Microsoft.EntityFrameworkCore.EntityState.Added;
+                    ctx2.SaveChanges();
+                    ctx2.Entry(advertiser).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                }
+                products = ctx2.Products.Where(x => x.AdvertiserId == advertiser.AdvertiserId && x.ProductName == item.title && x.Description == item.description).FirstOrDefault();
+                if (products == null)
+                {
+                    products = new Bartergora2._0.Models.Product()
+                    {
+                        Source = "Commission Junction",
+                        AdvertiserId = advertiser.AdvertiserId,
+                        ProductName = item.title,
+                        Description = item.description,
+                        Price = Convert.ToDecimal(item?.price?.amount ?? "0"),
+                        SalePrice = Convert.ToDecimal(item?.salePrice?.amount ?? "0"),
+                        //SKU = item.sku,
+                        //UPC = item.upccode,
+                        linkURL = item.linkCode.clickUrl,
+                        DateCreated = DateTime.Now,
+                        Deleted = false
+                    };
+                    ctx2.Products.Add(products);
+                    ctx2.Entry(products).State = Microsoft.EntityFrameworkCore.EntityState.Added;
+                    ctx2.SaveChanges();
+                    ctx2.Entry(products).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                }
+                productImage = ctx2.ProductImages.Where(x => x.ProductId == products.ProductId && x.ImageUrl == item.linkCode.imageUrl).FirstOrDefault();
+                if (productImage == null)
+                {
+                    productImage = new ProductImage() { ProductId = products.ProductId, ImageUrl = item.linkCode.imageUrl, DateCreated = DateTime.Now, Deleted = false };
+                    ctx2.ProductImages.Add(productImage);
+                    ctx2.Entry(productImage).State = Microsoft.EntityFrameworkCore.EntityState.Added;
+                    ctx2.SaveChanges();
+                    ctx2.Entry(productImage).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                }
+                ProductsToSubCategories = ctx2.ProductsToSubCategories.Where(x => x.SubCategoryId == item.SubCategoryId && x.ProductId == products.ProductId).FirstOrDefault();
+                if (ProductsToSubCategories == null)
+                {
+                    ProductsToSubCategories = new ProductsToSubCategories() { SubCategoryId = item.SubCategoryId, ProductId = products.ProductId, DateCreated = DateTime.Now, Deleted = false };
+                    ctx2.ProductsToSubCategories.Add(ProductsToSubCategories);
+                    ctx2.Entry(ProductsToSubCategories).State = Microsoft.EntityFrameworkCore.EntityState.Added;
+                    ctx2.SaveChanges();
+                    ctx2.Entry(ProductsToSubCategories).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                }
+            }
+            Assert.IsTrue(true);
+        }
+        [TestMethod]
+        public void TestBartagoraDataLoad()
+        {
+            bartergoraDataLoadService.LoadData();
+            Assert.IsTrue(true);
+        }
+        [TestMethod]
+        public void TestDataLoadCategories()
+        {
+            var categoryId = ctx2.Categories.Where(x => x.CategoryName == "electronics").Select(x => x.CategoryId).Distinct().ToList();
+            var subCategoryId = ctx2.SubCategoriesToCategories.Where(x => categoryId.Any(id => id == x.CategoryId)).Select(x => x.SubCategoryId).Distinct().ToList();
+            var subCategories = ctx2.SubCategories.Where(y => subCategoryId.Contains(y.SubCategoryId)).Select(x => new { /*x.SubCategoryId,*/ x.SubCategoryDefinition }).Distinct().ToList();
+            Assert.IsTrue(true);
+        }
+        [TestMethod]
+        public void TestGetSynonyms()
+        {
+            var results = dataMuseService.GetSynonyms("headphone");
+            Assert.IsTrue(true);
+        }
+        [TestMethod]
+        public void TestWordAssociation()
+        {
+            //string word = string.Empty;
+            int maxCount = 0;
+            string response = string.Empty;
+            //var products = ctx2.Products;
+            var categories = ctx2.Database.SqlQueryRaw<CategoriesWithDescription>("EXEC [tmd].[GetCategoriesWithDescription]");
+            foreach (var item in categories)
+            {
+                response = string.Empty;
+                maxCount = 0;
+                var preliminaryWord = item.SubCategoryName.Trim().Split(' ');
+                if (item.SubCategoryName.Trim() == "Hairdressing & Cosmetology")
+                {
+                    Console.WriteLine("test");
+                }
+                if (preliminaryWord[0] == "hairdressing")
+                {
+                    Console.WriteLine("test");
+                }
+                if (preliminaryWord[0].Substring(preliminaryWord[0].Length - 2, 2) == "es")
+                {
+                    preliminaryWord[0] = preliminaryWord[0].Substring(0, preliminaryWord[0].Length - 2);
+                    Console.WriteLine("test");
+                }
+                if (preliminaryWord[0].Substring(preliminaryWord[0].Length - 1, 1) == "s")
+                {
+                    preliminaryWord[0] = preliminaryWord[0].Substring(0, preliminaryWord[0].Length - 1);
+                    Console.WriteLine("test");
+                }
+                if (preliminaryWord[0].Substring(preliminaryWord[0].Length - 3, 3) == "ing")
+                {
+                    preliminaryWord[0] = preliminaryWord[0].Substring(0, preliminaryWord[0].Length - 3);
+                    Console.WriteLine("test");
+                }
+                if (preliminaryWord[0].Substring(preliminaryWord[0].Length - 2, 2) == "s,")
+                {
+                    preliminaryWord[0] = preliminaryWord[0].Substring(0, preliminaryWord[0].Length - 2);
+                    Console.WriteLine("test");
+                }
+                var resultsString = dataMuseService.GetSynonyms(preliminaryWord[0]/*.Replace("Accessories", "").Replace("&", "").Trim()*/);
+                var results = JsonSerializer.Deserialize<List<WordResult>>(resultsString).OrderByDescending(x => x.score);
+                foreach (var synonym in results)
+                {
+                    response += synonym.word + ",";
+                    maxCount++;
+                    if (maxCount > 1)
+                    {
+                        break;
+                    }
+                }
+                var categoryMatch = ctx2.SubCategories.Where(x => x.SubCategoryName == item.SubCategoryName).FirstOrDefault();
+                if (categoryMatch != null)
+                {
+                    categoryMatch.KeyWords = response;
+                    ctx2.Attach(categoryMatch);
+                    ctx2.Entry(categoryMatch).State = EntityState.Modified;
+                    ctx2.SaveChanges();
+                    ctx2.Entry(categoryMatch).State = EntityState.Detached;
+                }
+
+            }
+
             Assert.IsTrue(true);
         }
         [TestMethod]
@@ -987,28 +1486,59 @@ namespace PricePredictionTest
             Assert.IsTrue(true);
         }
         [TestMethod]
-        public void TestMultiTrainer()
+        public void GetPriceHistoryTest()
         {
-            string symbol = "AMZN";
-            JsonObject quote = SchwabService.GetQuote(symbol, true, false);
+            string symbol = "MU";
+            DateTime startDate = DateTime.Now.AddDays(-45);
+            DateTime endDate = DateTime.Now;
+            float percentHigher = 0f;
+            float percentLower = 0f;
+            int higherCount = 0;
+            int lowerCount = 0;
+            //JsonObject quote = SchwabService.GetQuoteAsync(symbol, true, false).Result;
             //var results = SchwabService.GetPriceHistory(symbol, "day", "2", "minute", 15,
             //    DateTime.Now.AddDays(-30), DateTime.Now);
-            var results = SchwabService.GetPriceHistory(symbol, "day", "2", "minute", 15,
-            null, null);
-            var ser = JsonSerializer.Serialize(results.GetProperty("candles"));
-            var candle90 = JsonSerializer.Deserialize<List<TMDInvestment.Models.CandleItems>>(ser);
-            decimal lastPrice = (decimal)quote["lastPrice"];
-            //ml.MultiTrainer(candle90, Convert.ToSingle(lastPrice));
-            JsonObject result = new JsonObject();
-            ml.Calculate(candle90, ref result);
+            var movers = SchwabService.GetMovers();
+            foreach (var mover in movers)
+            {
+                if(mover == null) { continue; }
+                var results = SchwabService.GetPriceHistory(mover["Symbol"].ToString(), "month", "1", "daily", 1, startDate, endDate).Result;
+                var ser = JsonSerializer.Serialize(results.GetProperty("candles"));
+                var candles90 = JsonSerializer.Deserialize<List<TMDInvestment.Models.CandleItems>>(ser).OrderByDescending(x => x.datetime).ToList();
+                var candleFirst = candles90.FirstOrDefault();
+                mover.Add("lastopChange", candleFirst?.opChange ?? 0f);
+                mover.Add("lastopChangePercent", candleFirst?.opPercent ?? 0f);
+                mover.Add("lastOpen", candleFirst?.open ?? 0f);
+                mover.Add("lastClose", candleFirst?.close ?? 0f);
+                foreach (var candle in candles90)
+                {
+                    if (candle.opChange > 0)
+                    {
+                        higherCount++;
+
+                    }
+                    else if (candle.opChange < 0)
+                    {
+                        lowerCount++;
+                    }
+                }
+                percentHigher = ((float)higherCount / (float)candles90.Count) * 100f;
+                percentLower = ((float)lowerCount / (float)candles90.Count) * 100f;
+                mover.Add("PercentHigher", percentHigher);
+                mover.Add("PercentLower", percentLower);
+            }
+            
+
+            //var lastCandle90 = candle90.OrderByDescending(x => x.datetime);
             Assert.IsTrue(true);
         }
         [TestMethod]
         public void TestTextCategoryTrainer()
         {
+            IEnumerable<ModelInput> categories = null;
             //// Initialize MLContext
             //var mlContext = new MLContext();
-
+            categories = ctx2.Set<ModelInput>().FromSql($"EXEC [tmd].[GetCategoriesWithDescription]").ToList();
             //// Load your data into a strongly-typed collection
             //var reviews = new[]
             //{
@@ -1037,8 +1567,9 @@ namespace PricePredictionTest
             //Console.WriteLine($"Text: {input.Text}");
             //Console.WriteLine($"Prediction: {result.PredictedLabel}");
 
-            ml.TestTextCategoryTrainer();
+            //ml.TestTextCategoryTrainer(categories);
         }
+
         // Define the data classes
         //class SentimentData
         //{

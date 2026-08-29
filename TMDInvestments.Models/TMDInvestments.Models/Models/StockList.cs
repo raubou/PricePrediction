@@ -11,21 +11,21 @@ namespace TMDInvestments.Models
     {
         [Key]
         public long? Id { get; set; }
-        public string Symbol { get; set; }
-        public string Name { get; set; }
-        public bool ExcludeFromAutomation{ get; set; }
-        public bool UseRsi { get; set; }
-        public bool UseSma200 { get; set; }
-        public bool UseEma200 { get; set; }
-        public bool UseVwap { get; set; }
-        public bool UseEma9 { get; set; }
-        public bool UseEma12 { get; set; }
-        public bool UseEma26 { get; set; }
-        public bool UseMacd { get; set; }
+        public string? Symbol { get; set; }
+        public string? Name { get; set; }
+        public bool? ExcludeFromAutomation{ get; set; }
+        public bool? UseRsi { get; set; }
+        public bool? UseSma200 { get; set; }
+        public bool? UseEma200 { get; set; }
+        public bool? UseVwap { get; set; }
+        public bool? UseEma9 { get; set; }
+        public bool? UseEma12 { get; set; }
+        public bool? UseEma26 { get; set; }
+        public bool? UseMacd { get; set; }
         public DateTime? ExpEarningDate { get; set; }
         public int? QuoteRetry { get; set; }
         public DateTime? DateCreated { get; set; }
         public DateTime? DateUpdated { get; set; }
-        public int LastUpdatedBy { get; set; }
+        public int? LastUpdatedBy { get; set; }
     }
 }

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Options;
@@ -5,6 +6,8 @@ using System.Net.Http;
 using TMD.Database.Connect.Managers;
 using TMD.Services.Service;
 using TMDInvestments.Models;
+using TMDInvestments.Context;
+using Microsoft.EntityFrameworkCore;
 
 namespace TraderGo.Pages
 {
@@ -18,12 +21,12 @@ namespace TraderGo.Pages
         public dynamic? IPOs { get; set; }
         [BindProperty]
         public int Total { get; set; }
-        public IPOsandEarningsModel(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<MailSettings> mailSettings, IHttpClientFactory _factory, ILogger<IPOsandEarningsModel> logger, IOptions<FinnHub> finnHub, IOptions<Polygon> polycon, IOptions<SchwabSettings> settings) //: base(connectionSettings, connectionSettings2, mailSettings)
+        public IPOsandEarningsModel(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<MailSettings> mailSettings, IHttpClientFactory _factory, ILogger<IPOsandEarningsModel> logger, IOptions<FinnHub> finnHub, IOptions<Polygon> polycon, IOptions<SchwabSettings> settings, IDbContextFactory<TmdContext> contextFactory) //: base(connectionSettings, connectionSettings2, mailSettings)
         {
             _logger = logger;
             _httpClient = _factory.CreateClient();
             _mgr = new Manager(connectionSettings?.Value?.Connection, "", null);
-            _traderGoService = new TraderGoService(_logger, _httpClient, false, finnHub, polycon, _factory, settings); 
+            _traderGoService = new TraderGoService(_logger, _httpClient, false, finnHub, polycon, _factory, settings, contextFactory); 
         }
 
         public override IActionResult Execute()

@@ -9,6 +9,7 @@ using TMD.Services.Service;
 using TMDInvestments.Context;
 using TMDInvestments.Models;
 using TMDInvestments.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace TraderGo.Pages
 {
@@ -27,7 +28,7 @@ namespace TraderGo.Pages
         Manager _marketMgr;
         //Manager _NewsMgr;
         TraderGoService _traderGoService;
-        public IndexModel(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<MailSettings> mailSettings, IOptions<SchwabSettings> settings, IOptions<yfapiSettings> yfapiSettings, IHttpClientFactory factory, ILogger<IndexModel> logger) //: base(connectionSettings,connectionSettings2, mailSettings)
+        public IndexModel(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<MailSettings> mailSettings, IOptions<SchwabSettings> settings, IOptions<yfapiSettings> yfapiSettings, IHttpClientFactory factory, ILogger<IndexModel> logger, IDbContextFactory<TmdContext> contextFactory) //: base(connectionSettings,connectionSettings2, mailSettings)
         {
             _logger = logger;
             //_httpClient = factory.CreateClient();
@@ -35,8 +36,8 @@ namespace TraderGo.Pages
             _factory = factory;
             _marketMgr = new Manager(connectionSettings?.Value?.Connection, "",null);
             //_NewsMgr = new Manager(connectionSettings2?.Value?.Connection, "", _logger);
-            _traderGoService = new TraderGoService(yfapiSettings.Value,_logger, _factory, false);
-            services = new SchwabServices(_logger, _settings, _factory);
+            _traderGoService = new TraderGoService(yfapiSettings.Value,_logger, _factory, false, contextFactory);
+            services = new SchwabServices(_logger, _settings, _factory, contextFactory);
         }
 
         public override IActionResult Execute()

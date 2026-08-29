@@ -9,10 +9,12 @@ namespace TMDInvestments.Models
 {
     public sealed class StockTracker2
     {
+        public StockTracker2() {
+        }
         [Key]
         public long? Id { get; set; }
-        public string Symbol { get; set; }
-        public string Name { get; set; }
+        public string? Symbol { get; set; }
+        public string? Name { get; set; }
         public int? TradeDirection { get; set; }
         public int? TradePlatform { get; set; }
         public bool? IsReversed { get; set; }
@@ -20,7 +22,7 @@ namespace TMDInvestments.Models
         public DateTime? DatePurchased { get; set; }
         public decimal? PriceSold { get; set; }
         public DateTime? DateSold { get; set; }
-        public int Quantity { get; set; }
+        public int? Quantity { get; set; }
         public decimal? LastPrice { get; set; }
         public decimal? PurchasedRsi { get; set; }
         public decimal? PurchasedSma26 { get; set; }
@@ -68,9 +70,9 @@ namespace TMDInvestments.Models
         public decimal? SoldMacd { get; set; }
         public decimal? SoldMacdSignal { get; set; }
         public decimal? SoldMacdHistogram { get; set; }
-        public string Status { get; set; }
+        public string? Status { get; set; }
         public DateTime? DateCreated { get; set; }
         public DateTime? DateUpdated { get; set; }
-        public int LastUpdatedBy { get; set; }
+        public int? LastUpdatedBy { get; set; }
     }
 }

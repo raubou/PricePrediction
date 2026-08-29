@@ -14,6 +14,6 @@ namespace NewsAggregator.models.returnModel
         [XmlElement("PageNumber")]
         public string PageNumber { get; set; }
         [XmlElement("item")]
-        public List<RakutenModelItems> item = new List<RakutenModelItems>();
+        public List<RakutenModelItems> items { get; set; } = new List<RakutenModelItems>();
     }
 }

@@ -1,10 +1,12 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System.Net.Http;
+using Microsoft.EntityFrameworkCore;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Web;
+using TMD.PricePrediction;
 using TMD.Services;
 using TMD.Services.Service;
 using TMDInvestments.Context;
@@ -13,50 +15,80 @@ using TMDInvestments.Models;
 
 namespace TMDInvestments.Services
 {
-    public class SchwabServices
+    public sealed class SchwabServices
     {
         private readonly ILogger? _logger;
         private SchwabSettings? _settings;
-        private Polygon? _polygon;
+        //private Polygon? _polygon;
         private TaAPISettings? _taapiSettings;
         private readonly IHttpClientFactory? _factory;
         Dictionary<string, object>? headers;
         Token? _token;
-        TmdContext? ctx = null;
+        TmdContext? _ctx = null;
         int? fetchRetry = 0;
         HttpClientServices<dynamic>? client = null;
         PolygonService? polygonService = null;
         IndicesCalculatorV2 indicesCalculatorV2 = null;
         TaAPIService? taAPIService = null;
-        //public SchwabServices() { }
-        public SchwabServices(ILogger logger, SchwabSettings settings, Polygon polygon, IHttpClientFactory factory)
+        IDbContextFactory<TmdContext> _contextFactory;
+        public SchwabServices(ILogger logger, SchwabSettings settings, IHttpClientFactory factory, IDbContextFactory<TmdContext> contextFactory)
         {
             _logger = logger;
             _settings = settings;
-            _polygon = polygon;
+            //_polygon = polygon;
             _factory = factory;
-            ctx = new TmdContext();
-            _token = ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
-            polygonService = new PolygonService(logger, _polygon, _factory);
+            _contextFactory = contextFactory;
+            //this._ctx = ctx;
+            //ctx = new TmdContext();
+            //IConfigurationBuilder builder = new ConfigurationBuilder()
+            //    .AddJsonFile("appsettings.json");
+            //IConfigurationRoot config = builder.Build();
+            //var ConnectionStrings = config.GetSection("ConnectionStrings").Get<ConnectionSettings>();
+            //var services = new ServiceCollection();
+            //var serviceProvider = services.BuildServiceProvider();
+            //var ctx = serviceProvider.GetService<TmdContext>();
+            _ctx = contextFactory.CreateDbContext();
+            //using (var scope = serviceProvider.CreateScope())
+            //{
+            //    var ctxFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<TmdContext>>();
+            //    var context = ctxFactory.CreateDbContext();
+            //    _ctx = context;
+            //}
+            _token = _ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
+            //polygonService = new PolygonService(logger, _polygon, _factory);
         }
-        public SchwabServices(ILogger logger, SchwabSettings settings, IHttpClientFactory factory)
-        {
-            _logger = logger;
-            _settings = settings;
-            _factory = factory;
-            ctx = new TmdContext();
-            _token = ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
-        }
-        public SchwabServices(ILogger logger, SchwabSettings settings,TaAPISettings taAPISettings, IHttpClientFactory factory)
-        {
-            _logger = logger;
-            _settings = settings;
-            _factory = factory;
-            _taapiSettings = taAPISettings;
-            ctx = new TmdContext();
-            _token = ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
-            taAPIService = new TaAPIService(_logger, _taapiSettings, _factory);
-        }
+        //public SchwabServices(ILogger logger, SchwabSettings settings, IHttpClientFactory factory)
+        //{
+        //    _logger = logger;
+        //    _settings = settings;
+        //    _factory = factory;
+        //    ctx = new TmdContext();
+        //}
+        //public SchwabServices(ILogger logger, SchwabSettings settings, IHttpClientFactory factory/*, ServiceProvider serviceProvider*/)
+        //{
+        //    _logger = logger;
+        //    _settings = settings;
+        //    _factory = factory;
+        //    //_serviceProvider = serviceProvider;
+        //    //ctx = new TmdContext();
+        //    //using (var scope = serviceProvider.CreateScope())
+        //    //{
+        //    //    var ctxFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<TmdContext>>();
+        //    //    var context = ctxFactory.CreateDbContext();
+        //    //    ctx = context;
+        //    //}
+        //    _token = ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
+        //}
+        //public SchwabServices(ILogger logger, SchwabSettings settings,TaAPISettings taAPISettings, IHttpClientFactory factory)
+        //{
+        //    _logger = logger;
+        //    _settings = settings;
+        //    _factory = factory;
+        //    _taapiSettings = taAPISettings;
+        //    ctx = new TmdContext();
+        //    _token = ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
+        //    taAPIService = new TaAPIService(_logger, _taapiSettings, _factory);
+        //}
 
         public void FetchToken(string code,ref bool success, bool refreshToken = false)
         {
@@ -74,7 +106,7 @@ namespace TMDInvestments.Services
                 headers.Add("User-Agent", "TMDInvestments");
                 string contentType = "application/x-www-form-urlencoded";
                 string payLoad = (!refreshToken) ? $"grant_type=authorization_code&code={code}&redirect_uri=https://127.0.0.1/SchwabAPICallBack": $"grant_type=refresh_token&refresh_token={System.Text.Encoding.Default.GetString((_token?.Refresh_Token ?? new byte[1]))}";
-                client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+                client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
                 var bytes = Encoding.UTF8.GetBytes(_settings.ApiKey + ":" + _settings.ApiSecret);
                 JsonElement results = client.Post("v1/oauth/token", payLoad, $"Basic {Convert.ToBase64String(bytes)}", headers, contentType);
                 if (results.TryGetProperty("error", out JsonElement value) || results.TryGetProperty("errors", out JsonElement value2))
@@ -108,26 +140,26 @@ namespace TMDInvestments.Services
             JsonObject[] results = new JsonObject[1];
             var markets = new List<string>(){ "$DJI", "$COMPX", "$SPX","NYSE", "NASDAQ"};
             bool success = false;
-            indicesCalculatorV2 = new IndicesCalculatorV2(_logger, _settings, _factory/*, true, false*/);
+            indicesCalculatorV2 = new IndicesCalculatorV2(_logger, _settings, _factory, _contextFactory);
         Retry:
             headers = new Dictionary<string, object>();
             headers.Add("accept", "application/json");
 
             foreach (var item in markets)
             {
-                client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+                client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
                 try
                 {
                     //results = client.Get("marketdata/v1/movers/" + market + "?sort=PERCENT_CHANGE_UP&frequency=0", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
                     //results = client.Get("marketdata/v1/movers/" + market, $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
-                    result = client.Get("marketdata/v1/movers/" + item, $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
+                    result = client.Get("marketdata/v1/movers/" + item, $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers).Result;
                 }
                 catch (Exception ex) //Call may error on onget call being called twice
                 {
-                    client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+                    client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
                     //results = client.Get("marketdata/v1/movers/" + market + "?sort=PERCENT_CHANGE_UP&frequency=0", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
                     //result = client.Get("marketdata/v1/movers/" + market, $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
-                    result = client.Get("marketdata/v1/movers/" + item, $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
+                    result = client.Get("marketdata/v1/movers/" + item, $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers).Result;
                     //return results;
                 }
                 if (result.ValueKind == JsonValueKind.Object && result.TryGetProperty("errors", out JsonElement value))
@@ -139,7 +171,7 @@ namespace TMDInvestments.Services
                     cnt++;
                     FetchToken("", ref success, true);
                     //return GetMovers(market);
-                    _token = ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
+                    _token = _ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
                     goto Retry;
                 }
                 //cnt = 0;
@@ -148,7 +180,8 @@ namespace TMDInvestments.Services
                 foreach (var mover in result.GetProperty("screeners").EnumerateArray())
                 {
                     results[cnt] = new JsonObject();
-                    results[cnt] = indicesCalculatorV2.CalculateV2(mover.GetProperty("symbol").ToString(), mover);
+                    results[cnt] = GetQuoteAsync(mover.GetProperty("symbol").ToString(), true, false).Result;
+                    //results[cnt] = indicesCalculatorV2.CalculateV2(mover.GetProperty("symbol").ToString(), mover);
                     //results[cnt].Add("Symbol", mover.GetProperty("symbol").ToString());
                     //results[cnt].Add("Name", mover.GetProperty("description").ToString());
                     //results[cnt].Add("lastPrice", mover.GetProperty("lastPrice").ToString());
@@ -165,10 +198,10 @@ namespace TMDInvestments.Services
         Retry:
             headers = new Dictionary<string, object>();
             headers.Add("accept", "*/*");
-            client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+            client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
             try
             {
-                accountNumbers = client.Get("trader/v1/accounts/accountNumbers", $"Bearer {System.Text.Encoding.Default.GetString((_token?.Access_Token ?? new byte[1]))}", headers);
+                accountNumbers = client.Get("trader/v1/accounts/accountNumbers", $"Bearer {System.Text.Encoding.Default.GetString((_token?.Access_Token ?? new byte[1]))}", headers).Result;
             }
             catch (Exception ex) //Call may error on onget call being called twice
             {
@@ -191,7 +224,7 @@ namespace TMDInvestments.Services
                     FetchToken("", ref success, true);
                     //System.Threading.Thread.Sleep(6000); //Five Seconds.
                     //GetAccountInfo(ref results);
-                    _token = ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
+                    _token = _ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
                     goto Retry;
                 }
             }
@@ -202,10 +235,10 @@ namespace TMDInvestments.Services
             }
             else
             {
-                HttpClientServices<SchwabAccountInfo> client = new HttpClientServices<SchwabAccountInfo>(_factory, _settings, _logger);
+                HttpClientServices<SchwabAccountInfo> client = new HttpClientServices<SchwabAccountInfo>(_factory, _settings);
                 try
                 {
-                    results = client.Get($"trader/v1/accounts/{accountNumbers[0].GetProperty("hashValue").ToString()}?fields=positions", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
+                    results = client.Get($"trader/v1/accounts/{accountNumbers[0].GetProperty("hashValue").ToString()}?fields=positions", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers).Result;
                     //return;
                 }
                 catch (Exception ex)
@@ -227,10 +260,10 @@ namespace TMDInvestments.Services
         Retry:
             headers = new Dictionary<string, object>();
             headers.Add("accept", "*/*");
-            client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+            client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
             try
             {
-                accountNumbers = client.Get("trader/v1/accounts/accountNumbers", $"Bearer {System.Text.Encoding.Default.GetString((_token?.Access_Token ?? new byte[1]))}", headers);
+                accountNumbers = client.Get("trader/v1/accounts/accountNumbers", $"Bearer {System.Text.Encoding.Default.GetString((_token?.Access_Token ?? new byte[1]))}", headers).Result;
             }
             catch (Exception ex) //Call may error on onget call being called twice
             {
@@ -253,7 +286,7 @@ namespace TMDInvestments.Services
                     FetchToken("", ref success, true);
                     //System.Threading.Thread.Sleep(6000); //Five Seconds.
                     //GetAccountInfo(ref results);
-                    _token = ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
+                    _token = _ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
                     goto Retry;
                 }
             }
@@ -264,17 +297,17 @@ namespace TMDInvestments.Services
             }
             else
             {
-                client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+                client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
                 try
                 {
-                    results = client.Get($"trader/v1/accounts/{accountNumbers[0].GetProperty("hashValue").ToString()}?fields=positions", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
+                    results = client.Get($"trader/v1/accounts/{accountNumbers[0].GetProperty("hashValue").ToString()}?fields=positions", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers).Result;
                     return;
                 }
                 catch (Exception ex)
                 {
                     results = new JsonElement();
-                    client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
-                    results = client.Get($"trader/v1/accounts/{accountNumbers[0].GetProperty("hashValue").ToString()}?fields=positions", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
+                    client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
+                    results = client.Get($"trader/v1/accounts/{accountNumbers[0].GetProperty("hashValue").ToString()}?fields=positions", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers).Result;
                     //results = results;
                     return;
                 }
@@ -289,11 +322,11 @@ namespace TMDInvestments.Services
         Retry:
             headers = new Dictionary<string, object>();
             headers.Add("accept", "application/json");
-            client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+            client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
             //&status=PENDING_ACTIVATION
             try
             {
-                results = client.Get($"trader/v1/orders?fromEnteredTime={fromDate}&toEnteredTime={toDate}", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
+                results = client.Get($"trader/v1/orders?fromEnteredTime={fromDate}&toEnteredTime={toDate}", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers).Result;
             }
             catch (Exception ex)
             {
@@ -315,7 +348,7 @@ namespace TMDInvestments.Services
                     FetchToken("", ref success, true);
                     //System.Threading.Thread.Sleep(6000); //Five Seconds.
                     //GetAccountInfo(ref results);
-                    _token = ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
+                    _token = _ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
                     goto Retry;
                 }
             }
@@ -330,7 +363,7 @@ namespace TMDInvestments.Services
             headers = new Dictionary<string, object>();
             headers.Add("accept", "*/*");
             //headers.Add("Content-Type", "application/json");
-            client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+            client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
 
             //{ "complexOrderStrategyType": "NONE", "orderType": "LIMIT", "session": "NORMAL", "price": "6.45",
             //"duration": "DAY", "orderStrategyType": "SINGLE", "orderLegCollection": [ { "instruction": "BUY_TO_OPEN",
@@ -433,12 +466,12 @@ namespace TMDInvestments.Services
             //{"message": "A validation error occurred while processing the request."}
             try
             {
-                accountNumbers = client.Get("trader/v1/accounts/accountNumbers", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
+                accountNumbers = client.Get("trader/v1/accounts/accountNumbers", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers).Result;
             }
             catch (Exception ex) //Call may error on onget call being called twice
             {
-                client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
-                accountNumbers = client.Get("trader/v1/accounts/accountNumbers", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
+                client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
+                accountNumbers = client.Get("trader/v1/accounts/accountNumbers", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers).Result;
                 return accountNumbers;
             }
             if (accountNumbers.ValueKind == JsonValueKind.Object && accountNumbers.TryGetProperty("errors", out JsonElement value))
@@ -450,12 +483,12 @@ namespace TMDInvestments.Services
                 //fetchRetry++;
                 FetchToken("", ref success, true);
                 //return SetOrder(order);
-                _token = ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
+                _token = _ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
                 goto Retry;
             }
             try
             {
-                client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+                client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
                 string contentType = "application/json";
                 results = client.Post($"trader/v1//accounts/{accountNumbers[0].GetProperty("hashValue").ToString()}/orders", order, $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers, contentType);
             }
@@ -475,10 +508,10 @@ namespace TMDInvestments.Services
         Retry:
             headers = new Dictionary<string, object>();
             headers.Add("accept", "application/json");
-            client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+            client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
             try
             {//symbol-search, desc-search
-                results = client.Get($"marketdata/v1/instruments?symbol={name}&projection=symbol-search", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
+                results = client.Get($"marketdata/v1/instruments?symbol={name}&projection=symbol-search", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers).Result;
                 try
                 {
                     var temp = JsonSerializer.Deserialize<List<dynamic>>(JsonSerializer.Serialize(results.GetProperty("instruments")));
@@ -488,8 +521,8 @@ namespace TMDInvestments.Services
                 {
 
                 }                
-                client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
-                results = client.Get($"marketdata/v1/instruments?symbol={name}&projection=desc-search", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
+                client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
+                results = client.Get($"marketdata/v1/instruments?symbol={name}&projection=desc-search", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers).Result;
                 try
                 {
                     var temp = JsonSerializer.Deserialize<List<dynamic>>(JsonSerializer.Serialize(results.GetProperty("instruments")));
@@ -502,7 +535,7 @@ namespace TMDInvestments.Services
             }
             catch (Exception ex)
             {
-                client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+                client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
                 results = client.Get($"marketdata/v1/instruments?symbol={name}&projection=symbol-search", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
                 try
                 {
@@ -513,7 +546,7 @@ namespace TMDInvestments.Services
                 {
 
                 }
-                client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+                client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
                 results = client.Get($"marketdata/v1/instruments?symbol={name}&projection=desc-search", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
                 try
                 {
@@ -535,27 +568,28 @@ namespace TMDInvestments.Services
                 }
                 fetchRetry++;
                 FetchToken("", ref success, true);
-                _token = ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
+                _token = _ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
                 //return Search(name);
                 goto Retry;
             }
             return output;
         }
-        public dynamic GetQuote(string symbol,bool useV2 = true, bool skipCalculation = false)
+        public async Task<JsonObject> GetQuoteAsync(string symbol,bool useV2 = true, bool skipCalculation = false)
         {
             int fetchRetry = 0;
             symbol = symbol.ToUpper();
-            dynamic results = null;
+            JsonElement results = new JsonElement();
+            JsonObject output = new JsonObject();
             bool success = false;
         Retry:
             headers = new Dictionary<string, object>();
             headers.Add("accept", "application/json");
-            IndicesCalculator indicesCalculator = new IndicesCalculator(_logger, _settings, _polygon, _factory);
-            indicesCalculatorV2 = new IndicesCalculatorV2(_logger, _settings, _factory/*, true, false*/);
-            client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+            //IndicesCalculator indicesCalculator = new IndicesCalculator(_logger, _settings/*, _polygon*/, _factory);
+            indicesCalculatorV2 = new IndicesCalculatorV2(_logger, _settings, _factory, _contextFactory);
+            HttpClientServices<JsonElement>? client = new HttpClientServices<JsonElement>(_factory, _settings/*, _logger*/);
             try
             {
-                results = client.Get($"marketdata/v1/{symbol}/quotes?fields=quote,fundamental,extended,reference,regular", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
+                results = await client.Get($"marketdata/v1/{symbol}/quotes?fields=quote,fundamental,extended,reference,regular", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
             }
             catch (Exception ex)
             {
@@ -565,23 +599,26 @@ namespace TMDInvestments.Services
             }
             if (results.ValueKind == JsonValueKind.Object && results.TryGetProperty("errors", out JsonElement value))
             {
+                if(results.GetProperty("errors").ToString().Contains("404"))
+                    return output;
                 if (fetchRetry == 3)
                 {
-                    return results;
+                    output.Add("errors", "Failed to Authenicate");
+                    return output;
                 }
                 else
                 {
                     fetchRetry++;
                     FetchToken("",ref success, true);
-                    _token = ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
+                    _token = _ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
                     goto Retry;
                 }
             }
             if (!skipCalculation)
                 if (useV2)
-                    results = indicesCalculatorV2.CalculateV2(symbol, results);
+                    output = indicesCalculatorV2.CalculateV2(symbol, results);
 
-            return results;
+            return output;
         }
         public dynamic GetQuotes(string symbols, bool useV2 = true, bool skipCalculation = false)
         {
@@ -593,11 +630,11 @@ namespace TMDInvestments.Services
         Retry:
             headers = new Dictionary<string, object>();
             headers.Add("accept", "application/json");
-            IndicesCalculatorV2 indicesCalculator = new IndicesCalculatorV2(_logger, _settings, _factory/*, false, true*/);
-            client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+            IndicesCalculatorV2 indicesCalculator = new IndicesCalculatorV2(_logger, _settings, _factory, _contextFactory);
+            client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
             try
             {
-                results = client.Get($"marketdata/v1/quotes?symbols={HttpUtility.UrlEncode(symbols)}&fields=quote,fundamental,extended,reference,regular", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
+                results = client.Get($"marketdata/v1/quotes?symbols={HttpUtility.UrlEncode(symbols)}&fields=quote,fundamental,extended,reference,regular", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers).Result;
             }
             catch (Exception ex)
             {
@@ -616,7 +653,7 @@ namespace TMDInvestments.Services
                     fetchRetry++;
                     FetchToken("", ref success, true);
                     //System.Threading.Thread.Sleep(6000); //Five Seconds.
-                    _token = ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
+                    _token = _ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
                     goto Retry;
                 }
                 //return GetQuote(symbol, skipCalculation);
@@ -650,9 +687,9 @@ namespace TMDInvestments.Services
             //    results = indicesCalculator.calculate(results, symbol);
             return returnObj;
         }
-        public dynamic GetPriceHistory(string symbol, string periodType, string period, string frequencyType, int frequency, DateTime? startDate, DateTime? endDate)
+        public async Task<JsonElement> GetPriceHistory(string symbol, string periodType, string period, string frequencyType, int frequency, DateTime? startDate, DateTime? endDate)
         {
-            dynamic results;
+            JsonElement results = new JsonElement();
             bool success = false;
             long? start = null;
             long? end = null;
@@ -674,28 +711,28 @@ namespace TMDInvestments.Services
                 IConfiguration config = builder.Build();
                 _settings = config.GetSection("SchwabAPI").Get<SchwabSettings>();
             }
-            client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+            HttpClientServices<JsonElement> client = new HttpClientServices<JsonElement>(_factory, _settings/*, _logger*/);
             try
             {
                 //if (periodType != "day")
                 //{
-                //    results = client.Get($"marketdata/v1/pricehistory?symbol={symbol}&periodType={periodType}&period={1}&frequencyType={frequencyType}&frequency={frequency}&startDate={start}&endDate={end}", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
+                    results = await client.Get($"marketdata/v1/pricehistory?symbol={symbol}&periodType={periodType}&period={1}&frequencyType={frequencyType}&frequency={frequency}&startDate={start}&endDate={end}", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
                 //}
                 //else
                 //{
-                   results = client.Get($"marketdata/v1/pricehistory?symbol={symbol}&periodType={periodType}&period={1}&frequencyType={frequencyType}&frequency={frequency}", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
+                   //results = client.Get($"marketdata/v1/pricehistory?symbol={symbol}&periodType={periodType}&period={1}&frequencyType={frequencyType}&frequency={frequency}", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
                 //}
             }
             catch (Exception ex)
             {
-                client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+                client = new HttpClientServices<JsonElement>(_factory, _settings/*, _logger*/);
                 //if (periodType != "day")
                 //{
-                //    results = client.Get($"marketdata/v1/pricehistory?symbol={symbol}&periodType={periodType}&period={1}&frequencyType={frequencyType}&frequency={frequency}&startDate={start}&endDate={end}", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
+                    results = await client.Get($"marketdata/v1/pricehistory?symbol={symbol}&periodType={periodType}&period={1}&frequencyType={frequencyType}&frequency={frequency}&startDate={start}&endDate={end}", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
                 //}
                 //else
                 //{
-                    results = client.Get($"marketdata/v1/pricehistory?symbol={symbol}&periodType={periodType}&period={1}&frequencyType={frequencyType}&frequency={frequency}", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
+                    //results = client.Get($"marketdata/v1/pricehistory?symbol={symbol}&periodType={periodType}&period={1}&frequencyType={frequencyType}&frequency={frequency}", $"Bearer {System.Text.Encoding.Default.GetString(_token.Access_Token)}", headers);
                 //}
                 return results;
             }
@@ -708,7 +745,7 @@ namespace TMDInvestments.Services
                 fetchRetry++;
                 FetchToken("", ref success, true);
                 //return GetPriceHistory(symbol, periodType, period, frequencyType, frequency, startDate, endDate);
-                _token = ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
+                _token = _ctx.Token.Where(x => x.TokenType == TokenType.SchwabToken).FirstOrDefault();
                 goto Retry;
             }
             //results = calculate(results);

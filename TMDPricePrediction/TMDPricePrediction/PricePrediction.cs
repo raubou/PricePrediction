@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TMD.PricePrediction;
 using TMD.PricePrediction.Classes;
+using TMDInvestments.Context;
 using TMDInvestments.Models;
 using TMDInvestments.Models.Models;
 
@@ -21,7 +22,8 @@ namespace TMDPricePrediction
         ExecCryptoPricePrediction? exec2 = null;
         List<BuySellCommodity>? BuySellStockList = null;
         readonly IHttpClientFactory? httpClientFactory = null;
-        Helper? helper = null;
+        Helper? _helper = null;
+        static TmdContext ctx = null;
 
         public PricePrediction(ILoggerFactory loggerFactory, IOptions<SchwabSettings> SchwabSettings, IOptions<ETradeSettings> ETradeSettings, IOptions<CoinBaseSettings> CoinBaseSettings, IOptions<yfapiSettings> yfapiSettings)
         {
@@ -31,6 +33,7 @@ namespace TMDPricePrediction
             _ETradeSettings = ETradeSettings;
             BuySellStockList = new List<BuySellCommodity>();
             _yfapiSettings = yfapiSettings;
+            ctx = new TmdContext();
         }
 
         [Function("PricePrediction")]
@@ -51,11 +54,11 @@ namespace TMDPricePrediction
         .SetHandlerLifetime(Timeout.InfiniteTimeSpan); // Disable rotation, as it is handled by PooledConnectionLifetime
             var serviceProvider = client.Services.BuildServiceProvider();
             var httpClientFactory = serviceProvider.GetService<IHttpClientFactory>();
-            helper = new Helper(_logger, _SchwabSettings.Value, _ETradeSettings.Value, _yfapiSettings.Value, httpClientFactory);
+            //_helper = new Helper(_logger, _SchwabSettings.Value, _ETradeSettings.Value, _yfapiSettings.Value, httpClientFactory, ctx);
 
-            exec1 = new ExecStockPricePredictionSchwab(_logger, _SchwabSettings.Value, httpClientFactory);
-            exec3 = new ExecStockPricePredictionETrade(_logger, _ETradeSettings.Value, _SchwabSettings.Value, httpClientFactory);
-            exec2 = new ExecCryptoPricePrediction(_logger, _CoinBaseSettings.Value, httpClientFactory);
+            //exec1 = new ExecStockPricePredictionSchwab(_logger, _SchwabSettings.Value, httpClientFactory, _helper);
+            //exec3 = new ExecStockPricePredictionETrade(_logger, _ETradeSettings.Value, _SchwabSettings.Value, httpClientFactory, _helper);
+            //exec2 = new ExecCryptoPricePrediction(_logger, _CoinBaseSettings.Value, httpClientFactory/*, _helper*/);
 
             decimal totalAvailiableforLongTradeSchwab = 0m;
             decimal totalAvailiableforLongTradeETrade = 0m;
@@ -86,7 +89,7 @@ namespace TMDPricePrediction
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Source: {ex.Source} stack trace: {ex.StackTrace} inner exception {ex?.InnerException?.Message ?? ""} error: {ex.Message}");
+                Helper.Log(_logger, LogLevel.Error, $"Source: {ex.Source} stack trace: {ex.StackTrace} inner exception {ex?.InnerException?.Message ?? ""} error: {ex.Message}");
             }
             try
             {
@@ -97,17 +100,17 @@ namespace TMDPricePrediction
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Source: {ex.Source} stack trace: {ex.StackTrace} inner exception {ex?.InnerException?.Message ?? ""} error: {ex.Message}");
+                Helper.Log(_logger, LogLevel.Error, $"Source: {ex.Source} stack trace: {ex.StackTrace} inner exception {ex?.InnerException?.Message ?? ""} error: {ex.Message}");
             }
         ExecCrypto:
-            try
-            {
-                exec2.Exec();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Source: {ex.Source} stack trace: {ex.StackTrace} inner exception {ex?.InnerException?.Message ?? ""} error: {ex.Message}");
-            }
+            //try
+            //{
+            //    exec2.Exec();
+            //}
+            //catch (Exception ex)
+            //{
+            //    Helper.Log(_logger, LogLevel.Error, $"Source: {ex.Source} stack trace: {ex.StackTrace} inner exception {ex?.InnerException?.Message ?? ""} error: {ex.Message}");
+            //}
             exec1 = null;
             exec2 = null;
             exec3 = null;

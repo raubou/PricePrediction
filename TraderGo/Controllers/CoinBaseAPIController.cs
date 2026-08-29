@@ -7,7 +7,7 @@ using TMD.Services;
 using TMD.Services.Service;
 using TMDInvestments.Context;
 using TMDInvestments.Models;
-using TMDInvestments.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace TraderGo.Controllers
 {
@@ -30,7 +30,7 @@ namespace TraderGo.Controllers
         TraderGoService _traderGoService;
        // HttpClient _client;
         TmdContext ctx = null;
-        public CoinBaseAPIController(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<FinnHub> finnHub, IOptions<Polygon> polycon, IHttpClientFactory? httpClientFactory, ILogger<TraderGoAPIController> logger, IOptions<CoinBaseSettings> settings)
+        public CoinBaseAPIController(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<FinnHub> finnHub, IOptions<Polygon> polycon, IHttpClientFactory? httpClientFactory, ILogger<TraderGoAPIController> logger, IOptions<CoinBaseSettings> settings, IDbContextFactory<TmdContext> contextFactory)
         {
             _connectionSettings = connectionSettings;
             _connectionSettings2 = connectionSettings2;
@@ -41,13 +41,13 @@ namespace TraderGo.Controllers
             _factory = httpClientFactory;
             //_client = _httpClientFactory.CreateClient();
             //_client = httpClientFactory?.CreateClient();
-            _traderGoService = new TraderGoService(null, _logger, httpClientFactory, false);
+            _traderGoService = new TraderGoService(null, _logger, httpClientFactory, false, contextFactory);
         }
         [HttpGet, Route("GetQuote/{symbol}")]
-        public IActionResult GetQuote(string symbol)
+        public async Task<IActionResult> GetQuote(string symbol)
         {
             services = new CoinBaseService(_logger, _settings, _factory);
-            var results = services.GetQuote(symbol);
+            var results = await services.GetQuoteAsync(symbol);
             return Ok(results);
         }
         [HttpGet, Route("CryptoTracker/{coin}")]

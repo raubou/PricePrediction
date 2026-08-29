@@ -53,9 +53,9 @@
         <div class="col border border-1 border-light text-center">&nbsp;</div>
         <div class='col border border-1 border-light text-center'>Date Purchased</div>
     </div>
-    @{
+@*     @{
         var caca = Model?.Accounts?.Where(x => x.Currency.ToLower().Contains("btc")).ToList();
-    }
+    } *@
     @foreach (var item in Model?.Accounts)
     {
         var baseName = item.Currency.ToUpper() + "-USD";
@@ -78,7 +78,7 @@
         {
             try
             {                
-                results = Model.coinBaseService.GetQuote(item.Currency + "-USD");
+                results = Model.coinBaseService.GetQuoteAsync(item.Currency + "-USD").Result;
             }
             catch (Exception ex)
             {
@@ -92,14 +92,14 @@
                 <div class="col border border-1">@item.Name</div>
                 <div class="col border border-1">@item.Default</div>
                 <div class="col border border-1">@item.Uuid</div>
-                <div class="col border border-1">@valueofNonTrackedAsset</div>
+                <div class="col border border-1">@(Math.Round(valueofNonTrackedAsset, 2))</div>
                 <div class="col border border-1">@item.AvailableBalance.Currency-USB</div>
                 <div class="col border border-1">
                     $@(Math.Round(Convert.ToDecimal(item.AvailableBalance.Value) * Convert.ToDecimal(results["lastPrice"].ToString()), 2))
                 </div>
-                <div class="col border border-1">$@results["lastPrice"].ToString()</div>
-                <div class="col border border-1">$@coin?.LastPrice</div>
-                <div class="col border border-1">$@coin?.PricePurchased</div>
+                <div class="col border border-1">$@(Math.Round(Convert.ToDecimal(results["lastPrice"].ToString()), 2))</div>
+                <div class="col border border-1">$@(Math.Round(Convert.ToDecimal(coin?.LastPrice.ToString()), 2))</div>
+                <div class="col border border-1">$@(Math.Round(Convert.ToDecimal(coin?.PricePurchased), 2))</div>
                 @{
                     status = string.Empty;
                     if (coin != null && coin?.PricePurchased > Convert.ToDecimal(results["lastPrice"].ToString()))

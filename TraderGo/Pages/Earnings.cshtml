@@ -4,18 +4,18 @@
 @using System.Text.Json.Nodes;
 @{
     ViewData["Title"] = "Tradergo.com - Earnings";
-    int rowCnt = 1;
-    string boldStyle = string.Empty;
-    JsonObject quote = null;
+    // int rowCnt = 1;
+    // string boldStyle = string.Empty;
+    // JsonObject quote = null;
 }
 <div class="row">
     <div class="col">
         <h4 class="d-flex justify-content-center text-muted">Upcomming Earnings</h4>
     </div>
-    @{
-        var lastUpdated = (@Model.Earnings?.Count > 0) ? @Model.Earnings?[0].datecreated : DateTime.MinValue; ;
+@*     @{
+        var lastUpdated = (Model.Total > 0) ? @Model.Earnings?.GetEnumerator(). : DateTime.MinValue;
     }
-    <div class="col">Last Updated @lastUpdated</div>
+    <div class="col">Last Updated @lastUpdated</div> *@
     <div class="col">
         <form method="post" id="formSubmit" name="formSubmit">
             <input type="submit" id="btnUpdate" value="Update Earnings" class="btn btn-primary" />
@@ -28,7 +28,7 @@
     </div>
 </div>
 <div class="row">
-    <div class="col"><b>Total: @Model.Total</b></div>
+    <div class="col"><b>Total: @(Model?.Total ?? 0)</b></div>
 </div>
 <hr />
 <div class="border rounded-3 p-3" style="width:100%;height:auto;margin:0px auto;float:none;position: relative; top: 40px;overflow:hidden;overflow-x:auto;">
@@ -62,67 +62,70 @@
 
             } *@
 
-            if ((bool)Model?.stockList?.Any(x => x.Symbol == item.symbol))
+            if ((bool)Model?.stockList?.Any(x => x.Symbol == item?["Symbol"]?.ToString()))
             {
-                boldStyle = "fw-bolder";
+                Model.boldStyle = "fw-bolder";
             }
             else
             {
-                boldStyle = "";
+                Model.boldStyle = "";
             }
             <div class="row border border-1 border-info">
                 <div class="col">
-                    @rowCnt
+                    @(Model?.rowCnt ?? 0)
                 </div>
-                <div class="col @boldStyle">
-                    <a rel="canonical" href="javascript:objContext.GetQuote('@item.symbol','@item.name.ToString().Replace(@"'", " ")')" style="color:#006699;text-decoration:none;">@item.symbol</a>
+                <div class="col @Model?.boldStyle">
+                    <a rel="canonical" href="javascript:objContext.GetQuote('@item?["symbol"].ToString()','@item?["name"]?.ToString()?.Replace(@"'", " ")')" style="color:#006699;text-decoration:none;">@item?["symbol"].ToString()</a>
                 </div>
-                <div id="lastPrice_@rowCnt" class="col">
-                    $@quote?["lastPrice"]?.ToString()
+                <div id="lastPrice_@Model?.rowCnt" class="col">
+                    @* $@Model?.quote?["lastPrice"]?.ToString() *@
                 </div>
                 <script type="text/javascript">
+                $(function() {
+                    $(".overlay").hide();
                     $.ajax({
-                          url: "api/TraderGoAPI/GetQuote/@item.symbol",
+                          url: "api/TraderGoAPI/GetQuote/@item["symbol"].ToString()",
                       }).done(function (data) {
                           console.log(JSON.stringify(data));
-                            $("#lastPrice_@rowCnt").html("$" + data.lastPrice)
+                            $("#lastPrice_@Model?.rowCnt").html("$" + data.lastPrice)
                     objContext.sleep(500);
                       }).catch(function (e) {
 
                       });
-                </script>
+                });
+             </script>
                 <div class="col overflow-hidden">
-                    @item.name
+                    @item["name"].ToString()
                 </div>
                 <div class="col">
-                            @item.year
+                    @item["year"].ToString()
                         </div>
                 <div class="col">
-                            @item.quarter
+                    @item["quarter"].ToString()
                         </div>
                 <div class="col">
-                            @item.hour
+                    @item["hour"].ToString()
                         </div>
                 <div class="col">
-                            @item.revenueEstimate.ToString()
+                    @item["revenueEstimate"].ToString()
                         </div>
                 <div class="col">
-                            @item.revenueActual.ToString()
+                    @item["revenueActual"].ToString()
                         </div>
                 <div class="col">
-                            @item.epsEstimate
+                    @item["epsEstimate"].ToString()
                         </div>
                 <div class="col">
-                            @item.epsActual
+                    @item["epsActual"].ToString()
                         </div>
                 <div class="col">
-                    @item.LastEarningDate.ToString()
+                    @item["LastEarningDate"].ToString()
                 </div>
                 <div class="col">
-                            @item.date.ToString()
+                    @item["Date"].ToString()
                         </div>
                     </div>
-                rowCnt++;
+                Model.rowCnt++;
             }
     </div>
 </div>

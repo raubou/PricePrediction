@@ -7,6 +7,8 @@ using TMD.Database.Connect.Managers;
 using TMD.Services.Service;
 using TMDInvestments.Models;
 using TMDInvestments.Services;
+using TMDInvestments.Context;
+using Microsoft.EntityFrameworkCore;
 
 namespace TraderGo.Pages
 {
@@ -20,13 +22,13 @@ namespace TraderGo.Pages
         SchwabSettings _settings;
         HttpClient _httpClient;
         [BindProperty] public int Total { get; set; }
-        public StockAnalysisModel(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<MailSettings> mailSettings, IHttpClientFactory _factory, ILogger<SettingsModel> logger, IOptions<FinnHub> finnHub, IOptions<Polygon> polycon, IOptions<SchwabSettings> settings) //: base(connectionSettings, connectionSettings2, mailSettings)
+        public StockAnalysisModel(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<MailSettings> mailSettings, IHttpClientFactory _factory, ILogger<SettingsModel> logger, IOptions<FinnHub> finnHub, IOptions<Polygon> polycon, IOptions<SchwabSettings> settings, IDbContextFactory<TmdContext> contextFactory) //: base(connectionSettings, connectionSettings2, mailSettings)
         {
             _logger = logger;
             //_httpClient = _factory.CreateClient();
             //_mgr = new Manager(connectionSettings?.Value?.Connection, "", null);
             _settings = settings.Value;
-            _service = new SchwabServices(_logger, _settings, _factory);
+            _service = new SchwabServices(_logger, _settings, _factory, contextFactory);
         }
 
         public override IActionResult Execute()

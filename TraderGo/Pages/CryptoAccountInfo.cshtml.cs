@@ -2,9 +2,14 @@ using Coinbase.AdvancedTrade.Models;
 using Coinbase.AdvancedTrade.Models.Public;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using NewsAggregator.models.returnModel;
 using System.Text.Json.Nodes;
+using TMD.PricePrediction;
 using TMD.Services;
+using TMDInvestment.Models;
+using TMDInvestments.Context;
 using TMDInvestments.Models;
 
 namespace TraderGo.Pages
@@ -15,37 +20,40 @@ namespace TraderGo.Pages
         private readonly ILogger<CryptoAccountInfoModel> _logger;
         private readonly CoinBaseSettings _settings;
         private readonly IHttpClientFactory _factory;
+        Helper _helper  = null;
         [BindProperty] public CoinBaseService coinBaseService { get; set; }
         [BindProperty] public List<Account>? Accounts { get; set; }
         [BindProperty] public List<PortfolioBreakdown>? Portfolios { get; set; }
         [BindProperty] public List<PublicProduct>? PublicProducts { get; set; }
         [BindProperty] public List<CryptoList> CryptoList { get; set; }
         [BindProperty] public List<CryptoTracker2> CryptoTracker { get; set; }
-        public CryptoAccountInfoModel(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<MailSettings> mailSettings, IHttpClientFactory factory, ILogger<CryptoAccountInfoModel> logger, IOptions<CoinBaseSettings> settings)// : base(connectionSettings, connectionSettings2, mailSettings)
+        public CryptoAccountInfoModel(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<MailSettings> mailSettings, IHttpClientFactory factory, ILogger<CryptoAccountInfoModel> logger, IOptions<CoinBaseSettings> settings, IDbContextFactory<TmdContext> contextFactory)// : base(connectionSettings, connectionSettings2, mailSettings)
         {
             _logger = logger;
             _settings = settings.Value;
             _factory = factory;
-            coinBaseService = new CoinBaseService(_logger, _settings, _factory);
+            coinBaseService = new CoinBaseService(_logger, _settings, _factory/*, new Helper(new TMDInvestments.Context.TmdContext())*/);
+            _helper = new Helper(_logger, null, null, null, contextFactory);
         }
 
         public override IActionResult Execute()
         {
-            Accounts = coinBaseService.GetAccounts()/*.Where(x => Convert.ToDecimal(x.AvailableBalance.Value) > 0)*/.ToList();
+            Accounts = coinBaseService.GetAccounts().ToList();
             PublicProducts = coinBaseService.GetProducts().OrderBy(x => x.DisplayName).ToList();
             Portfolios = coinBaseService.GetPortfolios();
             CryptoList = ctx.CryptoList.ToList();
-            CryptoTracker = ctx.CryptoTracker2.Where(x => x.PriceSold == null && x.DateSold == null && (x.BuyStatus.ToLower() == "filled" /*|| x.BuyStatus.ToLower() == "open" || x.BuyStatus.ToLower() == "pending"*/)).ToList();
+            CryptoTracker = ctx.CryptoTracker2.Where(x => x.PriceSold == null && x.DateSold == null && (x.BuyStatus.ToLower() == "filled")).ToList();
             return Page();
         }
         public IActionResult OnPost()
         {
             var fromData = Request.Form["Currency"];
             var products = coinBaseService.GetProducts();
-            var coin = ctx.CryptoTracker2.Where(x => x.Coin == fromData + "-USD").FirstOrDefault();
-            coinBaseService = new CoinBaseService(_logger, _settings, _factory);
+            //var coin = ctx.CryptoTracker2.Where(x => x.Coin == fromData + "-USD").FirstOrDefault();
+            var coin = ctx.CryptoTracker2.Where(x => x.PriceSold == null && x.DateSold == null && (x.BuyStatus.ToLower() == "filled")).FirstOrDefault();
+            coinBaseService = new CoinBaseService(_logger, _settings, _factory/*, new Helper(ctx)*/);
             var order = coinBaseService.GetOrder((Guid)coin.BuyOrderId);
-            JsonObject results = coinBaseService.GetQuote(coin.Coin);
+            JsonObject results = coinBaseService.GetQuoteAsync(coin.Coin).Result;
             BuySellCrypto(coin, results, TradeDirection.SELL, Math.Round(Convert.ToDecimal(order.FilledSize), 5), coinBaseService, products, false);
             return Execute();
         }
@@ -75,8 +83,11 @@ namespace TraderGo.Pages
                     //precision = product.BaseIncrement.Substring((product.BaseIncrement.IndexOf(".") + 1), (product.BaseIncrement.Length - (product.BaseIncrement.IndexOf(".") + 1)));
                     //currency = product.DisplayName.Split('-');
                     //var account = services.GetAccounts().Where(x => x.Currency == currency[0]).FirstOrDefault();
-                    var baseSize = (account.AvailableBalance.Value.IndexOf(".") == -1) ? Convert.ToDecimal(account.AvailableBalance.Value) : Convert.ToDecimal(account.AvailableBalance.Value.Substring(0, (account.AvailableBalance.Value.IndexOf(".") + precision.Length)));
-                    output = coinBaseService.SetOrder(product.DisplayName, coinbaseDirection, baseSize);
+                    //var baseSize = (account.AvailableBalance.Value.IndexOf(".") == -1) ? Convert.ToDecimal(account.AvailableBalance.Value) : Convert.ToDecimal(account.AvailableBalance.Value.Substring(0, (account.AvailableBalance.Value.IndexOf(".") + precision.Length)));
+                    //output = coinBaseService.SetOrder(product.DisplayName, coinbaseDirection, baseSize);
+                    var currentBalance = Math.Round(Convert.ToDecimal(account?.AvailableBalance?.Value) * Convert.ToDecimal(product?.Price), 5);
+                    var results = coinBaseService.GetQuoteAsync(product.DisplayName).Result;
+                    _helper.BuySellCrypto(cryptoTracker, results, TradeDirection.SELL, currentBalance, coinBaseService, publicProducts/*, false, false*/);
                     break;
             }
             //if (output != null)

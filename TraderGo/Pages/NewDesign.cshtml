@@ -1,0 +1,476 @@
+﻿@page
+@model TraderGo.Pages.NewDesignModel
+@{
+    Layout = null;
+}
+<style>
+   * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: Arial, Helvetica, sans-serif;
+        /* font-family: "system-ui,-apple-system","Segoe UI",Roboto,"Helvetica Neue","Noto Sans","Liberation Sans",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"; */
+    }
+
+    body {
+        background: #0d1117 !important;
+        color: #fff !important;
+    }
+
+    /* Header */
+    header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 4%;
+        background: #161b22;
+        border-bottom: 1px solid #30363d;
+        position: fixed;
+        top:0px;
+        width:100%;
+        z-index: 1;
+        opacity:.9;
+    }
+
+    .logo {
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+    nav{
+        width: 100%;
+    }
+    nav a {
+        color: #c9d1d9;
+        text-decoration: none;
+        margin-left: 25px;
+        transition: 0.3s;
+    }
+
+        nav a:hover {
+            color: #58a6ff;
+        }
+
+    .SearchWrapper {
+        width: 40% !important;
+    }
+
+.main-container {
+    width:100%;
+    height:auto;
+        margin: 0 auto;
+        float:none;
+        overflow: hidden;
+        position: relative;
+        top:80px;
+}
+    /* Ticker */
+    .ticker-container {
+        overflow: hidden;
+        background: #111827;
+        border-bottom: 1px solid #30363d;
+    }
+
+    .ticker {
+        display: flex;
+        gap: 50px;
+        white-space: nowrap;
+        padding: 12px;
+        animation: scroll 25s linear infinite;
+    }
+
+    @@keyframes scroll {
+        from {
+            transform: translateX(100%);
+        }
+
+        to {
+            transform: translateX(-100%);
+        }
+    }
+
+    /* Hero */
+    .hero {
+        text-align: center;
+        padding: 80px 20px;
+    }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .hero p {
+            color: #8b949e;
+            margin-bottom: 25px;
+        }
+
+        .hero button {
+            padding: 14px 30px;
+            border: none;
+            border-radius: 8px;
+            background: #238636;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+            .hero button:hover {
+                background: #2ea043;
+            }
+
+    /* Market Overview */
+    .market-overview {
+/*         display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px; */
+        /* padding: 40px 8%; */
+    }
+
+    .market-card {
+        width:200px;
+        background: #161b22;
+        padding: 25px;
+        border-radius: 12px;
+        border: 1px solid #30363d;
+        color:#fff;
+        float: left;
+        margin-right: 20px;
+        margin-left: 20px;
+    }
+
+        .market-card p {
+            font-size: 1.8rem;
+            margin: 10px 0;
+        }
+
+    /* Stock Grid */
+    .stocks {
+        /* padding: 40px 8%; */
+    }
+
+        .stocks h2 {
+            margin-bottom: 20px;
+        }
+
+    .stock-grid {
+/*         display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 20px; */
+    }
+
+    .stock-card {
+        width: 200px;
+        background: #161b22;
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid #30363d;
+        transition: transform 0.3s;
+        color: #fff;
+        float: left;
+        margin-right: 20px;
+        margin-left: 20px;
+    }
+
+        .stock-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stock-card h3 {
+            margin-bottom: 8px;
+        }
+
+        .stock-card p {
+            color: #8b949e;
+            margin-bottom: 10px;
+        }
+
+    /* Watchlist */
+    .watchlist {
+        padding: 40px 8%;
+    }
+
+        .watchlist h2 {
+            margin-bottom: 20px;
+        }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #161b22;
+        border-radius: 12px;
+        overflow: hidden;
+        color: #fff;
+    }
+
+    th,
+    td {
+        padding: 16px;
+        text-align: left;
+    }
+
+    th {
+        background: #1f2937;
+    }
+
+    tr {
+        border-bottom: 1px solid #30363d;
+    }
+
+        tr:last-child {
+            border-bottom: none;
+        }
+
+    /* Utilities */
+    .positive {
+        color: #3fb950;
+        font-weight: bold;
+    }
+
+    .negative {
+        color: #f85149;
+        font-weight: bold;
+    }
+    #MyChart {
+        padding: 40px 8%;
+        /* border: 1px solid #000; */
+    }   
+    /* Footer */
+    footer {
+        text-align: center;
+        padding: 25px;
+        margin-top: 40px;
+        border-top: 1px solid #30363d;
+        color: #8b949e;
+    }
+
+</style>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/ag-charts-community/dist/umd/ag-charts-community.js"></script>
+    @* <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=search" /> *@
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=search" />
+    <link rel="icon" type="image/x-icon" href="../../img/stocklogo.png" />
+    <link rel="stylesheet" href="../../css/bootstrap.min.css" />
+    <script src="../../lib/jquery/dist/jquery.min.js"></script>
+    <script src="/js/bootstrap.bundle.min.js"></script>
+    <title>StockPulse</title>
+    <link rel="stylesheet" href="styles.css">
+    <script type="text/javascript">
+            const { AgCharts } = agCharts;
+
+            // Chart Options
+            const options = {};
+
+            // Create Chart
+            const chart = agCharts.AgCharts.create(options);
+
+            $(function() {
+                //alert('Hello World' + document.getElementById('myChart'));
+                // Chart Options
+                const options = {
+                    // Container: HTML Element to hold the chart
+                    container: document.getElementById('myChart'),
+                    // Data: Data to be displayed in the chart
+                    data: [
+                        { month: 'Jan', avgTemp: 2.3, iceCreamSales: 162000 },
+                        { month: 'Mar', avgTemp: 6.3, iceCreamSales: 302000 },
+                        { month: 'May', avgTemp: 16.2, iceCreamSales: 800000 },
+                        { month: 'Jul', avgTemp: 22.8, iceCreamSales: 1254000 },
+                        { month: 'Sep', avgTemp: 14.5, iceCreamSales: 950000 },
+                        { month: 'Nov', avgTemp: 8.9, iceCreamSales: 200000 },
+                    ],
+                    // Series: Defines which chart type and data to use
+                    series: [{ type: 'bar', xKey: 'month', yKey: 'iceCreamSales' }],
+                };
+                // Create Chart
+                AgCharts.create(options);
+            });
+    </script>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+@*         <div class="logo">📈 StockPulse</div>
+        <div class="input-group rounded-pill bg-white SearchWrapper">
+            <input class="form-control border-end-0 border rounded-pill" type="search" placeholder="Search all Commodities By Name or Symbol" title="Search all Commodities By Name or Symbol" alt="Search all Commodities By Name or Symbol" id="txtSearch" autocomplete="off">
+            <span class="input-group-append">
+                <button class="btn btn-outline-secondary bg-white border-bottom-0 border rounded-pill ms-n5" type="button" id="btnSearch">
+                    <i class="bi bi-search"></i>
+                </button>
+            </span>
+            <div id="searchResults" class="searchResults"></div>
+        </div>
+        <nav>
+            <a href="#">Markets</a>
+            <a href="#">Watchlist</a>
+            <a href="#">News</a>
+            <a href="#">Portfolio</a>
+        </nav> *@
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light text-white mb-3">
+            <div class="container-fluid">
+                <a rel="canonical" class="navbar-brand text-white" asp-area="" asp-page="/Index"><img src="../../img/stocklogo.png" height="30" alt="Tradergo.com" />Trader Go</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse menu fw-bold" id="navbarSupportedContent" style="font-size:10px;">
+                    <ul class="navbar-nav flex-grow-1">
+                        <li class="nav-item">
+                            <a rel="canonical" class="nav-link text-white" title="Home" asp-area="" asp-page="/Index" alt="home">Home</a>
+                        </li>
+                        <li class="nav-item">
+                            <a rel="canonical" class="nav-link text-white" asp-area="" title="Search Trends" asp-page="/Search" alt="search">Search</a>
+                        </li>
+                        <li class="nav-item">
+                            <a rel="canonical" class="nav-link text-white" asp-area="" title="Search Trends" asp-page="/Stock" alt="search">Stock</a>
+                        </li>
+                        <li class="nav-item">
+                            <a rel="canonical" class="nav-link text-white" asp-area="" title="Search Trends" asp-page="/Crypto" alt="search">Crypto</a>
+                        </li>
+                        <li class="nav-item">
+                            <a rel="canonical" class="nav-link text-white" asp-area="" title="Settings" asp-page="/Settings" alt="Settings">
+                                Settings
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="input-group rounded-pill bg-white SearchWrapper">
+                    <input class="form-control border-end-0 border rounded-pill" type="search" placeholder="Search all Commodities By Name or Symbol" title="Search all Commodities By Name or Symbol" alt="Search all Commodities By Name or Symbol" id="txtSearch" autocomplete="off">
+                    <span class="input-group-append">
+                        <button class="btn btn-outline-secondary bg-white border-bottom-0 border rounded-pill ms-n5" type="button" id="btnSearch">
+                            <span class="material-symbols-outlined">
+                                search
+                            </span>
+                        </button>
+                    </span>
+                    <div id="searchResults" class="searchResults"></div>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <!-- Main Container -->
+    <div class="main-container">
+    <!-- Ticker -->
+    <section class="ticker-container">
+        <div class="ticker">
+            <span>AAPL ▲ 218.45 (+1.24%)</span>
+            <span>MSFT ▲ 486.12 (+0.78%)</span>
+            <span>TSLA ▼ 182.67 (-2.11%)</span>
+            <span>NVDA ▲ 154.33 (+3.40%)</span>
+            <span>AMZN ▲ 223.17 (+0.92%)</span>
+            <span>META ▼ 721.50 (-0.65%)</span>
+        </div>
+    </section>
+
+    <!-- Hero -->
+    <section class="hero" style="display:none;">
+        <h1>Track the Market in Real Time</h1>
+        <p>Monitor stocks, build watchlists, and stay ahead of market trends.</p>
+        <button>Start Investing</button>
+    </section>
+
+        <!-- Market Overview -->
+        <h2>Markets</h2>
+        <div style="width:100%;height:inherit;margin:0px auto;float:none;overflow:hidden;overflow-x:auto;">
+            <div id="MarketsScroll" style="width:3200px;height:auto;margin:0px auto;float:none;overflow:hidden;">
+                <section class="market-overview">
+                    <div class="market-card">
+                        <h3>S&P 500</h3>
+                        <p>6,125.41</p>
+                        <span class="positive">+0.85%</span>
+                    </div>
+
+                    <div class="market-card">
+                        <h3>NASDAQ</h3>
+                        <p>20,152.88</p>
+                        <span class="positive">+1.32%</span>
+                    </div>
+
+                    <div class="market-card">
+                        <h3>DOW</h3>
+                        <p>44,125.17</p>
+                        <span class="negative">-0.27%</span>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- Stock Grid -->
+        <h2>Trending Stocks</h2>
+        <div style="width:100%;height:inherit;margin:0px auto;float:none;overflow:hidden;overflow-x:auto;">
+            <div id="MarketsScroll" style="width:3200px;height:auto;margin:0px auto;float:none;overflow:hidden;">
+                <section class="stocks">
+                    <div class="stock-grid">
+                        <div class="stock-card">
+                            <h3>AAPL</h3>
+                            <p>Apple Inc.</p>
+                            <span class="positive">$218.45 +1.24%</span>
+                        </div>
+
+                        <div class="stock-card">
+                            <h3>NVDA</h3>
+                            <p>NVIDIA Corp.</p>
+                            <span class="positive">$154.33 +3.40%</span>
+                        </div>
+
+                        <div class="stock-card">
+                            <h3>TSLA</h3>
+                            <p>Tesla Inc.</p>
+                            <span class="negative">$182.67 -2.11%</span>
+                        </div>
+
+                        <div class="stock-card">
+                            <h3>MSFT</h3>
+                            <p>Microsoft Corp.</p>
+                            <span class="positive">$486.12 +0.78%</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+    <!-- Watchlist -->
+    <section class="watchlist">
+        <h2>My Watchlist</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Symbol</th>
+                    <th>Price</th>
+                    <th>Change</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                <tr>
+                    <td>AMD</td>
+                    <td>$182.22</td>
+                    <td class="positive">+2.15%</td>
+                </tr>
+
+                <tr>
+                    <td>GOOGL</td>
+                    <td>$191.65</td>
+                    <td class="positive">+0.55%</td>
+                </tr>
+
+                <tr>
+                    <td>NFLX</td>
+                    <td>$714.88</td>
+                    <td class="negative">-1.02%</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+    <div id="myChart"></div>
+    </div>
+    <footer>
+        <p>© 2026 StockPulse. All rights reserved.</p>
+    </footer>
+
+</body>
+</html>

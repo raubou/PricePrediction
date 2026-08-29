@@ -4,9 +4,12 @@ using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Xml.Linq;
+using TMD.PricePrediction;
 using TMDInvestment.Models;
+using TMDInvestments.Context;
 using TMDInvestments.Models;
 using TMDInvestments.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace TMD.Services.Service
 {
@@ -17,16 +20,21 @@ namespace TMD.Services.Service
         CoinBaseSettings? _coinbaseSettings = null;
         ETradeSettings? _etradeSettings = null;
         IHttpClientFactory? _factory = null;
-        SchwabServices? services;
+        SchwabServices? _services;
         CoinBaseService? coinbaseService;
         ETradeService? etradeService;
         MLPricePredict? mlPricePredict;
-        //int fastPeriod = 12; int slowPeriod = 26; int signalPeriod = 9;
-        public IndicesCalculatorV2(ILogger log, SchwabSettings settings, IHttpClientFactory factory/*, bool use31016 = false, bool use5138 = false*/)
+        TmdContext? _ctx;
+        IDbContextFactory<TmdContext> _contextFactory;
+        public IndicesCalculatorV2(ILogger log, SchwabSettings settings, IHttpClientFactory factory, IDbContextFactory<TmdContext> contextFactory)
         {
             _log = log;
             _settings = settings;
             _factory = factory;
+            _contextFactory = contextFactory;
+            _ctx = contextFactory.CreateDbContext();
+            //this._helper = helper;
+            //this._services = services;
             //if (use31016)
             //{
             //    fastPeriod = 3; slowPeriod = 10; signalPeriod = 16;
@@ -36,11 +44,12 @@ namespace TMD.Services.Service
             //    fastPeriod = 5; slowPeriod = 13; signalPeriod = 8;
             //}
         }
-        public IndicesCalculatorV2(ILogger log, ETradeSettings etradeSettings, IHttpClientFactory factory/*, bool use31016 = false, bool use5138 = false*/)
+        public IndicesCalculatorV2(ILogger log, ETradeSettings etradeSettings, IHttpClientFactory factory/*, Helper? helper*/)
         {
             _log = log;
             _etradeSettings = etradeSettings;
             _factory = factory;
+            //this._helper = helper;
             //if (use31016)
             //{
             //    fastPeriod = 3; slowPeriod = 10; signalPeriod = 16;
@@ -50,11 +59,12 @@ namespace TMD.Services.Service
             //    fastPeriod = 5; slowPeriod = 13; signalPeriod = 8;
             //}
         }
-        public IndicesCalculatorV2(ILogger log, CoinBaseSettings coinbaseSettings, IHttpClientFactory factory/*, bool use31016 = false, bool use5138 = false*/)
+        public IndicesCalculatorV2(ILogger log, CoinBaseSettings coinbaseSettings, IHttpClientFactory factory/*, Helper? helper*/)
         {
             _log = log;
             _coinbaseSettings = coinbaseSettings;
             _factory = factory;
+            //this._helper = helper;
             //if (use31016)
             //{
             //    fastPeriod = 3; slowPeriod = 10; signalPeriod = 16;
@@ -64,9 +74,9 @@ namespace TMD.Services.Service
             //    fastPeriod = 5; slowPeriod = 13; signalPeriod = 8;
             //}
         }
-        public dynamic CalculateV2(string symbol, JsonElement quote)
+        public JsonObject CalculateV2(string symbol, JsonElement quote)
         {
-            services = new SchwabServices(_log, _settings, _factory);
+            _services = new SchwabServices(_log, _settings, _factory, _contextFactory);
             mlPricePredict = new MLPricePredict();
             decimal currentPrice = 0m;
             decimal totalVolume = 0m;
@@ -74,7 +84,7 @@ namespace TMD.Services.Service
             dynamic? results = null;
             dynamic? ser = null;
             //int? totalDaysBack = 0;
-            double hours = -24;
+            double days = -7;
             JsonObject output = new JsonObject();
             List<TMDInvestment.Models.CandleItems> candle90 = new List<TMDInvestment.Models.CandleItems>();
             try
@@ -110,7 +120,7 @@ namespace TMD.Services.Service
                         }
                         catch (Exception)
                         {
-                            _log.LogError($"{ex3.Message}", ex2);
+                            Helper.Log(_log, LogLevel.Error, $"{ex3.Message}");
                             return null;
                         }
 
@@ -120,7 +130,7 @@ namespace TMD.Services.Service
 
         //DateTime previewDate = DateTime.Now.AddDays(-30);
         GetPriceHistory:
-            DateTime previewDate = DateTime.Now.AddHours(hours);
+            DateTime previewDate = DateTime.Now.AddDays(days);
             //    if (previewDate.DayOfWeek == DayOfWeek.Saturday)
             //        previewDate = previewDate.AddDays(-1).AddHours(-48);
             //    else if (previewDate.DayOfWeek == DayOfWeek.Sunday)
@@ -142,8 +152,14 @@ namespace TMD.Services.Service
             try
             {
                 //results = services.GetPriceHistory(symbol, "day", "2", "minute", 15, null, null);
-                results = services.GetPriceHistory(symbol, "day", "2", "minute", 15, previewDate, DateTime.Now);
+                //results = services.GetPriceHistory(symbol, "day", "2", "minute", 15, previewDate, DateTime.Now);
+                //results = _services.GetPriceHistory(symbol, "day", "10", "minute", 15, previewDate, DateTime.Now).Result;
+                results = _services.GetPriceHistory(symbol, "day", "10", "minute", 15, null, null).Result;
                 ser = JsonSerializer.Serialize(results.GetProperty("candles"));
+                //if(ser.count() <= 0)
+                //{
+                //    goto results;
+                //}
                 candle90 = JsonSerializer.Deserialize<List<TMDInvestment.Models.CandleItems>>(ser);
                 candle90 = candle90.OrderBy(x => x.datetime).ToList();
                 //if (candle90.Count < 90)
@@ -154,13 +170,15 @@ namespace TMD.Services.Service
             }
             catch (Exception ex2)
             {
-                _log.LogError($"{ex2.Message}", ex2);
+                Helper.Log(_log, LogLevel.Error, $"{ex2.Message}");
             }
 
             mlPricePredict.Calculate(candle90, ref output);
-            //var test = candle90.OrderByDescending(x => x.datetime).ToList();
+            var test = candle90.OrderByDescending(x => x.datetime).ToList();
             float? SMA12 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(12).Average(c => c.close) : 0f;
             float? SMA26 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(26)?.Average(c => c.close) : 0f;
+            float? SMA20 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(20)?.Average(c => c.close) : 0f;
+            float? SMA21 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(21)?.Average(c => c.close) : 0f;
             float? SMA9 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(9)?.Average(c => c.close) : 0f;
             float? SMA3 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(3)?.Average(c => c.close) : 0f;
             float? SMA10 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(10)?.Average(c => c.close) : 0f;
@@ -168,9 +186,12 @@ namespace TMD.Services.Service
             float? SMA5 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(5)?.Average(c => c.close) : 0f;
             float? SMA8 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(8)?.Average(c => c.close) : 0f;
             float? SMA13 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(13)?.Average(c => c.close) : 0f;
+            float? SMA50 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(50)?.Average(c => c.close) : 0f;
 
             float? smoothingFactor12 = (2f / (candle90.OrderByDescending(x => x.datetime).Take(12).ToList().Count + 1f));
             float? smoothingFactor26 = (2f / (candle90.OrderByDescending(x => x.datetime).Take(26).ToList().Count + 1f));
+            float? smoothingFactor20 = (2f / (candle90.OrderByDescending(x => x.datetime).Take(20).ToList().Count + 1f));
+            float? smoothingFactor21 = (2f / (candle90.OrderByDescending(x => x.datetime).Take(21).ToList().Count + 1f));
             float? smoothingFactor9 = (2f / (candle90.OrderByDescending(x => x.datetime).Take(9).ToList().Count + 1f));
             float? smoothingFactor3 = (2f / (candle90.OrderByDescending(x => x.datetime).Take(3).ToList().Count + 1f));
             float? smoothingFactor10 = (2f / (candle90.OrderByDescending(x => x.datetime).Take(10).ToList().Count + 1f));
@@ -178,9 +199,12 @@ namespace TMD.Services.Service
             float? smoothingFactor5 = (2f / (candle90.OrderByDescending(x => x.datetime).Take(5).ToList().Count + 1f));
             float? smoothingFactor8 = (2f / (candle90.OrderByDescending(x => x.datetime).Take(8).ToList().Count + 1f));
             float? smoothingFactor13 = (2f / (candle90.OrderByDescending(x => x.datetime).Take(13).ToList().Count + 1f));
+            float? smoothingFactor50 = (2f / (candle90.OrderByDescending(x => x.datetime).Take(50).ToList().Count + 1f));
 
             float? EMA12 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor12) + (SMA12 * (1 - smoothingFactor12)) : 0f;
             float? EMA26 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor26) + (SMA26 * (1 - smoothingFactor26)) : 0f;
+            float? EMA20 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor20) + (SMA20 * (1 - smoothingFactor20)) : 0f;
+            float? EMA21 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor21) + (SMA21 * (1 - smoothingFactor21)) : 0f;
             float? EMA9 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor9) + (SMA9 * (1 - smoothingFactor9)) : 0f;
             float? EMA3 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor3) + (SMA3 * (1 - smoothingFactor3)) : 0f;
             float? EMA10 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor10) + (SMA10 * (1 - smoothingFactor10)) : 0f;
@@ -188,6 +212,7 @@ namespace TMD.Services.Service
             float? EMA5 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor5) + (SMA5 * (1 - smoothingFactor5)) : 0f;
             float? EMA8 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor8) + (SMA8 * (1 - smoothingFactor8)) : 0f;
             float? EMA13 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor13) + (SMA13 * (1 - smoothingFactor13)) : 0f;
+            float? EMA50 = (candle90.Count > 0) ? (candle90.OrderByDescending(x => x.datetime).ToList()[0].close * smoothingFactor50) + (SMA50 * (1 - smoothingFactor50)) : 0f;
 
             var closes = candle90.OrderBy(x => x.datetime)/*.Take(52)*/.Select(y => new MACDClosesDateTime { Price = y.close, Datetime = DateTimeOffset.FromUnixTimeMilliseconds(y.datetime).DateTime }).ToList();
 
@@ -203,6 +228,10 @@ namespace TMD.Services.Service
             var macdCalculator3 = new MacdCalculator(fastPeriod, slowPeriod, signalPeriod);
             List<MacdResult> macdCalculatorResults3 = macdCalculator.CalculateMacd(closes);
 
+            fastPeriod = 9; slowPeriod = 20; signalPeriod = 50;
+            var macdCalculator4 = new MacdCalculator(fastPeriod, slowPeriod, signalPeriod);
+            List<MacdResult> macdCalculatorResults4 = macdCalculator.CalculateMacd(closes);
+
             float? MACDLine = (macdCalculatorResults?.LastOrDefault()?.MacdLine ?? 0);
             float? MACDSignal = (macdCalculatorResults?.LastOrDefault()?.SignalLine ?? 0);
             float? MACDHistogram = (macdCalculatorResults?.LastOrDefault()?.Histogram ?? 0);
@@ -212,6 +241,9 @@ namespace TMD.Services.Service
             float? MACDLine3 = (macdCalculatorResults3?.LastOrDefault()?.MacdLine ?? 0);
             float? MACDSignal3 = (macdCalculatorResults3?.LastOrDefault()?.SignalLine ?? 0);
             float? MACDHistogram3 = (macdCalculatorResults3?.LastOrDefault()?.Histogram ?? 0);
+            float? MACDLine4 = (macdCalculatorResults4?.LastOrDefault()?.MacdLine ?? 0);
+            float? MACDSignal4 = (macdCalculatorResults4?.LastOrDefault()?.SignalLine ?? 0);
+            float? MACDHistogram4 = (macdCalculatorResults4?.LastOrDefault()?.Histogram ?? 0);
             //decimal? MACDLine2 = EMA3 - EMA10;
             //decimal? MACDSignal2 = EMA3 - EMA16;
             //decimal? MACDHistogram2 = MACDLine2 - MACDSignal2;
@@ -219,7 +251,7 @@ namespace TMD.Services.Service
             //decimal? MACDSignal3 = EMA5 - EMA13;
             //decimal? MACDHistogram3 = MACDLine3 - MACDSignal3;
 
-            List<decimal?> RSIList = candle90.OrderByDescending(x => x.datetime).Take(15).Select(c => (decimal?)c.close).ToList();
+            List<decimal?> RSIList = candle90.OrderByDescending(x => x.datetime).Take(14).Select(c => (decimal?)c.close).ToList();
             List<decimal?> gains = new List<decimal?>();
             List<decimal?> losses = new List<decimal?>();
 
@@ -244,7 +276,7 @@ namespace TMD.Services.Service
             }
             catch (Exception ex2)
             {
-                _log.LogError($"{ex2.Message}", ex2);
+                Helper.Log(_log, LogLevel.Error, $"RSI calculation error {ex2.Message}");
             }
 
             //var wmaWeight = new List<decimal>();
@@ -256,6 +288,36 @@ namespace TMD.Services.Service
             //}
             //var wma = candle90.OrderBy(x => x.datetime).Zip(wmaWeight, (c, d) => c.close * d).ToList();
             
+
+            //VWAP calculation
+            CandleItems candle = null;
+            float? vwap = 0f;
+            
+            try
+            {
+                candle = candle90.LastOrDefault();
+                vwap = (((candle?.close + candle?.high + candle?.low) / 3) * candle?.volume) / candle?.volume;
+                if (vwap is null)
+                    vwap = 0f;
+            }
+            catch (Exception ex)
+            {
+                Helper.Log(_log, LogLevel.Error, $"vwap calculation error {ex.Message}");
+            }
+
+            float? ema9ToVwapDiff = 0f;
+            try
+            {
+                ema9ToVwapDiff = Math.Abs((EMA9.Value - vwap.Value) / ((EMA9.Value + vwap.Value) / 2) * 100);
+                if(float.IsNaN(ema9ToVwapDiff.Value))
+                {
+                    ema9ToVwapDiff = 0f;
+                }
+            }
+            catch (Exception ex2)
+            {
+                Helper.Log(_log, LogLevel.Error, $"ema9 to vwap diff calculation error {ex2.Message}");
+            }
             output.Add("Symbol", symbol);
             try
             {
@@ -281,13 +343,14 @@ namespace TMD.Services.Service
                         }
                         catch (Exception)
                         {
-                            _log.LogError($"{ex3.Message}", ex2);
+                            Helper.Log(_log, LogLevel.Error, $"{ex3.Message}");
                             return null;
                         }
 
                     }
                 }
             }
+        results:
             var resultsJson = JsonSerializer.Deserialize<JsonNode>(JsonSerializer.Serialize(quote));
             output.Add("lastPrice", currentPrice);
             output.Add("results", resultsJson);
@@ -312,14 +375,12 @@ namespace TMD.Services.Service
             output.Add("SMA5", SMA5);
             output.Add("SMA8", SMA8);
             output.Add("SMA13", SMA13);
-            //output.Add("WMA26", WMA26);
-            //output.Add("WMA12", WMA12);
-            //output.Add("WMA9", WMA9);
-            //output.Add("WMA3", WMA3);
-            //output.Add("WMA10", WMA10);
-            //output.Add("WMA16", WMA16);
-            //output.Add("WMA5", WMA5);
-            //output.Add("WMA13", WMA13);
+            output.Add("SMA20", SMA20);
+            output.Add("SMA21", SMA21);
+            output.Add("SMA50", SMA50);
+            output.Add("EMA20", EMA20);
+            output.Add("EMA21", EMA21);
+            output.Add("EMA50", EMA50);
             output.Add("MACD", MACDLine);
             output.Add("MACDSignal", MACDSignal);
             output.Add("MACDHistogram", MACDHistogram);
@@ -329,19 +390,22 @@ namespace TMD.Services.Service
             output.Add("MACD3", MACDLine3);
             output.Add("MACDSignal3", MACDSignal3);
             output.Add("MACDHistogram3", MACDHistogram3);
-            //output.Add("VWAP", VWAP);
+            output.Add("MACD4", MACDLine4.Value.ToString("F8"));
+            output.Add("MACDSignal4", MACDSignal4.Value.ToString("F8"));
+            output.Add("MACDHistogram4", MACDHistogram4.Value.ToString("F8"));
+            output.Add("VWAP", (float.IsNaN(vwap.Value) ? "0" : vwap.Value.ToString("F8")));
             output.Add("volume", totalVolume);
-            //output.Add("SMACount", candle30.Count());
+            output.Add("EMA9TOVWAPDIFF", ema9ToVwapDiff);
             return output;
         }
 
-        public dynamic CalculateV2(PublicProduct product)
+        public JsonObject CalculateV2(PublicProduct product)
         {
-            coinbaseService = new CoinBaseService(_log, _coinbaseSettings, _factory);
+            coinbaseService = new CoinBaseService(_log, _coinbaseSettings, _factory/*, _helper*/);
             mlPricePredict = new MLPricePredict();
             decimal currentPrice = 0m;
             decimal totalVolume = 0m;
-            double hours = -24;
+            double hours = -7;
             JsonObject output = new JsonObject();
             List<Coinbase.AdvancedTrade.Models.Public.PublicCandle> candle90 = new List<Coinbase.AdvancedTrade.Models.Public.PublicCandle>();
 
@@ -357,10 +421,10 @@ namespace TMD.Services.Service
             //    Granularity.FIFTEEN_MINUTE).OrderByDescending(x => x.StartDate).ToList();
             try
             {
-                candle90 = coinbaseService.GetPriceHistory(product.ProductId,
+                candle90 = coinbaseService.GetPriceHistoryAsync(product.ProductId,
                     previewDate, DateTime.Now,
-                    Granularity.FIFTEEN_MINUTE).OrderBy(x => x.StartDate).ToList();
-                if(candle90.Count < 90)
+                    Granularity.FIFTEEN_MINUTE).Result.OrderBy(x => x.StartDate).ToList();
+                if(candle90.Count < 50)
                 {
                     hours = Math.Truncate(hours * 1.5F);
                     goto GetPriceHistory;
@@ -368,13 +432,15 @@ namespace TMD.Services.Service
             }
             catch (Exception ex2)
             {
-                _log.LogError($"{ex2.Message}", ex2);
+                Helper.Log(_log, LogLevel.Error, $"{ex2.Message}");
             }
 
             mlPricePredict.Calculate(candle90, ref output);
             //var test = candle90.OrderByDescending(x => x.StartDate).ToList();
 
             decimal? SMA12 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.StartDate).Take(12).Average(c => Convert.ToDecimal(c.Close)) : 0m;
+            decimal? SMA20 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.StartDate).Take(20).Average(c => Convert.ToDecimal(c.Close)) : 0m;
+            decimal? SMA21 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.StartDate).Take(21).Average(c => Convert.ToDecimal(c.Close)) : 0m;
             decimal? SMA26 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.StartDate).Take(26).Average(c => Convert.ToDecimal(c.Close)) : 0m;
             decimal? SMA9 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.StartDate).Take(9).Average(c => Convert.ToDecimal(c.Close)) : 0m;
             decimal? SMA3 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.StartDate).Take(3).Average(c => Convert.ToDecimal(c.Close)) : 0m;
@@ -383,8 +449,11 @@ namespace TMD.Services.Service
             decimal? SMA5 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.StartDate).Take(5).Average(c => Convert.ToDecimal(c.Close)) : 0m;
             decimal? SMA8 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.StartDate).Take(8).Average(c => Convert.ToDecimal(c.Close)) : 0m;
             decimal? SMA13 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.StartDate).Take(13).Average(c => Convert.ToDecimal(c.Close)) : 0m;
+            decimal? SMA50 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.StartDate).Take(50).Average(c => Convert.ToDecimal(c.Close)) : 0m;
 
             decimal? smoothingFactor12 = (2m / (candle90.OrderByDescending(x => x.StartDate).Take(12).ToList().Count + 1m));
+            decimal? smoothingFactor20 = (2m / (candle90.OrderByDescending(x => x.StartDate).Take(20).ToList().Count + 1m));
+            decimal? smoothingFactor21 = (2m / (candle90.OrderByDescending(x => x.StartDate).Take(21).ToList().Count + 1m));
             decimal? smoothingFactor26 = (2m / (candle90.OrderByDescending(x => x.StartDate).Take(26).ToList().Count + 1m));
             decimal? smoothingFactor9 = (2m / (candle90.OrderByDescending(x => x.StartDate).Take(9).ToList().Count + 1m));
             decimal? smoothingFactor3 = (2m / (candle90.OrderByDescending(x => x.StartDate).Take(3).ToList().Count + 1m));
@@ -393,8 +462,11 @@ namespace TMD.Services.Service
             decimal? smoothingFactor5 = (2m / (candle90.OrderByDescending(x => x.StartDate).Take(5).ToList().Count + 1m));
             decimal? smoothingFactor8 = (2m / (candle90.OrderByDescending(x => x.StartDate).Take(8).ToList().Count + 1m));
             decimal? smoothingFactor13 = (2m / (candle90.OrderByDescending(x => x.StartDate).Take(13).ToList().Count + 1m));
+            decimal? smoothingFactor50 = (2m / (candle90.OrderByDescending(x => x.StartDate).Take(50).ToList().Count + 1m));
 
             decimal? EMA12 = (candle90.Count > 0) ? (Convert.ToDecimal(candle90.OrderByDescending(x => x.StartDate).ToList()[0].Close) * smoothingFactor12) + (SMA12 * (1 - smoothingFactor12)) : 0m;
+            decimal? EMA20 = (candle90.Count > 0) ? (Convert.ToDecimal(candle90.OrderByDescending(x => x.StartDate).ToList()[0].Close) * smoothingFactor20) + (SMA20 * (1 - smoothingFactor20)) : 0m;
+            decimal? EMA21 = (candle90.Count > 0) ? (Convert.ToDecimal(candle90.OrderByDescending(x => x.StartDate).ToList()[0].Close) * smoothingFactor21) + (SMA21 * (1 - smoothingFactor21)) : 0m;
             decimal? EMA26 = (candle90.Count > 0) ? (Convert.ToDecimal(candle90.OrderByDescending(x => x.StartDate).ToList()[0].Close) * smoothingFactor26) + (SMA26 * (1 - smoothingFactor26)) : 0m;
             decimal? EMA9 = (candle90.Count > 0) ? (Convert.ToDecimal(candle90.OrderByDescending(x => x.StartDate).ToList()[0].Close) * smoothingFactor9) + (SMA9 * (1 - smoothingFactor9)) : 0m;
             decimal? EMA3 = (candle90.Count > 0) ? (Convert.ToDecimal(candle90.OrderByDescending(x => x.StartDate).ToList()[0].Close) * smoothingFactor3) + (SMA3 * (1 - smoothingFactor3)) : 0m;
@@ -403,6 +475,7 @@ namespace TMD.Services.Service
             decimal? EMA5 = (candle90.Count > 0) ? (Convert.ToDecimal(candle90.OrderByDescending(x => x.StartDate).ToList()[0].Close) * smoothingFactor5) + (SMA5 * (1 - smoothingFactor5)) : 0m;
             decimal? EMA8 = (candle90.Count > 0) ? (Convert.ToDecimal(candle90.OrderByDescending(x => x.StartDate).ToList()[0].Close) * smoothingFactor8) + (SMA8 * (1 - smoothingFactor8)) : 0m;
             decimal? EMA13 = (candle90.Count > 0) ? (Convert.ToDecimal(candle90.OrderByDescending(x => x.StartDate).ToList()[0].Close) * smoothingFactor13) + (SMA13 * (1 - smoothingFactor13)) : 0m;
+            decimal? EMA50 = (candle90.Count > 0) ? (Convert.ToDecimal(candle90.OrderByDescending(x => x.StartDate).ToList()[0].Close) * smoothingFactor50) + (SMA50 * (1 - smoothingFactor50)) : 0m;
 
             var closes = candle90.OrderBy(x => x.StartDate)/*.Take(52)*/.Select(y => new MACDClosesDateTime { Price = (float)Convert.ToDouble(y.Close), Datetime = y.StartDate }).ToList();
 
@@ -418,6 +491,10 @@ namespace TMD.Services.Service
             var macdCalculator3 = new MacdCalculator(fastPeriod, slowPeriod, signalPeriod);
             List<MacdResult> macdCalculatorResults3 = macdCalculator.CalculateMacd(closes);
 
+            fastPeriod = 9; slowPeriod = 20; signalPeriod = 50;
+            var macdCalculator4 = new MacdCalculator(fastPeriod, slowPeriod, signalPeriod);
+            List<MacdResult> macdCalculatorResults4 = macdCalculator.CalculateMacd(closes);
+
             float? MACDLine = (macdCalculatorResults?.LastOrDefault()?.MacdLine ?? 0);
             float? MACDSignal = (macdCalculatorResults?.LastOrDefault()?.SignalLine ?? 0);
             float? MACDHistogram = (macdCalculatorResults?.LastOrDefault()?.Histogram ?? 0);
@@ -427,6 +504,9 @@ namespace TMD.Services.Service
             float? MACDLine3 = (macdCalculatorResults3?.LastOrDefault()?.MacdLine ?? 0);
             float? MACDSignal3 = (macdCalculatorResults3?.LastOrDefault()?.SignalLine ?? 0);
             float? MACDHistogram3 = (macdCalculatorResults3?.LastOrDefault()?.Histogram ?? 0);
+            float? MACDLine4 = (macdCalculatorResults4?.LastOrDefault()?.MacdLine ?? 0);
+            float? MACDSignal4 = (macdCalculatorResults4?.LastOrDefault()?.SignalLine ?? 0);
+            float? MACDHistogram4 = (macdCalculatorResults4?.LastOrDefault()?.Histogram ?? 0);
             //decimal? MACDLine2 = EMA3 - EMA10;
             //decimal? MACDSignal2 = EMA3 - EMA16;
             //decimal? MACDHistogram2 = MACDLine2 - MACDSignal2;
@@ -434,7 +514,7 @@ namespace TMD.Services.Service
             //decimal? MACDSignal3 = EMA5 - EMA13;
             //decimal? MACDHistogram3 = MACDLine3 - MACDSignal3;
 
-            List<decimal?> RSIList = candle90.OrderByDescending(x => x.StartDate).Take(15).Select(c => (decimal?)Convert.ToDecimal(c.Close)).ToList();
+            List<decimal?> RSIList = candle90.OrderByDescending(x => x.StartDate).Take(14).Select(c => (decimal?)Convert.ToDecimal(c.Close)).ToList();
             List<decimal?> gains = new List<decimal?>();
             List<decimal?> losses = new List<decimal?>();
 
@@ -459,10 +539,34 @@ namespace TMD.Services.Service
             }
             catch (Exception ex2)
             {
-                _log.LogError($"{ex2.Message}", ex2);
+                Helper.Log(_log, LogLevel.Error, $"RSI calculation error {ex2.Message}");
             }
 
 
+            //VWAP calculation
+            PublicCandle candle = null;
+            decimal? vwap = 0m;
+
+            try
+            {
+                candle = candle90.LastOrDefault();
+                vwap = (((Convert.ToDecimal(candle.Close) + Convert.ToDecimal(candle.High) + Convert.ToDecimal(candle.Low)) / 3) * Convert.ToDecimal(candle.Volume)) / Convert.ToDecimal(candle.Volume);
+
+            }
+            catch (Exception ex)
+            {
+                Helper.Log(_log, LogLevel.Error, $"vwap calculation error {ex.Message}");
+            }
+
+            decimal? ema9ToVwapDiff = 0m;
+            try
+            {
+                ema9ToVwapDiff = Math.Abs((EMA9.Value - vwap.Value) / ((EMA9.Value + vwap.Value) / 2) * 100);
+            }
+            catch (Exception ex2)
+            {
+                Helper.Log(_log, LogLevel.Error, $"ema9 to vwap diff calculation error {ex2.Message}");
+            }
             output.Add("Symbol", product.ProductId);
             output.Add("Name", product.BaseName);
             output.Add("lastPrice", currentPrice);
@@ -487,14 +591,12 @@ namespace TMD.Services.Service
             output.Add("SMA5", SMA5);
             output.Add("SMA8", SMA8);
             output.Add("SMA13", SMA13);
-            //output.Add("WMA26", WMA26);
-            //output.Add("WMA12", WMA12);
-            //output.Add("WMA9", WMA9);
-            //output.Add("WMA3", WMA3);
-            //output.Add("WMA10", WMA10);
-            //output.Add("WMA16", WMA16);
-            //output.Add("WMA5", WMA5);
-            //output.Add("WMA13", WMA13);
+            output.Add("SMA20", SMA20);
+            output.Add("SMA21", SMA21);
+            output.Add("SMA50", SMA50);
+            output.Add("EMA20", EMA20);
+            output.Add("EMA21", EMA21);
+            output.Add("EMA50", EMA50);
             output.Add("MACD", MACDLine.Value.ToString("F8"));
             output.Add("MACDSignal", MACDSignal.Value.ToString("F8"));
             output.Add("MACDHistogram", MACDHistogram.Value.ToString("F8"));
@@ -504,15 +606,18 @@ namespace TMD.Services.Service
             output.Add("MACD3", MACDLine3.Value.ToString("F8"));
             output.Add("MACDSignal3", MACDSignal3.Value.ToString("F8"));
             output.Add("MACDHistogram3", MACDHistogram3.Value.ToString("F8"));
-            //output.Add("VWAP", VWAP);
+            output.Add("MACD4", MACDLine4.Value.ToString("F8"));
+            output.Add("MACDSignal4", MACDSignal4.Value.ToString("F8"));
+            output.Add("MACDHistogram4", MACDHistogram4.Value.ToString("F8"));
+            output.Add("VWAP", ((vwap != null && vwap.HasValue) ? vwap.Value.ToString("F8") : "0"));
             output.Add("volume", totalVolume);
-            //output.Add("SMACount", candle30.Count());
+            output.Add("EMA9TOVWAPDIFF", ema9ToVwapDiff);
             return output;
         }
 
         public dynamic CalculateV2(string symbol, XElement quote)
         {
-            services = new SchwabServices(_log, _settings, _factory);
+            //services = new SchwabServices(_log, _settings, _factory);
             decimal? currPrice = null;
             decimal currentPrice = 0m;
             symbol = (symbol.ToLower().Contains("vix") && !symbol.ToLower().Contains("$")) ? "$" + symbol : symbol;
@@ -534,9 +639,9 @@ namespace TMD.Services.Service
                     return quote;
                 }
             }
-            var results = services.GetPriceHistory(symbol, "month", "1", "daily", 1, DateTime.Now.AddDays(-90), DateTime.Now);//.ToList();
+            var results = _services.GetPriceHistory(symbol, "month", "1", "daily", 1, DateTime.Now.AddDays(-90), DateTime.Now).Result;//.ToList();
             //https://api.schwabapi.com/marketdata/v1/pricehistory?symbol=AAPL&periodType=day&period=10&frequencyType=minute&frequency=30
-            var resultsDaily = services.GetPriceHistory(symbol, "day", "1", "minute", 30, null, null);
+            var resultsDaily = _services.GetPriceHistory(symbol, "day", "1", "minute", 30, null, null).Result;
             List<TMDInvestment.Models.CandleItems> candle90 = new List<TMDInvestment.Models.CandleItems>();
             List<TMDInvestment.Models.CandleItems> candleDaily = new List<TMDInvestment.Models.CandleItems>();
             try
@@ -550,7 +655,7 @@ namespace TMD.Services.Service
             }
             catch (Exception ex)
             {
-                _log.LogError($"{ex.Message}", ex);
+                Helper.Log(_log, LogLevel.Error, $"{ex.Message}");
             }
             //var candle60 = candle90.Take(60).ToList();
             var candle30 = candle90.Take(30).ToList();
@@ -820,7 +925,7 @@ namespace TMD.Services.Service
             }
             catch (Exception ex)
             {
-                _log.LogError($"{ex.Message}. Indicies Calculator RSI");
+                Helper.Log(_log, LogLevel.Error, $"{ex.Message}. Indicies Calculator RSI");
             }
             close = 0;
             avgUp = 0;
@@ -852,7 +957,7 @@ namespace TMD.Services.Service
             }
             catch (Exception ex)
             {
-                _log.LogError($"{ex.Message}. Indicies Calculator RSI");
+                Helper.Log(_log, LogLevel.Error, $"{ex.Message}. Indicies Calculator RSI");
             }
             try
             {
@@ -878,7 +983,7 @@ namespace TMD.Services.Service
             }
             catch (Exception ex)
             {
-                _log.LogError($"{ex.Message}. WMA/SMA RSI");
+                Helper.Log(_log, LogLevel.Error, $"{ex.Message}. WMA/SMA RSI");
             }
             try
             {
@@ -890,7 +995,7 @@ namespace TMD.Services.Service
             }
             catch (Exception ex)
             {
-                _log.LogError($"{ex.Message}. VWAP");
+                Helper.Log(_log, LogLevel.Error, $"{ex.Message}. VWAP");
             }
             //EMA = (Today's Value * Multiplier) + Yesterday's EMA *(1 - Multiplier)
             //You can then use the SMA from the previous day as the first EMA for yesterday.
@@ -908,7 +1013,7 @@ namespace TMD.Services.Service
             }
             catch (Exception ex)
             {
-                _log.LogError($"{ex.Message}. EMA");
+                Helper.Log(_log, LogLevel.Error, $"{ex.Message}. EMA");
             }
 
             MACD = EMA12 - EMA26;

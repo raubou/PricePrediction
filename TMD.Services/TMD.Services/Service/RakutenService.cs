@@ -1,12 +1,13 @@
-﻿using Microsoft.Extensions.Configuration;
-using NewsAggregator.models.returnModel;
-using System.Text;
-using WikiNews2._0.helpers;
-using TMDInvestments.Models;
-using System.Diagnostics;
+﻿using GraphQLParser;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using TMDInvestments.Models.Models.returnModel;
+using NewsAggregator.models.returnModel;
+using System.Diagnostics;
 using System.Net;
+using System.Text;
+using TMDInvestments.Models;
+using TMDInvestments.Models.Models.returnModel;
+using WikiNews2._0.helpers;
 
 namespace TMD.Services
 {
@@ -25,11 +26,11 @@ namespace TMD.Services
         //private static IConfiguration? MongoDb;
         private static IConfiguration? connection;
         static HttpRequestMessage? request;
-        static TokenModel? token;
+        static TokenModel? _token;
         private static HttpClient? _client;
         //private MongodbConnect _connect;
         //private static Manager? manager;
-        dynamic? error = null;
+        static dynamic? error = null;
         private static ILogger? _log;
         //private static SqlConnection? _connection;
         //static string? conn = string.Empty;
@@ -79,6 +80,56 @@ namespace TMD.Services
             //_connection = new SqlConnection(conn);
             //_connection.Open();
             //manager = new Manager(_connection, mongoConn, _log);
+            _token = GetToken(/*_client,*/ ref error);
+        }
+        public RakutenService(ILogger log, IHttpClientFactory factory, bool isAzureFunction)
+        {
+            _log = log;
+            //_client = client;
+            timer = new Stopwatch();
+            if (!isAzureFunction)
+            {
+                IConfigurationBuilder builder = new ConfigurationBuilder()
+                    .AddJsonFile("appsettings.json");
+                IConfigurationRoot configuration = builder.Build();
+                linkShare = configuration.GetSection("LinkShare");
+                connection = configuration.GetSection("ConnectionStrings");
+                //MongoDb = configuration.GetSection("Mondodb");
+                if (linkShare != null)
+                {
+                    _baseUrl = linkShare.GetSection("baseUrl").Value;
+                    //_baseToken = linkShare.GetSection("baseToken").Value;
+                    _clientId = linkShare.GetSection("LinkShareClientId").Value;
+                    _clientSecret = linkShare.GetSection("LinkShareClientSecret").Value;
+                    _userId = linkShare.GetSection("userId").Value;
+                    _password = linkShare.GetSection("password").Value;
+                    _sid = linkShare.GetSection("LinkShareSid").Value;
+                }
+            }
+            else
+            {
+                _baseUrl = Environment.GetEnvironmentVariable("LinkShareBaseUrl");
+                _clientId = Environment.GetEnvironmentVariable("LinkShareClientId");
+                _clientSecret = Environment.GetEnvironmentVariable("LinkShareClientSecret");
+                _userId = Environment.GetEnvironmentVariable("LinkShareUserId");
+                _password = Environment.GetEnvironmentVariable("LinkSharePassword");
+                _sid = Environment.GetEnvironmentVariable("LinkShareSid");
+            }
+            if (factory == null)
+            {
+                var handler = new SocketsHttpHandler
+                {
+                    PooledConnectionLifetime = TimeSpan.FromMinutes(7), // Recreate every 15 minutes
+
+                };
+
+                _client = new HttpClient(handler);
+            }
+            else
+            {
+                _client = factory.CreateClient();
+            }
+            _token = GetToken(/*_client,*/ ref error);
         }
         static RakutenService()
         {
@@ -144,8 +195,7 @@ namespace TMD.Services
                 //conn = Environment.GetEnvironmentVariable("ConnectionString");
                 //mongoConn = Environment.GetEnvironmentVariable("MondodbConnection");
             }
-            //_connection = new SqlConnection(conn);
-            //manager = new Manager(_connection, mongoConn, _log);
+            _token = GetToken(/*_client,*/ ref error);
         }
 
         public void GetProducts(MerchantItem merchant, List<Category> categories, ref RssModel rss)
@@ -154,12 +204,12 @@ namespace TMD.Services
             {
                 timer.Start();
                 //GetSettings(client);
-                if (token == null || string.IsNullOrEmpty(token?.access_token))
-                {
-                    token = GetToken(_client, ref error);
-                }
+                //if (token == null || string.IsNullOrEmpty(token?.access_token))
+                //{
+                //    token = GetToken(/*_client,*/ ref error);
+                //}
                 //else
-                if (token == null || string.IsNullOrEmpty(token?.access_token))
+                if (_token == null || string.IsNullOrEmpty(_token?.access_token))
                 {
                     //Console.WriteLine("Cannot get products for Index " + index + " Token not availiabe.");
                     _log.LogInformation("Cannot get products. Token not availiabe.");
@@ -195,7 +245,7 @@ namespace TMD.Services
             try
             {
                 _log.LogInformation("Getting Products for merchant " + _merchant.name);
-                products = GetRakutenProducts(1, token, _merchant, ref error);
+                products = GetRakutenProducts(1, /*_token,*/ _merchant, ref error);
                 //products = GetRakutenProducts(index, token, ref error);
                 totalMatches = Convert.ToInt32(products.TotalMatches);
                 totalPages = (Convert.ToInt32(products.TotalPages) > maxPages) ? maxPages : Convert.ToInt32(products.TotalPages);
@@ -211,7 +261,7 @@ namespace TMD.Services
                 }
                 while(minPages <= totalPages)
                 {
-                    products = GetRakutenProducts(minPages, token, _merchant, ref error);
+                    products = GetRakutenProducts(minPages, /*token,*/ _merchant, ref error);
                     if (products != null)
                     {
                         //LoadProduct(products, _log, ref rss, categories, _merchant.merchantName);
@@ -244,18 +294,18 @@ namespace TMD.Services
             //} while (index < totalPages);
         }
 
-        private RakutenModel GetRakutenProducts(int index, TokenModel token, MerchantItem merchant, ref dynamic error)
+        public RakutenModel GetRakutenProducts(int index, /*TokenModel token,*/ MerchantItem merchant, ref dynamic error)
         //private RakutenModel GetRakutenProducts(int index, TokenModel token, ref dynamic error)
         {
             Dictionary<string, string> headers = new Dictionary<string, string>();
-            headers.Add("Authorization", "Bearer " + token.access_token);
+            headers.Add("Authorization", "Bearer " + _token.access_token);
             HttpRequestMessage request = AuthenicationHelper.GetAuthenicatedRequest(HttpMethod.Get,_baseUrl + "productsearch/1.0?pagenumber=" + index + "&max=100&mid=" + merchant.mid, headers, "application/json", "");
             //HttpRequestMessage request = GetAuthenicatedRequest(HttpMethod.Get, "productsearch/1.0?pagenumber=" + index + "&max=100", headers, "application/json", "");
             RakutenModel results = APIProxy<RakutenModel>.Send(request, "application/json", ref error, _client);
             return results;
         }
 
-        private static TokenModel GetToken(HttpClient client, ref dynamic error)
+        public static TokenModel GetToken(/*HttpClient client,*/ ref dynamic error)
         {
             Dictionary<string, string> headers = new Dictionary<string, string>();
             //headers.Add("Authorization", "Basic " + _baseToken);
@@ -267,14 +317,14 @@ namespace TMD.Services
             //string body = "grant_type=password&username=" + _userId + "&password=" + _password + "&scope=" + _sid;
             string body = "grant_type=password&scope=" + _sid;
             HttpRequestMessage request = AuthenicationHelper.GetAuthenicatedRequest(HttpMethod.Post, _baseUrl + "token", headers, "application/x-www-form-urlencoded", body);
-            TokenModel result = APIProxy<TokenModel>.Send(request, "", ref error, client);
+            TokenModel result = APIProxy<TokenModel>.Send(request, "", ref error, _client);
              return result;
         }
         //private void LoadProduct(RakutenModel products, ILog _log, ref RssModel rss, List<Category> categories, string merchantName)
         private void LoadProduct(RakutenModel products, ILogger _log, ref RssModel rss, List<Category> categories)
         {
             //DataAggregator da = new DataAggregator();
-            foreach (var item in products.item)
+            foreach (var item in products.items)
             {
                 try
                 {
@@ -321,11 +371,11 @@ namespace TMD.Services
             MerchByAppStatusResponse merchants = null;
             //Console.WriteLine("Getting Merchants.");
             _log.LogInformation("Getting Merchants.");
-            token = GetToken(_client, ref error);
-            if (token != null)
+            //token = GetToken(/*_client,*/ ref error);
+            if (_token != null)
             {
                 Dictionary<string, string> headers = new Dictionary<string, string>();
-                headers.Add("Authorization", "Bearer " + token.access_token);
+                headers.Add("Authorization", "Bearer " + _token.access_token);
                 //request = AuthenicationHelper.GetAuthenicatedRequest(HttpMethod.Get, _baseUrl + "advertisersearch/1.0", headers, "application/json", "");
                 //request = AuthenicationHelper.GetAuthenicatedRequest(HttpMethod.Get, _baseUrl + "v2/advertisers?page=0&limit=100&ships_to=US&deep_links=true&network=1", headers, "application/json", "");
                 request = AuthenicationHelper.GetAuthenicatedRequest(HttpMethod.Get, _baseUrl + "linklocator/1.0/getMerchByAppStatus/approved", headers, "application/json", "");

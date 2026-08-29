@@ -1,32 +1,39 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Options;
 using TMDInvestments.Context;
 using TMDInvestments.Models;
+using TorchSharp.Modules;
 
 namespace TraderGo
 {
     public abstract class PageModelBase : PageModel
     {
-        protected IOptions<ConnectionSettings>? _connectionSettings;
-        public TmdContext ctx = null;
+        //protected IOptions<ConnectionSettings>? _connectionSettings;
+        public TmdContext? ctx = null;
         //public ILogger _log;
         [BindProperty]
         public LoginRegister? loginRegister { get; set; }
-        public PageModelBase() {
+        //public PageModelBase()
+        //{
+        //}
+        public PageModelBase()
+        {
             ctx = new TmdContext();
         }
 
-        //public PageModelBase(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<MailSettings> mailSettings)
-        //{
-        //    _connectionSettings = connectionSettings;
-        //    //_log = logger;
-        //    ctx = new TmdContext();
-        //}
+        public PageModelBase(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<MailSettings> mailSettings)
+        {
+            //_connectionSettings = connectionSettings;
+            //ViewData["_connectionSettings"] = _connectionSettings;
+            //_log = logger;
+            ctx = new TmdContext();
+        }
         public override void OnPageHandlerExecuting(PageHandlerExecutingContext context)
         {
-            ViewData["_connectionSettings"] = _connectionSettings;
+            //ViewData["_connectionSettings"] = _connectionSettings;
             //ViewData["_mongDBConnection"] = _mongDBConnection;
             ViewData["RouteData"] = RouteData;
             //ViewData["Logger"] = _log;

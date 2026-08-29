@@ -1,9 +1,12 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System.Dynamic;
 using System.Security.Cryptography;
 using System.Text;
 using System.Xml.Linq;
 using TinyOAuth2;
+using Microsoft.EntityFrameworkCore;
 using TMDInvestments.Context;
 using TMDInvestments.Models;
 
@@ -13,22 +16,25 @@ namespace TMD.Services.Service
     {
         private readonly ILogger? _logger;
         private readonly ETradeSettings? _settings;
-        private Polygon? _polygon;
+        //private Polygon? _polygon;
         private readonly IHttpClientFactory? _factory;
         private Dictionary<string, object>? headers;
         HttpClientServices<dynamic> client;
         TinyOAuth tinyOAuth;
-        TinyOAuthConfig config;
+        TinyOAuthConfig tinyOAuthConfig;
         string requestToken;
         string requestTokenSecret;
-        TmdContext ctx;
+        TmdContext _ctx;
         private static Random random = new Random();
         PolygonService? polygonService = null;
-        public ETradeService(ILogger logger, ETradeSettings settings, IHttpClientFactory? factory) {
+        //Helper? _helper = null;
+        public ETradeService(ILogger logger, ETradeSettings settings, IHttpClientFactory? factory, IDbContextFactory<TmdContext> contextFactory) {
             _logger = logger;
             _settings = settings;
             _factory = factory;
-            config = new TinyOAuthConfig
+            //this._ctx = ctx;
+            //_helper = helper;
+            tinyOAuthConfig = new TinyOAuthConfig
             {
                 AccessTokenUrl = _settings.baseURL + "oauth/access_token",
                 RequestTokenUrl = _settings.baseURL + "oauth/request_token",
@@ -37,19 +43,35 @@ namespace TMD.Services.Service
                 AuthorizeTokenUrl = _settings.authURL,
                 CallbackUrl = "oob" //"https://127.0.0.1/EtradeAPICallBack"
             };
-            tinyOAuth = new TinyOAuth(config);
-            ctx = new TmdContext();
-            var token = ctx.Token.Where(x => x.TokenType == TokenType.ETrade).FirstOrDefault();
+            tinyOAuth = new TinyOAuth(tinyOAuthConfig);
+            //IConfigurationBuilder builder = new ConfigurationBuilder()
+            //    .AddJsonFile("appsettings.json");
+            //IConfigurationRoot config = builder.Build();
+            //var ConnectionStrings = config.GetSection("ConnectionStrings").Get<ConnectionSettings>();
+            //var services = new ServiceCollection();
+            //services.AddDbContextFactory<TmdContext>(options =>
+            //    options.UseSqlServer(ConnectionStrings.Connection));
+            ////services.AddTransient<PricePrediction>();
+            //var serviceProvider = services.BuildServiceProvider();
+            //using (var scope = serviceProvider.CreateScope())
+            //{
+            //    var ctxFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<TmdContext>>();
+            //    var context = ctxFactory.CreateDbContext();
+            //    ctx = context;
+            //}
+            //ctx = new TmdContext();
+            _ctx = contextFactory.CreateDbContext();
+            var token = _ctx.Token.Where(x => x.TokenType == TokenType.ETrade).FirstOrDefault();
             if (token != null)
             {
                 requestToken = System.Text.Encoding.Default.GetString(token.Access_Token);
                 requestTokenSecret = System.Text.Encoding.Default.GetString(token.Refresh_Token);
             }
-            polygonService = new PolygonService(logger, _polygon, factory);
+            //polygonService = new PolygonService(logger, _polygon, factory);
         }
         public dynamic Quote(string symbol, bool skipCalculation = false)
         {
-            IndicesCalculatorV2 indicesCalculator = new IndicesCalculatorV2(_logger, _settings, _factory);
+            IndicesCalculatorV2 indicesCalculator = new IndicesCalculatorV2(_logger, _settings, _factory/*, _helper*/);
             dynamic output = null;
             string url = $"v1/market/quote/{symbol}";
             var param = "detailFlag=ALL&";
@@ -57,7 +79,7 @@ namespace TMD.Services.Service
             var authorization = GetHeaderAuth(url, "GET", param);
             //url += "&" + payLoad;
             url += "?" + param;
-            client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+            client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
             XElement results = client.Get(_settings.baseURL, url, authorization);
             if (!skipCalculation)
                 //output = polygonService.GetIndicators(symbol, DateTime.Now, "day", 14, 12, 26, 9, results);
@@ -72,11 +94,11 @@ namespace TMD.Services.Service
             //payLoad = GetHeaderPayload(url, "GET");
             var authorization = GetHeaderAuth(url, "GET", null);
             //url += "?" + payLoad;
-            client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+            client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
             dynamic accounts = client.Get(_settings.baseURL, url, authorization);
             var accountIdKey = ((XElement)accounts).Elements("Accounts").ToList()[0].Element("Account").Element("accountIdKey").Value;
 
-            client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+            client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
             url = $"v1/accounts/{accountIdKey}/balance";//?instType={instType}&realTimeNAV=true";
             var param = $"instType={instType}&realTimeNAV=true";
             authorization = GetHeaderAuth(url, "GET", param);
@@ -88,6 +110,29 @@ namespace TMD.Services.Service
             dynamic account = client.Get(_settings.baseURL, url, authorization);
             return account;
         }
+        public EtradeAccountInfo2 AccountModel()
+        {
+            string instType = "BROKERAGE";
+            string url = $"v1/accounts/list";
+            //payLoad = GetHeaderPayload(url, "GET");
+            var authorization = GetHeaderAuth(url, "GET", null);
+            //url += "?" + payLoad;
+            client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
+            dynamic accounts = client.Get(_settings.baseURL, url, authorization);
+            var accountIdKey = ((XElement)accounts).Elements("Accounts").ToList()[0].Element("Account").Element("accountIdKey").Value;
+
+            HttpClientServices<EtradeAccountInfo2> client2 = new HttpClientServices<EtradeAccountInfo2>(_factory, _settings/*, _logger*/);
+            url = $"v1/accounts/{accountIdKey}/balance";//?instType={instType}&realTimeNAV=true";
+            var param = $"instType={instType}&realTimeNAV=true";
+            authorization = GetHeaderAuth(url, "GET", param);
+            url += "?" + param;
+            //url += "?instType={instType}&realTimeNAV=true";
+            //payLoad = GetHeaderPayload(url, "GET");
+            //url += "?" + payLoad;
+            //url += "&" + payLoad;
+            dynamic account = client2.GetModel(_settings.baseURL, url, authorization);
+            return account;
+        }
         public XElement Portfolio()
         {
             string accountIdKey = string.Empty;
@@ -95,7 +140,7 @@ namespace TMD.Services.Service
             //payLoad = GetHeaderPayload(url, "GET");
             var authorization = GetHeaderAuth(url, "GET", null);
             //url += "?" + payLoad;
-            client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+            client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
             dynamic accounts = client.Get(_settings.baseURL, url, authorization);
             try
             {
@@ -112,7 +157,7 @@ namespace TMD.Services.Service
             //payLoad = GetHeaderPayload(url, "GET");
             authorization = GetHeaderAuth(url, "GET");
             //url += "?" + payLoad;
-            client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+            client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
             XElement portfolio = client.Get(_settings.baseURL, url, authorization);
             return portfolio;
         }
@@ -123,7 +168,7 @@ namespace TMD.Services.Service
             //payLoad = GetHeaderPayload(url, "GET");
             var authorization = GetHeaderAuth(url, "GET", null);
             //url += "?" + payLoad;
-            HttpClientServices<dynamic> client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+            HttpClientServices<dynamic> client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
             dynamic accounts = client.Get(_settings.baseURL, url, authorization);
             try
             {
@@ -140,7 +185,7 @@ namespace TMD.Services.Service
             //payLoad = GetHeaderPayload(url, "GET");
             authorization = GetHeaderAuth(url, "GET");
             //url += "?" + payLoad;
-            HttpClientServices<EtradeAccountInfo> client2 = new HttpClientServices<EtradeAccountInfo>(_factory, _settings, _logger);
+            HttpClientServices<EtradeAccountInfo> client2 = new HttpClientServices<EtradeAccountInfo>(_factory, _settings/*, _logger*/);
             EtradeAccountInfo portfolio = client2.GetModel(_settings.baseURL, url, authorization);
             return portfolio;
         }
@@ -150,14 +195,14 @@ namespace TMD.Services.Service
             //payLoad = GetHeaderPayload(url, "GET");
             var authorization = GetHeaderAuth(url, "GET");
             //url += "?" + payLoad;
-            client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+            client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
             dynamic results = client.Get(_settings.baseURL, url, authorization);
             return results;
         }
-        public dynamic SetOrder(string symbol, int qty, TradeDirection direction)
+        public dynamic SetOrder(string symbol, string priceType, string limitPrice, int? qty, TradeDirection direction)
         {
             string orderAction = null;
-            qty = Math.Abs(qty);
+            qty = Math.Abs((int)qty);
             switch (direction)
             {
                 case TradeDirection.BUY:
@@ -175,50 +220,59 @@ namespace TMD.Services.Service
             }
             string url = $"v1/accounts/list";
             var authorization = GetHeaderAuth(url, "GET", null);
-            client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+            client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
             dynamic accounts = client.Get(_settings.baseURL, url, authorization);
             var accountIdKey = ((XElement)accounts).Elements("Accounts").ToList()[0].Element("Account").Element("accountIdKey").Value;
 
-            dynamic previewOrder = PreviewOrder(accountIdKey, symbol, qty, orderAction, direction);
+            dynamic previewOrder = PreviewOrder(accountIdKey, symbol, priceType, limitPrice, qty, orderAction, direction);
             if (previewOrder is not XElement)
                 return previewOrder;
             var previewId = ((XElement)previewOrder)?.Element("PreviewIds")?.Element("previewId")?.Value?.ToString();
-            dynamic results = PlaceOrder(accountIdKey, previewId, symbol, qty, orderAction, direction);
+            dynamic results = PlaceOrder(accountIdKey, previewId, symbol, priceType, limitPrice, qty, orderAction, direction);
             return results;
         }
-        private dynamic PreviewOrder(string accountIdKey, string symbol, int qty, string orderAction, TradeDirection direction)
+        private dynamic PreviewOrder(string accountIdKey, string symbol, string priceType, string limitPrice, int? qty, string orderAction, TradeDirection direction)
         {
             string url = $"v1/accounts/{accountIdKey}/orders/preview";
             var authorization = GetHeaderAuth(url, "POST", null);
             string payLoad = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
                 "<PreviewOrderRequest>" +
-                   "<orderType>EQ</orderType>" +                   
+                   "<orderType>EQ</orderType>" +
                    "<Order>" +
                       "<allOrNone>true</allOrNone>" +
-                      "<priceType>MARKET</priceType>" +
+                      //"<priceType>MARKET</priceType>" +
+                      "<priceType>" + priceType + "</priceType>" +
                       "<orderTerm>GOOD_FOR_DAY</orderTerm>" +
                       "<marketSession>REGULAR</marketSession>" +
-                      "<stopPrice />" +
-                      "<limitPrice />" + //188.51</limitPrice>" +
-                      "<Instrument>" +
-                         "<Product>" +
-                            "<securityType>EQ</securityType>" +
-                            "<symbol>" + symbol + "</symbol>" +
-                         "</Product>" +
-                         "<orderAction>" + orderAction + "</orderAction>" +
-                         "<quantityType>QUANTITY</quantityType>" +
-                         "<quantity>" + qty + "</quantity>" +
-                      "</Instrument>" +
-                   "</Order>" +
-                   "<clientOrderId>" + RandomString(20) + "</clientOrderId>" +
-                "</PreviewOrderRequest>";
+                      "<stopPrice />";
+            if (!string.IsNullOrEmpty(limitPrice))
+            {
+                payLoad += "<limitPrice>" + limitPrice + "</limitPrice>";
+            }
+            else
+            {
+                payLoad += "<limitPrice />";
+            }
 
-            client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+            payLoad += "<Instrument>" +
+              "<Product>" +
+                 "<securityType>EQ</securityType>" +
+                 "<symbol>" + symbol + "</symbol>" +
+              "</Product>" +
+              "<orderAction>" + orderAction + "</orderAction>" +
+              "<quantityType>QUANTITY</quantityType>" +
+              "<quantity>" + qty + "</quantity>" +
+           "</Instrument>" +
+        "</Order>" +
+        "<clientOrderId>" + RandomString(20) + "</clientOrderId>" +
+     "</PreviewOrderRequest>";
+
+            client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
             dynamic results = client.Post(_settings.baseURL, url, payLoad, authorization, "application/xml");
             return results;
         }
 
-        private dynamic PlaceOrder(string accountIdKey, string previewId, string symbol, int qty, string orderAction, TradeDirection direction)
+        private dynamic PlaceOrder(string accountIdKey, string previewId, string symbol, string priceType, string limitPrice, int? qty, string orderAction, TradeDirection direction)
         {
             string url = $"v1/accounts/{accountIdKey}/orders/place";
             var authorization = GetHeaderAuth(url, "POST", null);
@@ -228,17 +282,27 @@ namespace TMD.Services.Service
                 "<clientOrderId>" + RandomString(20) + "</clientOrderId>" +
                 "<PreviewIds>" +
                     "<previewId>" + previewId + "</previewId>" +
-                    //"<cashMargin>CASH</cashMargin>" +
+                //"<cashMargin>CASH</cashMargin>" +
                 "</PreviewIds>" +
                 "<Order>" +
                     "<allOrNone>true</allOrNone>" +
                     //"<accountId>" + accountIdKey + "</accountId>" +                    
-                    "<priceType>MARKET</priceType>" +
+                    //"<priceType>MARKET</priceType>" +
+                    "<priceType>" + priceType + "</priceType>" +
                     "<orderTerm>GOOD_FOR_DAY</orderTerm>" +
                     "<marketSession>REGULAR</marketSession>" +
-                    "<stopPrice />" +
-                    "<limitPrice />" +//188.51</limitPrice>" +
-                    "<Instrument>" +
+                    "<stopPrice />";
+                    //"<limitPrice />" +//188.51</limitPrice>" +
+                    if (!string.IsNullOrEmpty(limitPrice))
+                    {
+                        payLoad += "<limitPrice>" + limitPrice + "</limitPrice>";
+                    }
+                    else
+                    {
+                        payLoad += "<limitPrice />";
+                    }
+
+            payLoad += "<Instrument>" +
                         "<Product>" +
                         "<securityType>EQ</securityType>" +
                         "<symbol>" + symbol + "</symbol>" +
@@ -249,7 +313,7 @@ namespace TMD.Services.Service
                     "</Instrument>" +
                 "</Order>" +
             "</PlaceOrderRequest>";
-            client = new HttpClientServices<dynamic>(_factory, _settings, _logger);
+            client = new HttpClientServices<dynamic>(_factory, _settings/*, _logger*/);
             dynamic results = client.Post(_settings.baseURL, url, payLoad, authorization, "application/xml");
             return results;
         }
@@ -263,7 +327,7 @@ namespace TMD.Services.Service
 
             var requestParameters = new List<string>
             {
-                "oauth_consumer_key=" +  config.ConsumerKey,
+                "oauth_consumer_key=" +  tinyOAuthConfig.ConsumerKey,
                 "oauth_nonce=" + nonce,
                 "oauth_signature_method=HMAC-SHA1",
                 "oauth_timestamp=" + timeStamp,
@@ -284,9 +348,9 @@ namespace TMD.Services.Service
 
             var signatureBaseString = GetSignatureBaseString(method, _settings.baseURL + url, requestParameters, null);
 
-            var signature = GetSignature(signatureBaseString, config.ConsumerSecret, requestTokenSecret);
+            var signature = GetSignature(signatureBaseString, tinyOAuthConfig.ConsumerSecret, requestTokenSecret);
 
-            string values = $"OAuth oauth_consumer_key=\"{Uri.EscapeDataString(config.ConsumerKey)}\",oauth_nonce=\"{Uri.EscapeDataString(nonce)}\",oauth_signature_method=\"HMAC-SHA1\",oauth_timestamp=\"{timeStamp}\",oauth_token=\"{Uri.EscapeDataString(requestToken)}\",oauth_signature=\"{Uri.EscapeDataString(signature)}\"";
+            string values = $"OAuth oauth_consumer_key=\"{Uri.EscapeDataString(tinyOAuthConfig.ConsumerKey)}\",oauth_nonce=\"{Uri.EscapeDataString(nonce)}\",oauth_signature_method=\"HMAC-SHA1\",oauth_timestamp=\"{timeStamp}\",oauth_token=\"{Uri.EscapeDataString(requestToken)}\",oauth_signature=\"{Uri.EscapeDataString(signature)}\"";
             //headers.Add("Authorization", values);
             return values;
         }
@@ -297,7 +361,7 @@ namespace TMD.Services.Service
 
             var requestParameters = new List<string>
             {
-                "oauth_consumer_key=" +  config.ConsumerKey,
+                "oauth_consumer_key=" +  tinyOAuthConfig.ConsumerKey,
                 "oauth_token=" +  Uri.EscapeDataString(requestToken),
                 "oauth_signature_method=HMAC-SHA1",
 				 //"oauth_signature",
@@ -314,7 +378,7 @@ namespace TMD.Services.Service
             //signatureBaseString = signatureBaseString.Replace("_", "%5f");
 
             // Appendix A.5.2. Calculating Signature Value
-            var signature = GetSignature(signatureBaseString, config.ConsumerSecret, requestTokenSecret);
+            var signature = GetSignature(signatureBaseString, tinyOAuthConfig.ConsumerSecret, requestTokenSecret);
 
             var list = ConcatList(requestParameters, "&") + "&oauth_signature=" + Uri.EscapeDataString(signature);
             return list;
@@ -450,7 +514,7 @@ namespace TMD.Services.Service
             else
                 // Construct the authorization url
                 //authorizationUrl = tinyOAuth.GetAuthorizationUrl(requestTokenInfo.RequestToken);
-                authorizationUrl = config.AuthorizeTokenUrl + "key=" + config.ConsumerKey + "&token=" + requestTokenInfo.RequestToken;// https://us.etrade.com/e/t/etws/authorize?key=282683cc9e4b8fc81dea6bc687d46758&token=%2FiQRgQCRGPo7Xdk6G8QDSEzX0Jsy6sKNcULcDavAGgU%3D
+                authorizationUrl = tinyOAuthConfig.AuthorizeTokenUrl + "key=" + tinyOAuthConfig.ConsumerKey + "&token=" + requestTokenInfo.RequestToken;// https://us.etrade.com/e/t/etws/authorize?key=282683cc9e4b8fc81dea6bc687d46758&token=%2FiQRgQCRGPo7Xdk6G8QDSEzX0Jsy6sKNcULcDavAGgU%3D
 
             requestTokenInfo.AuthorizationUrl = authorizationUrl;
 

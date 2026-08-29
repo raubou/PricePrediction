@@ -12,6 +12,8 @@ using TMD.Database.Connect.Managers;
 using TMDInvestments.Models;
 using TMDInvestments.Models.Models.Polygon;
 using TMDInvestments.Services;
+using Microsoft.EntityFrameworkCore;
+using TMDInvestments.Context;
 
 namespace TMD.Services.Service
 {
@@ -36,15 +38,17 @@ namespace TMD.Services.Service
         //List<DataRow>? dataRows;
         IndicesCalculatorV2 indicesCalculatorV2 = null;
         DataTable? dt;
+        IDbContextFactory<TmdContext> _contextFactory;
         static TraderGoService()
         {
             finnhub.GeneralNews = "/news?category=general";
             finnhub.finnhubKey = "cjbc5i9r01qn9c1l9ncgcjbc5i9r01qn9c1l9nd0";
             finnhub.URL = "https://finnhub.io/api/v1";
         }
-        public TraderGoService(yfapiSettings yfapi, ILogger log, IHttpClientFactory _factory, bool isAzureFunction)
+        public TraderGoService(yfapiSettings yfapi, ILogger log, IHttpClientFactory _factory, bool isAzureFunction, IDbContextFactory<TmdContext> contextFactory)
         {
             this.yfapi = yfapi;
+            _contextFactory = contextFactory;
             //yfapi.URL = "https://yfapi.net";
             //yfapi.MarketSummary = "/v6/finance/quote/marketSummary?lang=en&region=US";
             ////yfapi.Trending = "/v1/finance/trending/US";
@@ -92,13 +96,14 @@ namespace TMD.Services.Service
             //NewsManager = new Manager(conn, "", _log);
             MarketsManager = new Manager(conn2, "", _log);
         }
-        public TraderGoService(ILogger log, HttpClient client, bool isAzureFunction,IOptions<FinnHub> finnHub, IOptions<Polygon> polycon, IHttpClientFactory? _factory, IOptions<SchwabSettings> settings)
+        public TraderGoService(ILogger log, HttpClient client, bool isAzureFunction,IOptions<FinnHub> finnHub, IOptions<Polygon> polycon, IHttpClientFactory? _factory, IOptions<SchwabSettings> settings, IDbContextFactory<TmdContext> contextFactory)
         {
             _log = log;
             _client = client;
             _finnHub = finnHub;
             _polygon = polycon;
             this._factory = _factory;
+            _contextFactory = contextFactory;
             if (_factory == null)
             {
                 var handler = new SocketsHttpHandler
@@ -145,7 +150,7 @@ namespace TMD.Services.Service
             GainersandLosers.Losers = new ExpandoObject();
             dynamic GainersArray = new ExpandoObject();
             dynamic LosersArray = new ExpandoObject();
-            indicesCalculatorV2 = new IndicesCalculatorV2(_log, _settings, _factory);
+            indicesCalculatorV2 = new IndicesCalculatorV2(_log, _settings, _factory, _contextFactory);
             Dictionary<string, string> headers = new Dictionary<string, string>();
             headers.Add("X-API-KEY", yfapi.yfapiKey.ToString());
             var losers = GeneralHelper.GetRequest(headers, yfapi.URL.ToString() + yfapi.GainersLosers.ToString().Replace("{direction}", "day_losers"), _client, error);
@@ -161,7 +166,7 @@ namespace TMD.Services.Service
                 JsonObject[] gains = new JsonObject[1];
                 JsonObject[] losses = new JsonObject[1];
                 foreach (var item in GainersArray)
-                {                   
+                {
                     string symbol = item.GetProperty("symbol").ToString();
                     var results = item;
                     gains[gains.Length - 1] = indicesCalculatorV2.CalculateV2(symbol, results);
@@ -180,9 +185,10 @@ namespace TMD.Services.Service
             else
             {
                 GainersandLosers.Gainers = GainersArray;
-                GainersandLosers.Losers = LosersArray;  
+                GainersandLosers.Losers = LosersArray;
             }
-                return GainersandLosers;
+            return GainersandLosers;
+            return null;
         }
         DateTime fromDate = DateTime.Now;
         DateTime toDate = DateTime.Now.AddDays(35);
@@ -421,17 +427,18 @@ namespace TMD.Services.Service
             //MarketsManager.AddBulk("[dbo].[Earnings]", dt.Select());
         }
 
-        public void LoadEarnings()
+        public async Task LoadEarnings()
         {
             List<string> addedSymbols = new List<string>();
             //dynamic? jsonQuote = null;
             MarketsManager = new Manager(conn2, _finnHub.Value, _polygon.Value, _factory);
-            SchwabServices services = new SchwabServices(_log, _settings, _polygon.Value, _factory);
+            SchwabServices services = new SchwabServices(_log, _settings, _factory, _contextFactory);
             MarketsManager.TruncateEarnings();
             Dictionary<string, string> headers = new Dictionary<string, string>();
             headers.Add("X-Finnhub-Token", finnhub.finnhubKey.ToString());
             _log.LogInformation("Getting Earnings Calender");
-            var earnings = GeneralHelper.GetRequest(headers, finnhub.URL.ToString() + finnhub.Earnings.ToString().Replace("{from}", fromDate.Year + "-" + fromDate.Month + "-" + fromDate.Day).Replace("{to}", toDate.Year + "-" + toDate.Month + "-" + toDate.Day), _client, error);
+            //var earnings = GeneralHelper.GetRequest(headers, finnhub.URL.ToString() + finnhub.Earnings.ToString().Replace("{from}", fromDate.Year + "-" + fromDate.Month + "-" + fromDate.Day).Replace("{to}", toDate.Year + "-" + toDate.Month + "-" + toDate.Day), _client, error);
+            var earnings = GeneralHelper.GetRequest(headers, finnhub.URL.ToString() + finnhub.Earnings.ToString().Replace("{from}", fromDate.ToString("yyyy-MM-dd")).Replace("{to}", toDate.ToString("yyyy-MM-dd")), _client, error);
             dt = new DataTable();
 
             GeneralHelper.AddColumnstoTable(new string[] { "date", "epsActual", "epsEstimate", "hour", "quarter", "revenueActual", "revenueEstimate", "symbol", "Name", "LastEarningDate", "year" }, ref dt);
@@ -455,7 +462,7 @@ namespace TMD.Services.Service
                     try
                     {
                         //jsonQuote = System.Text.Json.JsonSerializer.Serialize(services.GetQuote(item.GetProperty("symbol").ToString(), true));
-                        var quote = services.GetQuote(item.GetProperty("symbol").ToString(), true);
+                        var quote = await services.GetQuoteAsync(item.GetProperty("symbol").ToString(), true);
                         if (quote != null)
                         {
                             //JObject quote = JObject.Parse(jsonQuote);

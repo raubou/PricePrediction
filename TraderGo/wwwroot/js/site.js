@@ -343,6 +343,7 @@ let addURL = '';
             objContext.GetCompanyNews(value);
         }, 500);
     }
+
     objContext.Quote = function (value, name) {
         $(".overlay").show();
         quote = value;
@@ -954,5 +955,41 @@ let addURL = '';
     }
     objContext.sleep = function (ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    objContext.PricePerecntChange = function (current, previous, previousItem) {
+        //alert(current + " " + previous);
+        let status = '';
+        var result = Math.abs((parseFloat(current) - parseFloat(previous)) / ((parseFloat(current) + parseFloat(previous)) / 2) * 100);
+        $(previousItem).html(result.toFixed(2) + "%");
+        if (previous > current) {
+            status = "text-danger";
+        }
+        else {
+            status = "text-success";
+        };
+        $(previousItem).addClass(status)
+        //alert(result);
+        //return Number(result).toFixed(2);
+    }
+    objContext.GetQuoteStupid = async function (pricePurchased, lastPrice, symbol, item, previousItem, priceDiffCurrent) {
+        let price = null;
+        await $.ajax({
+            url: "api/TraderGoAPI/GetQuote/" + symbol,
+        }).then(function (data) {
+            price = data.lastPrice;
+            console.log(JSON.stringify(data));
+            //alert(price);
+            //$(item).addClass(status);
+            
+            $(item).html("$" + Number(price.toFixed(2)));
+            objContext.PricePerecntChange(price, pricePurchased, previousItem);
+            objContext.PricePerecntChange(price, lastPrice, priceDiffCurrent);
+        }).done(function (data) {
+            objContext.sleep(500);
+            //return price;
+        }).catch(function (e) {
+
+        });
+        //return price;
     }
 }) (objContext)

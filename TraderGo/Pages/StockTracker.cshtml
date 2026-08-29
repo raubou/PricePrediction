@@ -116,7 +116,7 @@
                     if (item.Quantity > 0)
                         totalCost += (item.PricePurchased * item.Quantity);
                     if (item.Quantity < 0)
-                        totalShort += (item.PricePurchased * Math.Abs(item.Quantity));
+                        totalShort += (item.PricePurchased * Math.Abs((int)item.Quantity));
                 }
                 <div class="col overflow-hidden @textColor">
                     $@item.LastPrice.ToString()

@@ -8,10 +8,15 @@ using System.Xml.Serialization;
 
 namespace TMDInvestments.Models
 {
-    //public sealed class EtradeAccountInfo
-    //{
-    //    public PortfolioResponse PortfolioResponse { get; set; }
-    //}
+    [XmlRoot("BalanceResponse", Namespace = "")]
+    public sealed class EtradeAccountInfo2
+    {
+        public string accountId { get; set; }        
+
+        [XmlElement("Computed", Type = typeof(Computed))]
+        public Computed Computed { get; set; } = new Computed();
+
+    }
     [XmlRoot("PortfolioResponse", Namespace = "")]
     public sealed class EtradeAccountInfo
     {
@@ -20,6 +25,10 @@ namespace TMDInvestments.Models
     public sealed class AccountPortfolio
     {
         public string accountId { get; set; }
+
+        [XmlElement("Computed", Type = typeof(Computed))]
+        public Computed Computed { get; set; } = new Computed();
+
         [XmlElement("Position", Type = typeof(Position))]
         public List<Position> Positions { get; set; }
     }
@@ -58,4 +67,20 @@ namespace TMDInvestments.Models
         public string strikePrice { get; set; }
         public string symbol { get; set; }
     }
+    public sealed class Computed
+    {
+        public string regtEquity { get; set; }
+        public string cashAvailableForWithdrawal { get; set; }
+        public string cashAvailableForInvestment { get; set; }
+        public string dtMarginBuyingPower { get; set; } 
+
+        [XmlElement("RealTimeValues", Type = typeof(RealTimeValues))]
+        public RealTimeValues RealTimeValues { get; set; } = new RealTimeValues();
+    }
+    public sealed class RealTimeValues 
+    {
+        public string netMvLong { get; set; }
+        public string netMvShort { get; set; }
+    }
+
 }

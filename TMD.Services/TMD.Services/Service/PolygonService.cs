@@ -93,8 +93,8 @@ namespace TMD.Services.Service
             headers = new Dictionary<string, object>();
             Indicators indicators = new Indicators();
             headers.Add("accept", "*/*");
-            client = new HttpClientServices<Indicators>(_factory, _settings, _logger);
-            indicators = client.Get($"{_settings.Indicators.Replace("{symbol}", symbol.ToString()).Replace("{indicator}", indicator.ToString()).Replace("{timestamp}", timestamp.ToString()).Replace("{timespan}", timespan.ToString()).Replace("{window}", short_window.ToString()).Replace("{short_window}", short_window.ToString()).Replace("{long_window}", long_window.ToString()).Replace("{signal_window}", signal_window.ToString())}", $"Bearer {_settings.PolygonToken}", headers);
+            client = new HttpClientServices<Indicators>(_factory, _settings/*, _logger*/);
+            indicators = client.Get($"{_settings.Indicators.Replace("{symbol}", symbol.ToString()).Replace("{indicator}", indicator.ToString()).Replace("{timestamp}", timestamp.ToString()).Replace("{timespan}", timespan.ToString()).Replace("{window}", short_window.ToString()).Replace("{short_window}", short_window.ToString()).Replace("{long_window}", long_window.ToString()).Replace("{signal_window}", signal_window.ToString())}", $"Bearer {_settings.PolygonToken}", headers).Result;
             return indicators;
         }
     }
