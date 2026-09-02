@@ -25,6 +25,8 @@
     <div class='col border border-1 border-light text-center'>Last Close</div>
     <div class='col border border-1 border-light text-center'>Last Change</div>
     <div class='col border border-1 border-light text-center'>Last Change Percent</div>
+    <div class='col border border-1 border-light text-center'>RSI</div>
+    <div class='col border border-1 border-light text-center'>VWAP</div>
     <div class='col border border-1 border-light text-center'>Percent Higher</div>
     <div class='col border border-1 border-light text-center'>Percent Lower</div>
     <div class='col border border-1 border-light text-center'>Short Count</div>
@@ -50,6 +52,8 @@
         <div class='col border border-1 border-info'>$@Math.Round(Convert.ToDecimal(item["lastClose"].ToString()), 2)</div>
         <div class='col border border-1 border-info @textColor'>$@Math.Round(Convert.ToDecimal(item["lastopChange"].ToString()), 2)</div>
         <div class='col border border-1 border-info @textColor'>%@Math.Round(Convert.ToDecimal(item["lastopChangePercent"].ToString()), 2)</div>
+        <div class='col border border-1 border-info'>@Math.Round(Convert.ToDecimal(item["RSI"].ToString()), 2)</div>
+        <div class='col border border-1 border-info'>$@Math.Round(Convert.ToDecimal(item["VWAP"].ToString()), 2)</div>
         <div class='col border border-1 border-info'>%@Math.Round(Convert.ToDecimal(item["PercentHigher"].ToString()), 2)</div>
         <div class='col border border-1 border-info'>%@Math.Round(Convert.ToDecimal(item["PercentLower"].ToString()), 2)</div>
         <div class='col border border-1 border-info'>@item["shortCnt"].ToString()</div>

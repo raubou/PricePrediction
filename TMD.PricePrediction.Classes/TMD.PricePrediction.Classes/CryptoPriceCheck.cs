@@ -104,7 +104,7 @@ namespace TMD.PricePrediction
             foreach (var item in Accounts)
             {
                 Helper.Log(_logger, LogLevel.Information, $"Iterating crypto list. Analyzing {item.Currency}");
-                //if (item.Currency.Contains("ETH") /*|| item.Currency == "LTC"*/)
+                //if (item.Currency.Contains("BNB") /*|| item.Currency == "LTC"*/)
                 //{
                 //    //they do exist
                 //}
@@ -186,36 +186,57 @@ namespace TMD.PricePrediction
                 else
                 {
                     Helper.Log(_logger, LogLevel.Information, $"{item.Currency} not found pending. Checking filled.");
-                    coin = _ctx.CryptoTracker2.AsNoTracking().Where(x => x.Coin == item.Currency + "-USD" && x.PriceSold == null && x.DateSold == null && x.BuyStatus.ToLower() == "filled").FirstOrDefaultAsync().Result;
-                    if (coin is not null)
+                    var coins = _ctx.CryptoTracker2.AsNoTracking().Where(x => x.Coin == item.Currency + "-USD" && x.PriceSold == null && x.DateSold == null && x.BuyStatus.ToLower() == "filled").ToList() ;
+                    if (coins is not null && coins.Any())
                     {
                         Helper.Log(_logger, LogLevel.Information, $"{item.Currency} found in db filled.");
-                        var crypto = coin;
-                        if (crypto.BuyOrderId == null)
+                        
+
+                        if (coins.Count() > 1)
                         {
-                            Helper.Log(_logger, LogLevel.Information, $"{item.Currency} BuyOrderId missing. Getting by last order.");
-                            //var results2 = services.GetOrders(crypto.Coin);
-                            //var lastSell = results2.Where(x => x.Side == "BUY").OrderByDescending(y => Convert.ToDateTime(y.SequenceTimestamp)).FirstOrDefault();
-                            crypto.CurrentBalance = valueofNonTrackedAsset;
-                            var lastSell = GetLastOrder(crypto.Coin);
-                            buyOrderId = Guid.Parse(lastSell?.OrderId);
-                            crypto.BuyOrderId = buyOrderId;
-                            crypto.DatePurchased = item.UpdatedAt;
-                            _ctx.CryptoTracker2.Attach(crypto);
-                            _ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
-                            //_ctx.SaveChanges();
-                            //_ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
-                        }
-                        //continue; //already in tracker. Update pruchased date
-                        else
+                            Helper.Log(_logger, LogLevel.Information, $"{item.Currency} found in db filled. More than one record. Getting latest.");
+                            for( int i = 0; i < coins.Count(); i++)
+                            {
+                                if(i == 0)
+                                {
+                                    // skip first record. This is the latest one
+                                    continue;
+                                }
+                                var crypto = coins[i];
+                                _ctx.CryptoTracker2.Attach(crypto);
+                                _ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Deleted;
+                                //_ctx.SaveChanges();
+                            }
+                        } else
                         {
-                            crypto.CurrentBalance = valueofNonTrackedAsset;
-                            crypto.DatePurchased = item.UpdatedAt;
-                            _ctx.CryptoTracker2.Attach(crypto);
-                            _ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
-                            //_ctx.SaveChanges();
-                            //_ctx.Entry(crypto).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                            coin = coins[0];
+                            if (coin.BuyOrderId == null)
+                            {
+                                Helper.Log(_logger, LogLevel.Information, $"{item.Currency} BuyOrderId missing. Getting by last order.");
+                                //var results2 = services.GetOrders(crypto.Coin);
+                                //var lastSell = results2.Where(x => x.Side == "BUY").OrderByDescending(y => Convert.ToDateTime(y.SequenceTimestamp)).FirstOrDefault();
+                                coin.CurrentBalance = valueofNonTrackedAsset;
+                                var lastSell = GetLastOrder(coin.Coin);
+                                buyOrderId = Guid.Parse(lastSell?.OrderId);
+                                coin.BuyOrderId = buyOrderId;
+                                coin.DatePurchased = item.UpdatedAt;
+                                _ctx.CryptoTracker2.Attach(coin);
+                                _ctx.Entry(coin).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+                                //_ctx.SaveChanges();
+                                //_ctx.Entry(coin).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                            }
+                            //continue; //already in tracker. Update pruchased date
+                            else
+                            {
+                                coin.CurrentBalance = valueofNonTrackedAsset;
+                                coin.DatePurchased = item.UpdatedAt;
+                                _ctx.CryptoTracker2.Attach(coin);
+                                _ctx.Entry(coin).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+                                //_ctx.SaveChanges();
+                                //_ctx.Entry(coin).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                            }
                         }
+
                         Helper.Log(_logger, LogLevel.Information, $"{item.Currency} Updating in db.");
                         System.Threading.Thread.Sleep(250);
                     }
@@ -308,6 +329,12 @@ namespace TMD.PricePrediction
             var orders = coinBaseService.GetOrders(ProductId);
             var order = orders.Where(x => x.ProductId == ProductId).OrderByDescending(y => Convert.ToDateTime(y.SequenceTimestamp)).FirstOrDefault();
             return order;
+        }
+        private List<Fill> GetLastOrders(string ProductId)
+        {
+            var orders = coinBaseService.GetOrders(ProductId);
+            //var order = orders.Where(x => x.ProductId == ProductId).OrderByDescending(y => Convert.ToDateTime(y.SequenceTimestamp)).FirstOrDefault();
+            return orders;
         }
         void UpdatePrices()
         {

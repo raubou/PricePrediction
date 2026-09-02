@@ -13,7 +13,6 @@ using TMD.Services;
 using TMD.Services.Service;
 using TMDInvestments.Context;
 using TMDInvestments.Models;
-using TMDInvestments.Models.Models.Polygon;
 using TMDInvestments.Services;
 
 namespace TMD.PricePrediction
@@ -45,7 +44,7 @@ namespace TMD.PricePrediction
             var ConnectionStrings = config.GetSection("ConnectionStrings").Get<ConnectionSettings>();
             var services = new ServiceCollection();
             services.AddDbContextFactory<TmdContext>(options =>
-                options.UseSqlServer(ConnectionStrings.Connection));
+                options.UseSqlServer(ConnectionStrings?.Connection));
             services.AddTransient<Helper>();
             var serviceProvider = services.BuildServiceProvider();
             var ctx = serviceProvider.GetService<TmdContext>();
@@ -56,7 +55,7 @@ namespace TMD.PricePrediction
             //    var context = ctxFactory.CreateDbContext();
             //    _ctx = context;
             //}
-            rulesEngine = _ctx.RulesEngine.FirstOrDefault();
+            rulesEngine = _ctx?.RulesEngine?.FirstOrDefault();
             SetTimeZone();
         }
         //public Helper(ILogger _logger, SchwabSettings settings, ETradeSettings settings2)
@@ -238,12 +237,12 @@ namespace TMD.PricePrediction
             //int? NASDAQLong = 0;
             //int? NASDAQShort = 0;
 
-            StockTracker2 stockTrackerInd = null;
+            StockTracker2? stockTrackerInd = null;
             var BuySellStockList = new List<BuySellCommodity>();
 
 
             //Get stock already in trade being tracked.
-            var stockTracker = _ctx.StockTracker2.AsNoTracking().Where(x => x.PriceSold == null && x.DateSold == null && x.Status == "Filled"/* && x.TradePlatform == (int)Platform.CharlesSchwab*/);//.ToList();
+            var stockTracker = _ctx?.StockTracker2?.AsNoTracking()?.Where(x => x.PriceSold == null && x.DateSold == null && x.Status == "Filled"/* && x.TradePlatform == (int)Platform.CharlesSchwab*/);//.ToList();
 
             //if (stockTracker.Where(x => x.TradePlatform == (int)Platform.CharlesSchwab).Count() >= (rulesEngine.MaxNumberofStockstoBuy / 2) &&
             //    stockTracker.Where(x => x.TradePlatform == (int)Platform.ETrade).Count() >= (rulesEngine.MaxNumberofStockstoBuy / 2))
@@ -252,18 +251,18 @@ namespace TMD.PricePrediction
             //    return BuySellStockList;
             //}
             
-            var stockTrackerList = stockTracker.Select(y => y.Symbol);
+            var stockTrackerList = stockTracker?.Select(y => y.Symbol);
             Log(_logger, LogLevel.Information, $"Get existing stock tracker");
 
             //Get list of stocks to trade not in tracker
-            var stockList = _ctx.StockList.AsNoTracking().Where(x => !stockTrackerList.Contains(x.Symbol) && x.ExcludeFromAutomation != true).OrderBy(y => Guid.NewGuid());//.ToList();
+            var stockList = _ctx?.StockList?.AsNoTracking().Where(x => !stockTrackerList.Contains(x.Symbol) && x.ExcludeFromAutomation != true).OrderBy(y => Guid.NewGuid());//.ToList();
             Log(_logger, LogLevel.Information, $"Get stock list to trade");
 
             //stock sold/brought to cover in the last 24 hrs
             DateTime? minDate = DateTime.MinValue;
-            var StockHold24Hr = _ctx.StockTracker2.AsNoTracking().AsEnumerable().Where(x => x.PriceSold != null && x.DateSold != null && Math.Abs((x.DateSold - easternTime).Value.TotalHours) < 24).Select(y => new { Symbol = y.Symbol, DateSold = y.DateSold, DateUpdated = y.DateUpdated }).ToList();
+            var StockHold24Hr = _ctx?.StockTracker2?.AsNoTracking()?.AsEnumerable()?.Where(x => x.PriceSold != null && x.DateSold != null && Math.Abs((x.DateSold - easternTime).Value.TotalHours) < 24).Select(y => new { Symbol = y.Symbol, DateSold = y.DateSold, DateUpdated = y.DateUpdated }).ToList();
             //Include cancelled item for a 24h hold
-            StockHold24Hr.AddRange(_ctx.StockTracker2.AsNoTracking().AsEnumerable().Where(x => x.Status == "Cancelled" && Math.Abs((x.DateUpdated - easternTime).Value.TotalHours) < 24).Select(y => new { Symbol = y.Symbol, DateSold = y.DateSold ?? minDate, DateUpdated = y.DateUpdated }));
+            StockHold24Hr?.AddRange(_ctx?.StockTracker2?.AsNoTracking()?.AsEnumerable()?.Where(x => x.Status == "Cancelled" && Math.Abs((x.DateUpdated - easternTime).Value.TotalHours) < 24).Select(y => new { Symbol = y.Symbol, DateSold = y.DateSold ?? minDate, DateUpdated = y.DateUpdated }));
 
             ///Test blank out to test stock quote list count
             //if (stockTracker.Where(x => x.TradePlatform == (int)Platform.CharlesSchwab).Count() >= (settings.MaxNumberofStockstoBuy / 2) &&
@@ -1816,17 +1815,17 @@ namespace TMD.PricePrediction
             }
             return true;
         }
-        public bool BuySellCrypto(CryptoTracker2 cryptoTracker, dynamic results, TradeDirection direction, decimal amount, CoinBaseService coinBaseService, List<PublicProduct> publicProducts)
+        public bool BuySellCrypto(CryptoTracker2? cryptoTracker, dynamic results, TradeDirection direction, decimal amount, CoinBaseService? coinBaseService, List<PublicProduct> publicProducts)
         {
             string symbol = (results["Symbol"].ToString().Substring((results["Symbol"].ToString().Length - 1), 1) == "C") ? results["Symbol"].ToString().Substring(0, (results["Symbol"].ToString().Length - 1)) : results["Symbol"].ToString();
             PublicProduct? product = publicProducts.Where(x => x.DisplayName == symbol).FirstOrDefault();
-            string precision = product.BaseIncrement.Substring((product.BaseIncrement.IndexOf(".") + 1), (product.BaseIncrement.Length - (product.BaseIncrement.IndexOf(".") + 1)));
-            string[] currency = product.DisplayName.Split('-');
-            var account = coinBaseService.GetAccounts().Where(x => x.Currency == currency[0] && Convert.ToDecimal(x.AvailableBalance.Value) > 0m).FirstOrDefault();
+            string precision = product?.BaseIncrement.Substring((product.BaseIncrement.IndexOf(".") + 1), (product.BaseIncrement.Length - (product.BaseIncrement.IndexOf(".") + 1)));
+            string[] currency = product?.DisplayName.Split('-');
+            var account = coinBaseService?.GetAccounts()?.Where(x => x.Currency == currency[0] && Convert.ToDecimal(x.AvailableBalance.Value) > 0m)?.FirstOrDefault();
             decimal minSubtract = 0m;
             decimal baseSize = 0m;
 
-            Coinbase.AdvancedTrade.Models.Order output = null;
+            Coinbase.AdvancedTrade.Models.Order? output = null;
             Coinbase.AdvancedTrade.Enums.OrderSide coinbaseDirection = (direction == TradeDirection.BUY || direction == TradeDirection.BUY_TO_COVER) ? Coinbase.AdvancedTrade.Enums.OrderSide.BUY : Coinbase.AdvancedTrade.Enums.OrderSide.SELL;
             lock (_transactLock)
             {
@@ -1834,13 +1833,14 @@ namespace TMD.PricePrediction
                 {
                     case TradeDirection.BUY:
 
-                        var perItem = amount.ToString();
-                        var amountSize = Convert.ToDecimal(perItem.Substring(0, ((perItem.Length - perItem.IndexOf(".")) - 1)));
-                        output = coinBaseService.SetOrder(product.DisplayName, coinbaseDirection, amountSize);
+                        //var perItem = amount.ToString();
+                        //var amountSize = Convert.ToDecimal(perItem.Substring(0, ((perItem.Length - perItem.IndexOf(".")) - 1)));
+                        //output = coinBaseService?.SetOrder(product?.DisplayName, coinbaseDirection, amountSize);
+                        output = coinBaseService?.SetOrder(product?.DisplayName, coinbaseDirection, amount);
                         break;
                     case TradeDirection.SELL:
 
-                        switch (precision.Length)
+                        switch (precision?.Length)
                         {
                             case 1:
                                 minSubtract = .1m;
@@ -1870,13 +1870,13 @@ namespace TMD.PricePrediction
                                 //    minSubtract = .000000001m;
                                 //    break;
                         }
-                        baseSize = decimal.Round(Convert.ToDecimal(account.AvailableBalance.Value), precision.Length) - minSubtract;
+                        baseSize = decimal.Round(Convert.ToDecimal(account?.AvailableBalance.Value), precision?.Length ?? 0) - minSubtract;
 
-                        output = coinBaseService.SetOrder(product.DisplayName, coinbaseDirection, baseSize);
+                        output = coinBaseService?.SetOrder(product?.DisplayName, coinbaseDirection, baseSize);
                         if (output == null)
                         {
-                            baseSize = (int)Convert.ToDecimal(account.AvailableBalance.Value);
-                            output = coinBaseService.SetOrder(product.DisplayName, coinbaseDirection, baseSize);
+                            baseSize = (int)Convert.ToDecimal(account?.AvailableBalance.Value);
+                            output = coinBaseService?.SetOrder(product?.DisplayName, coinbaseDirection, baseSize);
                         }
 
                         break;

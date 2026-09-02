@@ -1,17 +1,14 @@
 ﻿using Coinbase.AdvancedTrade.Models;
 using Coinbase.AdvancedTrade.Models.Public;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using System.ComponentModel;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using TMD.Services;
 using TMDInvestments.Context;
 using TMDInvestments.Models;
-using TMDInvestments.Models.Enum;
 
 namespace TMD.PricePrediction.Classes
 {
@@ -19,30 +16,18 @@ namespace TMD.PricePrediction.Classes
     {
         ILogger? _logger;
         CoinBaseSettings? _settings; 
-        //TaAPISettings? _taapiSettings;
         CoinBaseService? coinBaseService = null;
         IHttpClientFactory? _httpClientFactory;
-        //TaAPIService? taapiService = null;
         TmdContext? _ctx = null;
         List<BuySellCommodity>? BuySellCryptoList;
         RulesEngine? settings = null;
         IQueryable<CryptoTracker2>? cryptoTracker = null;
         List<PublicProduct>? products = null;
-        //CryptoPriceCheck? cryptoPriceCheck = null;
-        //Task? task1 = null;
         Helper? _helper = null;
         IDbContextFactory<TmdContext>? _contextFactory = null;
         List<PortfolioBreakdown>? portfolios = null;
         static readonly System.Threading.Lock _transactLock = new();
-        //public ExecCryptoPricePrediction(ILogger logger, CoinBaseSettings settings, IHttpClientFactory httpClientFactory, Helper helper) {
 
-        //    _logger = logger;
-        //    _settings = settings;
-        //    _helper = helper;
-        //    coinBaseService = new CoinBaseService(logger, settings, _httpClientFactory);
-        //    ctx = new TmdContext();
-        //    //helper = new Helper();
-        //}
         public ExecCryptoPricePrediction(ILogger logger, CoinBaseSettings settings, IHttpClientFactory httpClientFactory, IDbContextFactory<TmdContext> contextFactory)
         {
 
@@ -83,7 +68,7 @@ namespace TMD.PricePrediction.Classes
                 {
                     Console.WriteLine("Cleaning up resources within the thread...");
                     // Perform thread-specific cleanup here
-                    _ctx.Dispose();
+                    _ctx?.Dispose();
                     _ctx = null;
                     //httpClientFactory = null;
                     return;
@@ -102,11 +87,11 @@ namespace TMD.PricePrediction.Classes
             //Get Products
             lock (_transactLock)
             {
-                products = coinBaseService.GetProducts();
+                products = coinBaseService?.GetProducts();
             }
 
             //GetSettings
-            settings = _ctx.RulesEngine.FirstOrDefaultAsync().Result;
+            settings = _ctx?.RulesEngine?.FirstOrDefaultAsync().Result;
             Helper.Log(_logger, LogLevel.Information, $"Get settings");
             //_logger.LogInformation($"Get settings");
 
@@ -130,7 +115,7 @@ namespace TMD.PricePrediction.Classes
             Helper.Log(_logger, LogLevel.Information, $"Get account info");
             lock (_transactLock)
             {
-                portfolios = coinBaseService.GetPortfolios();
+                portfolios = coinBaseService?.GetPortfolios();
             }                
 
             //Checked for queued crypto adn see if direction is the same
@@ -138,8 +123,8 @@ namespace TMD.PricePrediction.Classes
             //CheckforQueuedCrypto(); 
 
             //Get Crypto already in trade being tracked.
-            cryptoTracker = _ctx.CryptoTracker2.AsNoTracking().Where(x => x.PriceSold == null && x.DateSold == null && (x.BuyStatus.ToLower() == "filled" /*|| x.BuyStatus.ToLower() == "open" || x.BuyStatus.ToLower() == "pending"*/));//.ToList();
-            var cryptoTrackerList = cryptoTracker.AsNoTracking().Select(y => y.Coin);
+            cryptoTracker = _ctx?.CryptoTracker2?.AsNoTracking()?.Where(x => x.PriceSold == null && x.DateSold == null && (x.BuyStatus.ToLower() == "filled" /*|| x.BuyStatus.ToLower() == "open" || x.BuyStatus.ToLower() == "pending"*/));//.ToList();
+            var cryptoTrackerList = cryptoTracker?.AsNoTracking()?.Select(y => y.Coin);
             Helper.Log(_logger, LogLevel.Information, $"Get exiting Crypto tracker");
 
             if(portfolios != null && portfolios.Count() > 0)
@@ -195,11 +180,11 @@ namespace TMD.PricePrediction.Classes
                         //if stock was cancelled, check updated date
                         try
                         {
-                            Helper.Log(_logger, LogLevel.Warning, $"Crypto {crypto + "-USD"} - ({cryptoEnum.GetDescription()}) purchased {Math.Round(Math.Abs((CryptoHold24Hr.Where(y => y.Coin == crypto + "-USD").Select(z => z.DateSold).FirstOrDefault() - Helper.easternTime).Value.TotalHours), 5)} hours ago was purchased less than 24h ago, skipping");
+                            Helper.Log(_logger, LogLevel.Warning, $"Crypto {crypto + "-USD"} - ({TMDInvestments.Models.Enum.EnumExtensions.GetDescription(cryptoEnum)}) purchased {Math.Round(Math.Abs((CryptoHold24Hr.Where(y => y.Coin == crypto + "-USD").Select(z => z.DateSold).FirstOrDefault() - Helper.easternTime).Value.TotalHours), 5)} hours ago was purchased less than 24h ago, skipping");
                         }
                         catch (Exception ex)
                         {
-                            Helper.Log(_logger, LogLevel.Warning, $"Crypto {crypto + "-USD"} - ({cryptoEnum.GetDescription()}) cancelled {Math.Round(Math.Abs((CryptoHold24Hr.Where(y => y.Coin == crypto + "-USD").Select(z => z.DateUpdated).FirstOrDefault() - Helper.easternTime).Value.TotalHours), 5)} hours ago was purchased less than 24h ago, skipping");
+                            Helper.Log(_logger, LogLevel.Warning, $"Crypto {crypto + "-USD"} - ({TMDInvestments.Models.Enum.EnumExtensions.GetDescription(cryptoEnum)}) cancelled {Math.Round(Math.Abs((CryptoHold24Hr.Where(y => y.Coin == crypto + "-USD").Select(z => z.DateUpdated).FirstOrDefault() - Helper.easternTime).Value.TotalHours), 5)} hours ago was purchased less than 24h ago, skipping");
                         }
                         continue;
                     }
@@ -230,7 +215,7 @@ namespace TMD.PricePrediction.Classes
                     }
                     if (product.CancelOnly || product.IsDisabled || product.LimitOnly || product.PostOnly || product.TradingDisabled || product.ViewOnly || product.Status != "online")
                     {
-                        Helper.Log(_logger, LogLevel.Warning, $"Crypto {crypto + "-USD"} - ({cryptoEnum.GetDescription()}) Does not meet the criteria for purchase at this time.");
+                        Helper.Log(_logger, LogLevel.Warning, $"Crypto {crypto + "-USD"} - ({TMDInvestments.Models.Enum.EnumExtensions.GetDescription(cryptoEnum)}) Does not meet the criteria for purchase at this time.");
                         continue;
                     }
                     //skip crypto under $1
@@ -241,12 +226,12 @@ namespace TMD.PricePrediction.Classes
                     //    rejectPriceCount++;
                     //    continue;
                     //}
-                    Helper.Log(_logger, LogLevel.Information, $"Checking {crypto + "-USD"} - ({cryptoEnum.GetDescription()})");
+                    Helper.Log(_logger, LogLevel.Information, $"Checking {crypto + "-USD"} - ({TMDInvestments.Models.Enum.EnumExtensions.GetDescription(cryptoEnum)})");
 
-                    dynamic results = null;
+                    dynamic? results = null;
                     try
                     {
-                        results = coinBaseService.GetQuoteAsync(crypto + "-USD").Result;
+                        results = coinBaseService?.GetQuoteAsync(crypto + "-USD")?.Result;
                     }
                     catch (Exception ex)
                     {
@@ -259,14 +244,14 @@ namespace TMD.PricePrediction.Classes
                         //_ctx.Entry(st).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
                         continue;
                     }
-                    Helper.Log(_logger, LogLevel.Information, $"{crypto + "-USD"} - ({cryptoEnum.GetDescription()}) price {results?["lastPrice"]?.ToString()}");
+                    Helper.Log(_logger, LogLevel.Information, $"{crypto + "-USD"} - ({TMDInvestments.Models.Enum.EnumExtensions.GetDescription(cryptoEnum)}) price {results?["lastPrice"]?.ToString()}");
 
                     if (results is JsonObject)
                     {
                         if (((JsonObject)results).TryGetPropertyValue("errors", out JsonNode errors))
                         {
                             //failed to get quote.
-                            Helper.Log(_logger, LogLevel.Error, $"Failed to get quote for {crypto + "-USD"} - ({cryptoEnum.GetDescription()}) {errors.ToString()}");
+                            Helper.Log(_logger, LogLevel.Error, $"Failed to get quote for {crypto + "-USD"} - ({TMDInvestments.Models.Enum.EnumExtensions.GetDescription(cryptoEnum)}) {errors.ToString()}");
                             //var st = crypto;
                             //st.QuoteRetry = (st.QuoteRetry == null) ? 1 : st.QuoteRetry + 1;
                             //_ctx.CryptoList.Attach(st);
@@ -281,7 +266,7 @@ namespace TMD.PricePrediction.Classes
                         if (((JsonElement)results).TryGetProperty("errors", out JsonElement errors))
                         {
                             //failed to get quote.
-                            Helper.Log(_logger, LogLevel.Error, $"Failed to get quote for {crypto + "-USD"} - ({cryptoEnum.GetDescription()}) {errors.ToString()}");
+                            Helper.Log(_logger, LogLevel.Error, $"Failed to get quote for {crypto + "-USD"} - ({TMDInvestments.Models.Enum.EnumExtensions.GetDescription(cryptoEnum)}) {errors.ToString()}");
                             //var st = crypto;
                             //st.QuoteRetry = (st.QuoteRetry == null) ? 1 : st.QuoteRetry + 1;
                             //_ctx.CryptoList.Attach(st);
@@ -297,15 +282,15 @@ namespace TMD.PricePrediction.Classes
                     //    _helper.Log(_logger, LogLevel.Information, $"Not buying/selling short {results["Symbol"].ToString()} - ({results["Symbol"].ToString()}). Volume fall below min of 50000");
                     //    continue;
                     //}
-                    _helper?.CalculatePoints(results, ref shortCnt, ref longCnt, .08m, true);
+                    _helper?.CalculatePoints(results, ref shortCnt, ref longCnt,.08m, true);
                     //_helper?.CalculatePoints(results, ref longCnt, ref shortCnt, .75m, false);
 
                     //_logger.LogInformation($"{crypto.Coin} - ({crypto.Name}) Score. Long score: {longCnt}. Short score {shortCnt}");
-                    Helper.Log(_logger, LogLevel.Information, $"{crypto + "-USD"} - ({cryptoEnum.GetDescription()}) Score. Long score: {longCnt}. Short score {shortCnt}");
+                    Helper.Log(_logger, LogLevel.Information, $"{crypto + "-USD"} - ({TMDInvestments.Models.Enum.EnumExtensions.GetDescription(cryptoEnum)}) Score. Long score: {longCnt}. Short score {shortCnt}");
 
                     if (longCnt >= settings.CryptoLongCount/*8*/)
                     {
-                        Helper.Log(_logger, LogLevel.Information, $"Adding {crypto + "-USD"} - ({cryptoEnum.GetDescription()}) to potential long list.");
+                        Helper.Log(_logger, LogLevel.Information, $"Adding {crypto + "-USD"} - ({TMDInvestments.Models.Enum.EnumExtensions.GetDescription(cryptoEnum)}) to potential long list.");
                         BuySellCryptoList.Add(new BuySellCommodity(longCnt, TradeDirection.BUY, results));
                         cryptoCnt++;
                     }
@@ -319,7 +304,7 @@ namespace TMD.PricePrediction.Classes
                     //}
                     else
                     {
-                        Helper.Log(_logger, LogLevel.Information, $"Not buying/selling short {crypto + "-USD"} - ({cryptoEnum.GetDescription()}). Long score: {longCnt}. Short score {shortCnt}");
+                        Helper.Log(_logger, LogLevel.Information, $"Not buying/selling short {crypto + "-USD"} - ({TMDInvestments.Models.Enum.EnumExtensions.GetDescription(cryptoEnum)}). Long score: {longCnt}. Short score {shortCnt}");
                     }
                 }
 
@@ -786,14 +771,14 @@ namespace TMD.PricePrediction.Classes
         //    }
         //}
 
-        void CalculatePurchaseAmount2(decimal? availiabletoTrade, List<PublicProduct> products, IQueryable<CryptoTracker2> cryptoTracker, ref List<BuySellCommodity> BuySellCryptoList)
+        void CalculatePurchaseAmount2(decimal? availiabletoTrade, List<PublicProduct>? products, IQueryable<CryptoTracker2> cryptoTracker, ref List<BuySellCommodity> BuySellCryptoList)
         {
             if (cryptoTracker.Count() >= settings.MaxNumberofCryptotoBuy)
                 return;
             int cryptoCnt = 0;
-            var totalCanBuy = (BuySellCryptoList.Count() > (settings.MaxNumberofCryptotoBuy - cryptoTracker.Count())) ? (settings.MaxNumberofCryptotoBuy - cryptoTracker.Count()) : BuySellCryptoList.Count();
+            //var totalCanBuy = (BuySellCryptoList.Count() > (settings.MaxNumberofCryptotoBuy - cryptoTracker.Count())) ? (settings.MaxNumberofCryptotoBuy - cryptoTracker.Count()) : BuySellCryptoList.Count();
             //decimal? perCrypto = (availiabletoTrade / totalCanBuy) > settings.MaxDollarAmountPerCrypto ? (availiabletoTrade < settings.MaxDollarAmountPerCrypto) ? availiabletoTrade : settings.MaxDollarAmountPerCrypto : (availiabletoTrade / totalCanBuy);
-            decimal? perCrypto = 3m;
+            decimal perCrypto = 3m;
             foreach (var item in BuySellCryptoList)
             {
                 if ((cryptoTracker.Count() + cryptoCnt) >= settings.MaxNumberofCryptotoBuy)
@@ -804,7 +789,7 @@ namespace TMD.PricePrediction.Classes
                 //bool sellShort = (direction == TradeDirection.SELL_SHORT) ? true : false;
                 //if (perCrypto >= 5)
                 //{
-                _helper.BuySellCrypto(null, result, direction, Math.Round((decimal)perCrypto, 5), coinBaseService, products/*, sellShort*/);
+                _helper.BuySellCrypto(null, result, direction, Math.Round(perCrypto, 5), coinBaseService, products);
                     //if (!alreadyQueuedStock.Where(x => x.Coin == result["Symbol"].ToString()).Any())
                     //    QueueCryptotoBuy(result, direction, Math.Round((decimal)perCrypto, 5));
                     cryptoCnt++;
