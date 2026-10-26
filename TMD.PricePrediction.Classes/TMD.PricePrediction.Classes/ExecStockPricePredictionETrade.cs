@@ -59,7 +59,7 @@ namespace TMD.PricePrediction.Classes
             //}
             _helper = new Helper(_logger, _settings2, _settings, null, contextFactory);
             eTradeService = new ETradeService(_logger, _settings, _httpClientFactory, contextFactory);
-            services2 = new SchwabServices(_logger, _settings2, _httpClientFactory, _contextFactory);
+            services2 = new SchwabServices(_logger, _settings2, _httpClientFactory, _helper, _contextFactory);
         }
         //public ExecStockPricePredictionETrade(ILogger logger, ETradeService service, IHttpClientFactory httpClientFactory/*, Helper helper*/)
         //{
@@ -405,15 +405,19 @@ namespace TMD.PricePrediction.Classes
                 //if (((currentPrice < lastPrice) && (percentDiffLastPrice >= settings.StopLossPercentLastPriceStock)) ||
                 //    ((currentPrice < pricePurchased) && (percentDiffPricePurchased >= settings.StopLossPercentPurchasedStock)) ||
                 //    (pricePurchased < lastPrice) && (pricePurchased < currentPrice) && percentDiffPricePurchased >= 3.5m)
-                if (((currentPrice < lastPrice) &&
-                    (pricePurchased < currentPrice) &&
-                    (percentDiffPricePurchased >= 3.5m)) ||
-                    ((pricePurchased < currentPrice) && (percentDiffPricePurchased >= settings.StopLossPercentPurchasedStock))
+                //if (((currentPrice < lastPrice) &&
+                //    (pricePurchased < currentPrice) &&
+                //    (percentDiffPricePurchased >= 3.5m)) ||
+                //    ((pricePurchased < currentPrice) && (percentDiffPricePurchased >= settings.StopLossPercentPurchasedStock))
+                //    )
+                if (((currentPrice < lastPrice) && (percentDiffLastPrice >= settings.StopLossPercentLastPriceStock))
+                    ||
+                    ((currentPrice < pricePurchased) && (percentDiffPricePurchased >= settings.StopLossPercentPurchasedStock))                    
                     )
                 {
                     //if (percentDiffPricePurchased > settings.StopLossPercentPurchasedStock)
                     //{
-                    //buy to cover
+                    //Sell
                     Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentDiffPricePurchased, 4)}% since price purchased. Buying to cover.");
                         UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
                         //_helper.BuySellStock(stock, results, TradeDirection.SELL, stock.Quantity, false, eTradeService);

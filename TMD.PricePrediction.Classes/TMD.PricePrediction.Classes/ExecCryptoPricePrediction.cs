@@ -9,6 +9,7 @@ using System.Text.Json.Nodes;
 using TMD.Services;
 using TMDInvestments.Context;
 using TMDInvestments.Models;
+using TMDInvestments.Models.Models.Polygon;
 
 namespace TMD.PricePrediction.Classes
 {
@@ -40,7 +41,8 @@ namespace TMD.PricePrediction.Classes
             //_taapiSettings = taAPISettings;
             //_helper = helper;
             _helper = new Helper(_logger, null, null, null, contextFactory);
-            coinBaseService = new CoinBaseService(logger, settings, _httpClientFactory/*, _helper*/);
+            //coinBaseService = new CoinBaseService(logger, settings, _httpClientFactory/*, _helper*/);
+            coinBaseService = new CoinBaseService(logger, settings, _helper, _httpClientFactory, contextFactory);
             //taapiService = new TaAPIService(_logger, _taapiSettings, _httpClientFactory);
             //ctx = new TmdContext();
             //helper = new Helper();
@@ -143,6 +145,7 @@ namespace TMD.PricePrediction.Classes
             {
                 //Get list of Crypto to trade not in tracker
                 //var cryptoList = _ctx.CryptoList.AsNoTracking().Where(x => (!cryptoTrackerList.Contains(x.Coin) && !cryptoTrackerList.Contains(x.Coin.Substring(0, (x.Coin.Length - 1)))) && !x.ExcludeFromAutomation).OrderBy(y => Guid.NewGuid());//.ToList();
+                var cryptoList = coinBaseService.GetArbitrage();
 
                 Helper.Log(_logger, LogLevel.Information, $"Get crypto list to trade");
 
@@ -150,8 +153,8 @@ namespace TMD.PricePrediction.Classes
                 var CryptoHold24Hr = _ctx.CryptoTracker2.AsNoTracking().AsEnumerable().Where(x => x.PriceSold != null && x.DateSold != null && Math.Abs((x.DateSold - Helper.easternTime).Value.TotalHours) < 24).Select(y => new { Coin = y.Coin, DateSold = y.DateSold, DateUpdated = y.DateUpdated });//.ToList();
 
                 //Loop through and evaluate.
-                int? shortCnt = 0;
-                int? longCnt = 0;
+                //int? shortCnt = 0;
+                //int? longCnt = 0;
                 int? cryptoCnt = 0;
                 //int? rejectPriceCount = 0;
 
@@ -160,32 +163,40 @@ namespace TMD.PricePrediction.Classes
                 BuySellCryptoList = new List<BuySellCommodity>();
 
                 if (cryptoTracker.Count() < (int)settings.MaxNumberofCryptotoBuy)
-                //foreach (var crypto in cryptoList)
-                foreach (var crypto in Enum.GetNames<TMDInvestments.Models.Enum.CryptoList>())
+                foreach (var crypto in cryptoList)
+                //foreach (var crypto in Enum.GetNames<TMDInvestments.Models.Enum.CryptoList>())
                 {
-                    var cryptoEnum =Enum.Parse<TMDInvestments.Models.Enum.CryptoList>(crypto);
-                    shortCnt = 0;
-                    longCnt = 0;
+                    //var cryptoEnum =Enum.Parse<TMDInvestments.Models.Enum.CryptoList>(crypto);
+                    //shortCnt = 0;
+                    //longCnt = 0;
                     //if (crypto?.QuoteRetry >= 50)
                     //    continue;
                     //Skip if status is not filled
-                    var status = cryptoTracker.AsNoTracking().Where(x => x.Coin == crypto + "-USD").FirstOrDefault()?.BuyStatus?.ToLower();
+                    var status = cryptoTracker.AsNoTracking().Where(x => x.Coin == crypto["Symbol"].ToString()).FirstOrDefault()?.BuyStatus?.ToLower();
                     if (status == "open" || status == "pending")
                         continue;
 
 
                     //Check it stock has been brought in the last 24 hrs
-                    if (CryptoHold24Hr.Any(y => y.Coin == crypto + "-USD"))
+                    if (CryptoHold24Hr.Any(y => y.Coin == crypto["Symbol"].ToString()))
                     {
                         //if stock was cancelled, check updated date
-                        try
-                        {
-                            Helper.Log(_logger, LogLevel.Warning, $"Crypto {crypto + "-USD"} - ({TMDInvestments.Models.Enum.EnumExtensions.GetDescription(cryptoEnum)}) purchased {Math.Round(Math.Abs((CryptoHold24Hr.Where(y => y.Coin == crypto + "-USD").Select(z => z.DateSold).FirstOrDefault() - Helper.easternTime).Value.TotalHours), 5)} hours ago was purchased less than 24h ago, skipping");
-                        }
-                        catch (Exception ex)
-                        {
-                            Helper.Log(_logger, LogLevel.Warning, $"Crypto {crypto + "-USD"} - ({TMDInvestments.Models.Enum.EnumExtensions.GetDescription(cryptoEnum)}) cancelled {Math.Round(Math.Abs((CryptoHold24Hr.Where(y => y.Coin == crypto + "-USD").Select(z => z.DateUpdated).FirstOrDefault() - Helper.easternTime).Value.TotalHours), 5)} hours ago was purchased less than 24h ago, skipping");
-                        }
+                        //try
+                        //{
+                        //    Helper.Log(_logger, LogLevel.Warning, $"Crypto {crypto + "-USD"} - ({TMDInvestments.Models.Enum.EnumExtensions.GetDescription(cryptoEnum)}) purchased {Math.Round(Math.Abs((CryptoHold24Hr.Where(y => y.Coin == crypto + "-USD").Select(z => z.DateSold).FirstOrDefault() - Helper.easternTime).Value.TotalHours), 5)} hours ago was purchased less than 24h ago, skipping");
+                        //}
+                        //catch (Exception ex)
+                        //{
+                        //    Helper.Log(_logger, LogLevel.Warning, $"Crypto {crypto + "-USD"} - ({TMDInvestments.Models.Enum.EnumExtensions.GetDescription(cryptoEnum)}) cancelled {Math.Round(Math.Abs((CryptoHold24Hr.Where(y => y.Coin == crypto + "-USD").Select(z => z.DateUpdated).FirstOrDefault() - Helper.easternTime).Value.TotalHours), 5)} hours ago was purchased less than 24h ago, skipping");
+                        //}
+                        //try
+                        //{
+                        //    Helper.Log(_logger, LogLevel.Warning, $"Crypto {crypto["Symbol"].ToString()} - ({crypto["Name"].ToString()}) purchased {Math.Round(Math.Abs((CryptoHold24Hr.Where(y => y.Coin == crypto["Symbol"].ToString()).Select(z => z.DateSold).FirstOrDefault() - Helper.easternTime).Value.TotalHours), 5)} hours ago was purchased less than 24h ago, skipping");
+                        //}
+                        //catch (Exception ex)
+                        //{
+                        //    Helper.Log(_logger, LogLevel.Warning, $"Crypto {crypto["Symbol"].ToString()} - ({crypto["Name"].ToString()}) cancelled {Math.Round(Math.Abs((CryptoHold24Hr.Where(y => y.Coin == crypto["Symbol"].ToString()).Select(z => z.DateUpdated).FirstOrDefault() - Helper.easternTime).Value.TotalHours), 5)} hours ago was purchased less than 24h ago, skipping");
+                        //}
                         continue;
                     }
 
@@ -201,7 +212,8 @@ namespace TMD.PricePrediction.Classes
                     //{
 
                     //}
-                    var product = products.Where(x => x.DisplayName == crypto + "-USD").FirstOrDefault();
+                    //var product = products.Where(x => x.DisplayName == crypto["Symbol"].ToString() + "-USD").FirstOrDefault();
+                    var product = products.Where(x => x.DisplayName == crypto["Symbol"].ToString()).FirstOrDefault();
                     if (product == null)
                     {
                         //Helper.Log(_logger, LogLevel.Error, $"Product - Error");
@@ -215,7 +227,8 @@ namespace TMD.PricePrediction.Classes
                     }
                     if (product.CancelOnly || product.IsDisabled || product.LimitOnly || product.PostOnly || product.TradingDisabled || product.ViewOnly || product.Status != "online")
                     {
-                        Helper.Log(_logger, LogLevel.Warning, $"Crypto {crypto + "-USD"} - ({TMDInvestments.Models.Enum.EnumExtensions.GetDescription(cryptoEnum)}) Does not meet the criteria for purchase at this time.");
+                        //Helper.Log(_logger, LogLevel.Warning, $"Crypto {crypto + "-USD"} - ({TMDInvestments.Models.Enum.EnumExtensions.Gcrypto["Symbol"].ToString()etDescription(cryptoEnum)}) Does not meet the criteria for purchase at this time.");
+                        Helper.Log(_logger, LogLevel.Warning, $"Crypto {crypto["Symbol"].ToString()} - ({crypto["Name"].ToString()}) Does not meet the criteria for purchase at this time.");
                         continue;
                     }
                     //skip crypto under $1
@@ -226,72 +239,74 @@ namespace TMD.PricePrediction.Classes
                     //    rejectPriceCount++;
                     //    continue;
                     //}
-                    Helper.Log(_logger, LogLevel.Information, $"Checking {crypto + "-USD"} - ({TMDInvestments.Models.Enum.EnumExtensions.GetDescription(cryptoEnum)})");
+                    ////Helper.Log(_logger, LogLevel.Information, $"Checking {crypto + "-USD"} - ({TMDInvestments.Models.Enum.EnumExtensions.GetDescription(cryptoEnum)})");
+                    Helper.Log(_logger, LogLevel.Information, $"Checking {crypto["Symbol"].ToString()} - ({crypto["Name"].ToString()})");
 
-                    dynamic? results = null;
-                    try
-                    {
-                        results = coinBaseService?.GetQuoteAsync(crypto + "-USD")?.Result;
-                    }
-                    catch (Exception ex)
-                    {
-                        Helper.Log(_logger, LogLevel.Error, $"{ex.Message} - ({crypto + "-USD"}) - coinBaseService.GetQuote Error");
-                        //var st = crypto;
-                        //st.QuoteRetry = (st.QuoteRetry == null) ? 1 : st.QuoteRetry + 1;
-                        //_ctx.CryptoList.Attach(st);
-                        //_ctx.Entry(st).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
-                        //_ctx.SaveChanges();
-                        //_ctx.Entry(st).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
-                        continue;
-                    }
-                    Helper.Log(_logger, LogLevel.Information, $"{crypto + "-USD"} - ({TMDInvestments.Models.Enum.EnumExtensions.GetDescription(cryptoEnum)}) price {results?["lastPrice"]?.ToString()}");
+                    //dynamic? results = null;
+                    //try
+                    //{
+                    //    results = coinBaseService?.GetQuoteAsync(crypto["Symbol"].ToString())?.Result;
+                    //}
+                    //catch (Exception ex)
+                    //{
+                    //    Helper.Log(_logger, LogLevel.Error, $"{ex.Message} - ({crypto["Symbol"].ToString()}) - coinBaseService.GetQuote Error");
+                    //    //var st = crypto;
+                    //    //st.QuoteRetry = (st.QuoteRetry == null) ? 1 : st.QuoteRetry + 1;
+                    //    //_ctx.CryptoList.Attach(st);
+                    //    //_ctx.Entry(st).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+                    //    //_ctx.SaveChanges();
+                    //    //_ctx.Entry(st).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                    //    continue;
+                    //}
+                    Helper.Log(_logger, LogLevel.Information, $"{crypto["Symbol"].ToString()} - ({crypto["Name"].ToString()}) price {crypto?["lastPrice"]?.ToString()}");
 
-                    if (results is JsonObject)
-                    {
-                        if (((JsonObject)results).TryGetPropertyValue("errors", out JsonNode errors))
-                        {
-                            //failed to get quote.
-                            Helper.Log(_logger, LogLevel.Error, $"Failed to get quote for {crypto + "-USD"} - ({TMDInvestments.Models.Enum.EnumExtensions.GetDescription(cryptoEnum)}) {errors.ToString()}");
-                            //var st = crypto;
-                            //st.QuoteRetry = (st.QuoteRetry == null) ? 1 : st.QuoteRetry + 1;
-                            //_ctx.CryptoList.Attach(st);
-                            //_ctx.Entry(st).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
-                            //_ctx.SaveChanges();
-                            //_ctx.Entry(st).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
-                            continue;
-                        }
-                    }
-                    else
-                    {
-                        if (((JsonElement)results).TryGetProperty("errors", out JsonElement errors))
-                        {
-                            //failed to get quote.
-                            Helper.Log(_logger, LogLevel.Error, $"Failed to get quote for {crypto + "-USD"} - ({TMDInvestments.Models.Enum.EnumExtensions.GetDescription(cryptoEnum)}) {errors.ToString()}");
-                            //var st = crypto;
-                            //st.QuoteRetry = (st.QuoteRetry == null) ? 1 : st.QuoteRetry + 1;
-                            //_ctx.CryptoList.Attach(st);
-                            //_ctx.Entry(st).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
-                            //_ctx.SaveChanges();
-                            //_ctx.Entry(st).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
-                            continue;
-                        }
-                    }
+                    //if (results is JsonObject)
+                    //{
+                    //    if (((JsonObject)results).TryGetPropertyValue("errors", out JsonNode errors))
+                    //    {
+                    //        //failed to get quote.
+                    //        Helper.Log(_logger, LogLevel.Error, $"Failed to get quote for {crypto["Symbol"].ToString()}  - ( {crypto["Name"].ToString()} ) ");
+                    //        //var st = crypto;
+                    //        //st.QuoteRetry = (st.QuoteRetry == null) ? 1 : st.QuoteRetry + 1;
+                    //        //_ctx.CryptoList.Attach(st);
+                    //        //_ctx.Entry(st).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+                    //        //_ctx.SaveChanges();
+                    //        //_ctx.Entry(st).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                    //        continue;
+                    //    }
+                    //}
+                    //else
+                    //{
+                    //    if (((JsonElement)results).TryGetProperty("errors", out JsonElement errors))
+                    //    {
+                    //        //failed to get quote.
+                    //        Helper.Log(_logger, LogLevel.Error, $"Failed to get quote for {crypto["Symbol"].ToString()} - ({crypto["Name"].ToString()}) {errors.ToString()}");
+                    //        //var st = crypto;
+                    //        //st.QuoteRetry = (st.QuoteRetry == null) ? 1 : st.QuoteRetry + 1;
+                    //        //_ctx.CryptoList.Attach(st);
+                    //        //_ctx.Entry(st).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+                    //        //_ctx.SaveChanges();
+                    //        //_ctx.Entry(st).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                    //        continue;
+                    //    }
+                    //}
 
                     //if (Convert.ToDecimal(results["volume"].ToString()) < 50000)
                     //{
                     //    _helper.Log(_logger, LogLevel.Information, $"Not buying/selling short {results["Symbol"].ToString()} - ({results["Symbol"].ToString()}). Volume fall below min of 50000");
                     //    continue;
                     //}
-                    _helper?.CalculatePoints(results, ref shortCnt, ref longCnt,.08m, true);
+                    //_helper?.CalculatePoints(results, ref shortCnt, ref longCnt,.08m, true);
                     //_helper?.CalculatePoints(results, ref longCnt, ref shortCnt, .75m, false);
 
                     //_logger.LogInformation($"{crypto.Coin} - ({crypto.Name}) Score. Long score: {longCnt}. Short score {shortCnt}");
-                    Helper.Log(_logger, LogLevel.Information, $"{crypto + "-USD"} - ({TMDInvestments.Models.Enum.EnumExtensions.GetDescription(cryptoEnum)}) Score. Long score: {longCnt}. Short score {shortCnt}");
+                    Helper.Log(_logger, LogLevel.Information, $"{crypto["Symbol"].ToString()} - ({crypto["Name"].ToString()}) Score. Long score: {crypto["longCnt"].ToString()}. Short score {crypto["shortCnt"].ToString()}");
 
-                    if (longCnt >= settings.CryptoLongCount/*8*/)
+                    if (decimal.Parse(crypto["longCnt"].ToString()) >= settings.CryptoLongCount && decimal.Parse(crypto["lastopChangePercent"].ToString()) < 0)
                     {
-                        Helper.Log(_logger, LogLevel.Information, $"Adding {crypto + "-USD"} - ({TMDInvestments.Models.Enum.EnumExtensions.GetDescription(cryptoEnum)}) to potential long list.");
-                        BuySellCryptoList.Add(new BuySellCommodity(longCnt, TradeDirection.BUY, results));
+                        Helper.Log(_logger, LogLevel.Information, $"Adding {crypto["Symbol"].ToString()} - ({crypto["Name"].ToString()}) to potential long list.");
+                        //BuySellCryptoList.Add(new BuySellCommodity(longCnt, TradeDirection.BUY, results));
+                        BuySellCryptoList.Add(new BuySellCommodity(int.Parse(crypto["longCnt"].ToString()), TradeDirection.BUY, crypto));
                         cryptoCnt++;
                     }
                     //else //Short not availiable in coinbase yet
@@ -304,7 +319,7 @@ namespace TMD.PricePrediction.Classes
                     //}
                     else
                     {
-                        Helper.Log(_logger, LogLevel.Information, $"Not buying/selling short {crypto + "-USD"} - ({TMDInvestments.Models.Enum.EnumExtensions.GetDescription(cryptoEnum)}). Long score: {longCnt}. Short score {shortCnt}");
+                        Helper.Log(_logger, LogLevel.Information, $"Not buying/selling short {crypto["Symbol"].ToString()} - ({crypto["Name"].ToString()}). Long score: {crypto["longCnt"].ToString()}. Short score {crypto["shortCnt"].ToString()}");
                     }
                 }
 

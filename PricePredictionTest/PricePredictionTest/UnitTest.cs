@@ -4,6 +4,7 @@ using Coinbase.AdvancedTrade.Models;
 using Coinbase.AdvancedTrade.Models.Public;
 using HtmlAgilityPack;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -76,7 +77,7 @@ namespace PricePredictionTest
 
             var ConnectionStrings = config.GetSection("ConnectionStrings").Get<ConnectionSettings>();
             mailSettings = config.GetSection("MailSettings").Get<MailSettings>();
-            //var FinnHub = config.GetSection("finnhub").Get<FinnHub>();
+            var _finnHub = config.GetSection("finnhub").Get<FinnHub>();
             //var Polygon = config.GetSection("polygon").Get<Polygon>();
             _settings2 = config.GetSection("SchwabAPI").Get<SchwabSettings>();
             _settings = config.GetSection("CoinBase").Get<CoinBaseSettings>();
@@ -104,14 +105,16 @@ namespace PricePredictionTest
             httpClientFactory = serviceProvider.GetService<IHttpClientFactory>();
             var ctxFactory = serviceProvider.GetRequiredService<IDbContextFactory<TmdContext>>();
             helper = new Helper(_logger, _settings2, _settings3, null, ctxFactory);
-            services = new CoinBaseService(_logger, _settings/*, _taApiSettings*/, httpClientFactory/*, helper*/);
-            SchwabService = new SchwabServices(_logger, _settings2/*, _polygon, _taApiSettings*/, httpClientFactory, ctxFactory);
+            services = new CoinBaseService(_logger, _settings, helper, httpClientFactory, ctxFactory);
+            SchwabService = new SchwabServices(_logger, _settings2, httpClientFactory, helper, ctxFactory);
             ETradeService = new ETradeService(_logger, _settings3, httpClientFactory, ctxFactory);
             stackCommerceService = new StackCommerceService(_logger, httpClientFactory);
             rakutenService = new RakutenService(_logger, httpClientFactory, false);
-            _traderGoService = new TraderGoService(yfapiSettings, _logger, httpClientFactory, false, ctxFactory);
+            //_traderGoService = new TraderGoService(yfapiSettings, _logger, httpClientFactory, false, ctxFactory);
+            _traderGoService = new TraderGoService(yfapiSettings, _logger, SchwabService, helper, httpClientFactory, false, ctxFactory);
             commissionJunctionService = new CommissionJunctionService(_logger, httpClientFactory, false);
-            manager = new Manager(_logger);
+            //manager = new Manager(_logger);
+            manager = new Manager("", _finnHub, _polygon, httpClientFactory, _logger);
             ml = new MLPricePredict();
             bartergoraDataLoadService = new BartergoraDataLoadService(_logger, httpClientFactory);
             dataMuseService = new DataMuseService(_logger, httpClientFactory);
@@ -130,6 +133,32 @@ namespace PricePredictionTest
             var results = services.GetQuoteAsync("DOGE-USD").Result;
             var emaToVwapDiff = helper.CalculatePoints(results, ref shortCnt, ref longCnt, .03m, true);
             Assert.IsNotNull(results);
+        }
+        [TestMethod]
+        public void TestCoinBaseQuoteFromCryptoList()
+        {
+            int? longCnt = 0; int? shortCnt = 0;
+            //var cryptoList = Enum.GetValues(typeof(TMDInvestments.Models.Enum.CryptoList)).Cast<TMDInvestments.Models.Enum.CryptoList>().ToList();
+            var cryptoListLower = new List<JsonObject>();
+            var cryptoListHigher = new List<JsonObject>();
+            foreach (var crypto in TMDInvestments.Models.Enum.CryptoList.GetValues(typeof(TMDInvestments.Models.Enum.CryptoList)).Cast<TMDInvestments.Models.Enum.CryptoList>())
+            {
+                var results = services.GetQuoteAsync($"{crypto}-USD").Result;
+                double.TryParse(results?["lastopChange"]?.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double lastopChange);
+                double.TryParse(results?["lastopChangePercent"]?.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double lastopChangePercent);
+                double.TryParse(results?["PercentHigher"]?.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double percentHigher);
+                double.TryParse(results?["PercentLower"]?.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double percentLower);
+                var emaToVwapDiff = helper.CalculatePoints(results, ref shortCnt, ref longCnt, .03m, true);
+                if((lastopChange < 0) && (lastopChangePercent < 0) && (shortCnt >= 3) && (percentLower > percentHigher))
+                {
+                    cryptoListLower.Add(results);
+                }
+                else if ((lastopChange > 0) && (lastopChangePercent > 0) && (longCnt >= 3) && (percentLower < percentHigher))
+                {
+                    cryptoListHigher.Add(results);
+                }
+                Assert.IsNotNull(results);
+            }
         }
         [TestMethod]
         public void TestCoinBaseLimitOrder()
@@ -268,11 +297,16 @@ namespace PricePredictionTest
             var product = services.GetProducts().Where(x => x.DisplayName == "ETH-USD").ToList();
             Assert.IsNotNull(product);
         }
-
+        [TestMethod]
+        public void TestCoinBaseMovers()
+        {
+            var results = services.GetArbitrage();
+            Assert.IsNotNull(results);
+        }
         [TestMethod]
         public void TestSchwabGetMovers()
         {
-            var results = SchwabService.GetMovers();
+            var results = SchwabService.GetMoversAsync().Result;
             Assert.IsNotNull(results);
         }
         public void TestSchwabOrder()
@@ -881,7 +915,7 @@ namespace PricePredictionTest
         [TestMethod]
         public void GetSchwabQuote()
         {
-            var quote = SchwabService.GetQuoteAsync("VERF", true, false).Result;
+            var quote = SchwabService.GetQuoteAsync("SMCI", true, false).Result;
             Assert.IsNotNull(quote);
         }
         [TestMethod]
@@ -1075,12 +1109,17 @@ namespace PricePredictionTest
 
             categories = ctx2.Database.SqlQueryRaw<CategoriesWithDescription>($"EXEC [tmd].[GetCategoriesWithDescription]");
 
-            List<ModelInput> categoryResults = new List<ModelInput>();
+            //List<ModelInput> categoryResults = new List<ModelInput>();
+            //foreach (var item in categories)
+            //{
+            //    categoryResults.Add(new ModelInput { SubCategoryId = item.SubCategoryId, SubCategoryName = item.SubCategoryName/*, Description = item.SubCategoryDefinition*/ });
+            //}
+            List<ProductInput> categoryResults = new List<ProductInput>();
             foreach (var item in categories)
             {
-                categoryResults.Add(new ModelInput { SubCategoryId = item.SubCategoryId, SubCategoryName = item.SubCategoryName/*, Description = item.SubCategoryDefinition*/ });
+                categoryResults.Add(new ProductInput { /*Category = item.CategoryName, Description = item.CategoryDescription,*/ SubCategoryId = item.SubCategoryId, SubCategoryName = item.SubCategoryName/*, SubCategoryDefinition = item.SubCategoryDefinition */ });
             }
-            var predEngine = ml.InitTextCategoryPredict(categoryResults);
+            var predEngine = ml.InitTextCategoryPredict4(categoryResults);
 
             ml.predictCategory(predEngine, categoryResults, ref feed);
 
@@ -1202,12 +1241,17 @@ namespace PricePredictionTest
             //categories = ctx2.Set<GetCategoriesWithDescription>().FromSql($"EXEC [tmd].[GetCategoriesWithDescription]").ToList();
             categories = ctx2.Database.SqlQueryRaw<CategoriesWithDescription>($"EXEC [tmd].[GetCategoriesWithDescription]");
 
-            List<ModelInput> categoryResults = new List<ModelInput>();
+            //List<ModelInput> categoryResults = new List<ModelInput>();
+            //foreach (var item in categories)
+            //{
+            //    categoryResults.Add(new ModelInput { SubCategoryId = item.SubCategoryId, SubCategoryName = item.SubCategoryName/*, Description = item.SubCategoryDefinition*/ });
+            //}
+            List<ProductInput> categoryResults = new List<ProductInput>();
             foreach (var item in categories)
             {
-                categoryResults.Add(new ModelInput { SubCategoryId = item.SubCategoryId, SubCategoryName = item.SubCategoryName/*, Description = item.SubCategoryDefinition*/ });
+                categoryResults.Add(new ProductInput { /*Category = item.CategoryName, Description = item.CategoryDescription,*/ SubCategoryId = item.SubCategoryId, SubCategoryName = item.SubCategoryName/*, SubCategoryDefinition = item.SubCategoryDefinition */ });
             }
-            var predEngine = ml.InitTextCategoryPredict(categoryResults);
+            var predEngine = ml.InitTextCategoryPredict4(categoryResults);
             foreach (var merchant in merchants.Items)
             {
                products = rakutenService.GetRakutenProducts(1,/*token,*/ merchant, ref error);
@@ -1233,7 +1277,8 @@ namespace PricePredictionTest
             }
             Assert.IsTrue(true);
         }
-        private void LoadRakutenCategories(PredictionEngine<ModelInput, ModelOutput> predEngine, List<ModelInput> categoryResults, IEnumerable<RakutenModelItems> items)
+        //private void LoadRakutenCategories(PredictionEngine<ModelInput, ModelOutput> predEngine, List<ModelInput> categoryResults, IEnumerable<RakutenModelItems> items)
+        private void LoadRakutenCategories(PredictionEngine<ProductInput, ProductPrediction> predEngine, List<ProductInput> categoryResults, IEnumerable<RakutenModelItems> items)
         {
             //Bartergora2._0.Models.Category category = null;
             //Bartergora2._0.Models.SubCategory subCategory = null;
@@ -1327,12 +1372,17 @@ namespace PricePredictionTest
             //categories = ctx2.Set<GetCategoriesWithDescription>().FromSql($"EXEC [tmd].[GetCategoriesWithDescription]").ToList();
             categories = ctx2.Database.SqlQueryRaw<CategoriesWithDescription>("EXEC [tmd].[GetCategoriesWithDescription]");
 
-            List<ModelInput> categoryResults = new List<ModelInput>();
+            //List<ModelInput> categoryResults = new List<ModelInput>();
+            //foreach (var item in categories)
+            //{
+            //    categoryResults.Add(new ModelInput { SubCategoryId = item.SubCategoryId, SubCategoryName = item.SubCategoryName /*, Description = item.SubCategoryDefinition*/ });
+            //}
+            List<ProductInput> categoryResults = new List<ProductInput>();
             foreach (var item in categories)
             {
-                categoryResults.Add(new ModelInput { SubCategoryId = item.SubCategoryId, SubCategoryName = item.SubCategoryName /*, Description = item.SubCategoryDefinition*/ });
+                categoryResults.Add(new ProductInput { /*Category = item.CategoryName, Description = item.CategoryDescription,*/ SubCategoryId = item.SubCategoryId, SubCategoryName = item.SubCategoryName/*, SubCategoryDefinition = item.SubCategoryDefinition */ });
             }
-            var predEngine = ml.InitTextCategoryPredict(categoryResults);
+            var predEngine = ml.InitTextCategoryPredict4(categoryResults);
 
             ml.predictCategory(predEngine, categoryResults, ref response);
 
@@ -1400,6 +1450,26 @@ namespace PricePredictionTest
             Assert.IsTrue(true);
         }
         [TestMethod]
+        public void LoadData()
+        {
+            // Implement data loading logic here
+            IEnumerable<CategoriesWithDescription> categories = null;
+
+            ctx2.Database.ExecuteSqlRaw("EXEC [TMD].[TruncateAllTables]");
+
+            categories = ctx2.Database.SqlQueryRaw<CategoriesWithDescription>("EXEC [tmd].[GetCategoriesWithDescription]");
+            List<ProductInput> categoryResults = new List<ProductInput>();
+            foreach (var item in categories)
+            {
+                categoryResults.Add(new ProductInput { /*Category = item.CategoryName, Description = item.CategoryDescription,*/ SubCategoryId = item.SubCategoryId, SubCategoryName = item.SubCategoryName/*, SubCategoryDefinition = item.SubCategoryDefinition */ });
+            }
+            var predEngine = ml.InitTextCategoryPredict4(categoryResults);
+
+            //LoadCJData(predEngine, categoryResults);
+            ////LoadStackCommerceData(predEngine, categoryResults);
+            //LoadRakutenData(predEngine, categoryResults);
+        }
+        [TestMethod]
         public void TestDataLoadCategories()
         {
             var categoryId = ctx2.Categories.Where(x => x.CategoryName == "electronics").Select(x => x.CategoryId).Distinct().ToList();
@@ -1454,16 +1524,21 @@ namespace PricePredictionTest
                     preliminaryWord[0] = preliminaryWord[0].Substring(0, preliminaryWord[0].Length - 2);
                     Console.WriteLine("test");
                 }
-                var resultsString = dataMuseService.GetSynonyms(preliminaryWord[0]/*.Replace("Accessories", "").Replace("&", "").Trim()*/);
+                //var resultsString = dataMuseService.GetSynonyms(preliminaryWord[0]/*.Replace("Accessories", "").Replace("&", "").Trim()*/);
+                var resultsString = dataMuseService.GetSynonyms(item.SubCategoryName.Trim());
+                if(string.IsNullOrEmpty(resultsString))
+                {
+                    continue;
+                }
                 var results = JsonSerializer.Deserialize<List<WordResult>>(resultsString).OrderByDescending(x => x.score);
                 foreach (var synonym in results)
                 {
-                    response += synonym.word + ",";
-                    maxCount++;
-                    if (maxCount > 1)
-                    {
-                        break;
-                    }
+                    response += synonym.word + ", ";
+                    //maxCount++;
+                    //if (maxCount > 1)
+                    //{
+                    //    break;
+                    //}
                 }
                 var categoryMatch = ctx2.SubCategories.Where(x => x.SubCategoryName == item.SubCategoryName).FirstOrDefault();
                 if (categoryMatch != null)
@@ -1498,7 +1573,7 @@ namespace PricePredictionTest
             //JsonObject quote = SchwabService.GetQuoteAsync(symbol, true, false).Result;
             //var results = SchwabService.GetPriceHistory(symbol, "day", "2", "minute", 15,
             //    DateTime.Now.AddDays(-30), DateTime.Now);
-            var movers = SchwabService.GetMovers();
+            var movers = SchwabService.GetMoversAsync().Result;
             foreach (var mover in movers)
             {
                 if(mover == null) { continue; }

@@ -10,12 +10,12 @@ namespace TMDInvestments.Models.Models.Commerce
     public sealed class CategoriesWithDescription
     {
         //[Key] // Column index in your data file
-        public int CategoryId { get; set; }
-        public int SubCategoryId { get; set; }
+        public long CategoryId { get; set; }
+        public long SubCategoryId { get; set; }
         public string CategoryName { get; set; }
         public string CategoryDescription { get; set; }
         public string SubCategoryName { get; set; }
         public string SubCategoryDefinition { get; set; }
-        public string KeyWords { get; set; }
+        public string SubCategoryOther { get; set; }
     }
 }

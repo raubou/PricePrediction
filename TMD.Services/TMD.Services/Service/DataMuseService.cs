@@ -26,7 +26,8 @@ namespace TMD.Services.Service
                 word = GetSuggenstion(word);
                 var client = _httpClientFactory.CreateClient();
                 //var response = client.GetAsync($"{_baseUrl}?ml={word}").Result;
-                var response = client.GetAsync($"{_baseUrl}words?rel_trg={word}").Result;
+                //var response = client.GetAsync($"{_baseUrl}words?rel_trg={word}").Result;
+                var response = client.GetAsync($"{_baseUrl}words?ml={word.Replace(" ", "+")}").Result;
                 if (response.IsSuccessStatusCode)
                 {
                     var content = response.Content.ReadAsStringAsync().Result;

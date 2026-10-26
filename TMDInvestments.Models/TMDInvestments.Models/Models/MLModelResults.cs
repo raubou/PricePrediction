@@ -38,7 +38,7 @@ namespace TMDInvestments.Models
         //public string Title { get; set; }
         //[LoadColumn(2)] // Column index in your data file
         public string SubCategoryName { get; set; }
-        public string KeyWords { get; set; }
+        public string Description { get; set; }
 
     }
 
@@ -46,6 +46,39 @@ namespace TMDInvestments.Models
     {
         [ColumnName("PredictedLabel")]
         public string PredictedLabel { get; set; }
+        public float[] Score { get; set; }
+    }
+
+    public class ProductInput
+    {
+        [LoadColumn(0)]
+        public long SubCategoryId { get; set; }
+        [LoadColumn(1)]
+        public string SubCategoryName { get; set; }
+        [LoadColumn(2)]
+        public string SubCategoryDefinition { get; set; }
+        [LoadColumn(3)]
+        public string SubCategoryOther { get; set; }
+        [LoadColumn(4)]
+        public long CategoryId { get; set; }
+        [LoadColumn(5)]
+        //public long SubCategoryId { get; set; }
+        public string CategoryName { get; set; }
+        [LoadColumn(6)]
+        public string CategoryDescription { get; set; }
+        //public string SubCategoryName { get; set; }
+        //public string SubCategoryDefinition { get; set; }
+        //public string SubCategoryOther { get; set; }
+
+    }
+
+    public class ProductPrediction
+    {
+        // ML.NET defaults the output classification text to "PredictedLabel"
+        [ColumnName("PredictedLabel")]
+        public string PredictedLabel { get; set; }
+
+        // Floating-point probabilities corresponding to all categories
         public float[] Score { get; set; }
     }
 }

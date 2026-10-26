@@ -1,28 +1,45 @@
-﻿using System;
+﻿using Microsoft.ML.Data;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using TMDInvestment.Models;
 
 namespace NewsAggregator.models.returnModel
 {
+
     public sealed class ImpactModel
     {
-        public string @page { get; set; }//": "1",
-        public int @numpages { get; set; }//": "2",
-        public int @pagesize { get; set; }//": "100",
-        public int @total { get; set; }//": "145",
-        public int @start { get; set; }//": "0",
-        public int @end { get; set; }//": "99",
-        public string @uri { get; set; }//": "/Mediapartners/IRB3qLkYikxk1877680RhmjBNprcMSrhY1/Ads",
-        public string @firstpageuri { get; set; }//": "/Mediapartners/IRB3qLkYikxk1877680RhmjBNprcMSrhY1/Ads?PageSize=100&Page=1",
-        public string @previouspageuri { get; set; }//": "",
-        public string @nextpageuri { get; set; }//": "/Mediapartners/IRB3qLkYikxk1877680RhmjBNprcMSrhY1/Ads?PageSize=100&Page=2",
-        public string @lastpageuri { get; set; }//": "/Mediapartners/IRB3qLkYikxk1877680RhmjBNprcMSrhY1/Ads?PageSize=100&Page=2",
-        public List<Ads> ads { get; set; } = new List<Ads>();
+        [JsonPropertyName("@page")]
+        public string page { get; set; }//": "1",
+        [JsonPropertyName("@numpages")]
+        public string numpages { get; set; }//": "2",
+        [JsonPropertyName("@pagesize")]
+        public string pagesize { get; set; }//": "100",
+        [JsonPropertyName("@total")]
+        public string total { get; set; }//": "145",
+        [JsonPropertyName("@start")]
+        public string start { get; set; }//": "0",
+        [JsonPropertyName("@end")]
+        public string end { get; set; }//": "99",
+        [JsonPropertyName("@uri")]
+        public string uri { get; set; }//": "/Mediapartners/IRB3qLkYikxk1877680RhmjBNprcMSrhY1/Ads",
+        [JsonPropertyName("@firstpageuri")]
+        public string firstpageuri { get; set; }//": "/Mediapartners/IRB3qLkYikxk1877680RhmjBNprcMSrhY1/Ads?PageSize=100&Page=1",
+        [JsonPropertyName("@previouspageuri")]
+        public string previouspageuri { get; set; }//": "",
+        [JsonPropertyName("@nextpageuri")]
+        public string nextpageuri { get; set; }//": "/Mediapartners/IRB3qLkYikxk1877680RhmjBNprcMSrhY1/Ads?PageSize=100&Page=2",
+        [JsonPropertyName("@lastpageuri")]
+        public string lastpageuri { get; set; }//": "/Mediapartners/IRB3qLkYikxk1877680RhmjBNprcMSrhY1/Ads?PageSize=100&Page=2",
+        [JsonPropertyName("Items")]
+        public List<CatalogItems> ads { get; set; } = new List<CatalogItems>();
 
     }
 
-    public class Ads
+    public class CatalogItems
     {
         public string Id { get; set; }//": "1212429",
         public string Name { get; set; }//": "Get 6 Free Months Of Apple News+.",
@@ -39,7 +56,7 @@ namespace NewsAggregator.models.returnModel
         public string Width { get; set; }//": "",
         public string Height { get; set; }//": "",
         public string CreativeUrl { get; set; }//": "",
-        public string Labels { get; set; }//": "Subscriptions",
+        public string[] Labels { get; set; }//": "Subscriptions",
         public string AllowDeepLinking { get; set; }//": "true",
         public string MobileReady { get; set; }//": "false",
         public string Language { get; set; }//": "ENGLISH",
@@ -92,5 +109,16 @@ namespace NewsAggregator.models.returnModel
                                            //"DealDateCreated": "",
                                            //"DealDateLastUpdated": "",
         public string Uri { get; set; }//": "/Mediapartners/IRB3qLkYikxk1877680RhmjBNprcMSrhY1/Ads/1212429"
+        public string ImageUrl { get; set; }//": "https://imp.pxf.io/i/1877680/1212429/10014",
+        public string Category { get; set; }
+        public string Manufacturer { get; set; }
+        public string CatalogItemId { get; set; }
+        public string CurrentPrice { get; set; }
+        public string OriginalPrice { get; set; }
+        public string Gtin { get; set; }
+        public string Url { get; set; }
+        public string Mpn { get; set; }
+        public long SubCategoryId { get; set; }
+        public string SubCategoryName { get; set; }
     }
 }

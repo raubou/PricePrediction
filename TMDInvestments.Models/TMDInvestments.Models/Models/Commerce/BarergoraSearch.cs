@@ -11,12 +11,12 @@ namespace TMDInvestments.Models.Models.Commerce
     [Table("BarergoraSearch", Schema = "tmd")]
     public sealed class BarergoraSearch
     {
-        public int? ProductId { get; set; }
-        public int? AdvertiserId { get; set; }
+        public long? ProductId { get; set; }
+        public long? AdvertiserId { get; set; }
         public string? AdvertiserName { get; set; } 
-        public int? CategoryId { get; set; }
+        public long? CategoryId { get; set; }
         public string? CategoryName { get; set; }
-        public int? SubCategoryId { get; set; }
+        public long? SubCategoryId { get; set; }
         public string? SubCategoryName { get; set; }
         public string? SubCategoryDefinition { get; set; }
         public string Source { get; set; }

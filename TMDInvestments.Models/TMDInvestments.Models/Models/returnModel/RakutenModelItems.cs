@@ -41,7 +41,7 @@ namespace TMDInvestments.Models
         [XmlElement("imageurl")]
         public string imageurl { get; set; }
 
-        public int? SubCategoryId { get; set; }
+        public long? SubCategoryId { get; set; }
         public string? SubCategoryName { get; set; }
     }
 }

@@ -7,7 +7,7 @@
     <InvariantGlobalization>false</InvariantGlobalization>
     <PublishAot>false</PublishAot>
     <UserSecretsId>dotnet-TMD.EquitiesPrediction.Service-6d26d9d7-518a-4103-b5da-092b6943a9fc</UserSecretsId>
-	  <Version>2.7.7.2</Version>
+	  <Version>2.7.7.4</Version>
   </PropertyGroup>
 
   <ItemGroup>

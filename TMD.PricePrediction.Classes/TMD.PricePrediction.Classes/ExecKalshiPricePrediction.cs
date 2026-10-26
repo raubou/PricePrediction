@@ -48,7 +48,7 @@ namespace TMD.PricePrediction.Classes
             //    var context = ctxFactory.CreateDbContext();
             //    ctx = context;
             //}
-            _settings = _ctx.RulesEngine.FirstOrDefault();
+            _settings = _ctx?.RulesEngine?.FirstOrDefault();
             kalshiService = new KalshiService(_logger, httpClientFactory);
             coinBaseService = new CoinBaseService(_logger, coinBaseSettings, httpClientFactory/*, _helper*/);
         }
@@ -72,13 +72,14 @@ namespace TMD.PricePrediction.Classes
             try
             {
                 Debug.WriteLine("Get balance and positions {0}", DateTime.Now);
-                var balance = kalshiService.SendRequest(HttpMethod.Get, "/trade-api/v2/portfolio/balance", "", true);
+                var balance = kalshiService?.SendRequest(HttpMethod.Get, "/trade-api/v2/portfolio/balance", "", true);
                 System.Threading.Thread.Sleep(250);
-                var positions = kalshiService.SendRequest(HttpMethod.Get, "/trade-api/v2/portfolio/positions", "", true);
+                var positions = kalshiService?.SendRequest(HttpMethod.Get, "/trade-api/v2/portfolio/positions", "", true);
                 System.Threading.Thread.Sleep(250);
-                //var settlements = kalshiService.SendRequest(HttpMethod.Get, "/trade-api/v2/portfolio/settlements", "", true);
-                //var fills = kalshiService.SendRequest(HttpMethod.Get, "/trade-api/v2/portfolio/fills", "", true);
-                decimal balanceDollars = Convert.ToDecimal(balance.GetProperty("balance_dollars").GetString());
+                //var settlements = kalshiService?.SendRequest(HttpMethod.Get, "/trade-api/v2/portfolio/settlements", "", true);
+                //var fills = kalshiService?.SendRequest(HttpMethod.Get, "/trade-api/v2/portfolio/fills", "", true);
+                System.Threading.Thread.Sleep(100);
+                decimal balanceDollars = Convert.ToDecimal(balance?.GetProperty("balance_dollars").GetString());
                 if (balanceDollars <= 1)
                 {
                     Helper.Log(_logger, LogLevel.Warning, $"Low balance available: {balanceDollars}");
@@ -88,15 +89,15 @@ namespace TMD.PricePrediction.Classes
                 }
                 Helper.Log(_logger, LogLevel.Information, $"Balance: {balanceDollars}");
                 Debug.WriteLine($"Balance: {balanceDollars}");
-                var marketPositions = (IEnumerable<JsonElement>)positions.GetProperty("market_positions").EnumerateArray();
+                var marketPositions = (IEnumerable<JsonElement>)positions?.GetProperty("market_positions")?.EnumerateArray();
                 //var orderList = (IEnumerable<JsonElement>)orders.GetProperty("orders").EnumerateArray();
                 foreach (var marketPosition in marketPositions)
                 {
                     marketPositionTickers.Add(marketPosition.GetProperty("ticker").GetString());
-                    var kalshiMarketPosition = _ctx.KalshiMarketPositions.FirstOrDefaultAsync(x => x.Ticker == marketPosition.GetProperty("ticker").GetString()).Result;
+                    var kalshiMarketPosition = _ctx?.KalshiMarketPositions?.FirstOrDefaultAsync(x => x.Ticker == marketPosition.GetProperty("ticker").GetString()).Result;
                     if (kalshiMarketPosition == null)
                     {
-                        _ctx.KalshiMarketPositions.Add(new KalshiMarketPosition()
+                        _ctx?.KalshiMarketPositions?.Add(new KalshiMarketPosition()
                         {
                             Ticker = marketPosition.GetProperty("ticker").GetString(),
                             fees_paid_dollars = Convert.ToDecimal(marketPosition.GetProperty("fees_paid_dollars").GetString()),
@@ -108,13 +109,13 @@ namespace TMD.PricePrediction.Classes
                             Created = DateTime.UtcNow,
                             lastUpdated = null
                         });
-                        _ctx.SaveChangesAsync();
+                        _ctx?.SaveChangesAsync();
                     }
                 }
                 Debug.WriteLine($"Getting series for Crypto");
-                var results = kalshiService.SendRequest(HttpMethod.Get, "/trade-api/v2/series?category=Crypto", "", false);
+                var results = kalshiService?.SendRequest(HttpMethod.Get, "/trade-api/v2/series?category=Crypto", "", false);
                 System.Threading.Thread.Sleep(250);
-                var series = (IEnumerable<JsonElement>)results.GetProperty("series").EnumerateArray();//.GetProperty("category");
+                var series = (IEnumerable<JsonElement>)results?.GetProperty("series")?.EnumerateArray();//.GetProperty("category");
                                                                                                       //var seriesList = series.ToList(); 
                 var categories = series.Where(x => x.GetProperty("category").GetString() == "Crypto" && (x.GetProperty("frequency").GetString() == "fifteen_min" /*|| x.GetProperty("frequency").GetString() == "hourly"*/) && (/*x.GetProperty("title").GetString().Contains("Above/below") ||*/ x.GetProperty("title").GetString().Contains("15 Minute"))).ToList();
 
@@ -130,9 +131,9 @@ namespace TMD.PricePrediction.Classes
                     dynamic eventsBySeries = null;
                     //if(eventsCursor.ValueKind != JsonValueKind.Undefined && eventsCursor.TryGetProperty("cursor", out eventsCursor))
                     if (eventsCursor.ValueKind == JsonValueKind.String && !string.IsNullOrEmpty(eventsCursor.GetString()))
-                        eventsBySeries = kalshiService.SendRequest(HttpMethod.Get, $"/trade-api/v2/events?series_ticker={item.SeriesTicker}&cursor={eventsCursor.GetString()}", "", false);
+                        eventsBySeries = kalshiService?.SendRequest(HttpMethod.Get, $"/trade-api/v2/events?series_ticker={item.SeriesTicker}&cursor={eventsCursor.GetString()}", "", false);
                     else
-                        eventsBySeries = kalshiService.SendRequest(HttpMethod.Get, $"/trade-api/v2/events?series_ticker={item.SeriesTicker}", "", false);
+                        eventsBySeries = kalshiService?.SendRequest(HttpMethod.Get, $"/trade-api/v2/events?series_ticker={item.SeriesTicker}", "", false);
                     System.Threading.Thread.Sleep(250);
                     try
                     {
@@ -218,6 +219,7 @@ namespace TMD.PricePrediction.Classes
                                     no_ask_dollars = x.GetProperty("no_ask_dollars").GetString(),
                                     no_bid_dollars = x.GetProperty("no_bid_dollars").GetString(),
                                     yes_sub_title = x.GetProperty("yes_sub_title").GetString(),
+                                    exchange_index = x.GetProperty("exchange_index").GetInt32()
                                 }).FirstOrDefault();
 
                             if (!marketandTitle?.Title.ToLower().Contains("price up") &&
@@ -232,7 +234,7 @@ namespace TMD.PricePrediction.Classes
                             }
                             if(marketandTitle?.status != "active" && marketandTitle?.status != "initialized")
                             {
-                                Debug.WriteLine($"Market {item3.GetProperty("title").GetString()} does not match criteria");
+                                Debug.WriteLine($"Market {item3.GetProperty("title").GetString()} Order is finalized, no orders can be placed");
                                 System.Threading.Thread.Sleep(100);
                                 continue;
                             }
@@ -241,7 +243,7 @@ namespace TMD.PricePrediction.Classes
                             //    continue;
                             //}
 
-                            if (marketPositionTickers.Contains(marketandTitle.MarketTicker) /*|| marketList.Count() > 5*/)
+                            if (marketPositionTickers.Contains(marketandTitle?.MarketTicker) /*|| marketList.Count() > 5*/)
                             {
                                 Helper.Log(_logger, LogLevel.Information, $"Not buying: {item3.GetProperty("title").GetString()} Already in the books or limit reached");
                                 Debug.WriteLine($"Not buying: {item3.GetProperty("title").GetString()} Already in the books or limit reached");
@@ -249,7 +251,7 @@ namespace TMD.PricePrediction.Classes
                                 continue;
                             }
 
-                            DateTime closeTime = DateTime.Parse(marketandTitle.CloseTime.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+                            DateTime closeTime = DateTime.Parse(marketandTitle?.CloseTime.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
                             //var diffCLoseandNow = Math.Abs((closeTime - DateTime.UtcNow).TotalMinutes);
                             //if (diffCLoseandNow < 10)
                             if (Math.Abs((closeTime - DateTime.UtcNow).TotalMinutes) <= 10)
@@ -380,6 +382,7 @@ namespace TMD.PricePrediction.Classes
                                 }
                                 //var targetPrice = Convert.ToDecimal(marketandTitle.yes_sub_title.Trim().Replace("Target Price: $", ""));
                                 var ticker = marketandTitle.MarketTicker.Trim();
+                                var exchange_index = (int)marketandTitle.exchange_index;
                                 JsonObject quote = null;
                                 Debug.WriteLine($"Getting quote for {coin}");
                                 try
@@ -407,7 +410,11 @@ namespace TMD.PricePrediction.Classes
                                 int? shortCnt = 0; int? longCnt = 0;
                                 Debug.WriteLine($"Calculating points for {coin}");
                                 _helper?.CalculatePoints(quote, ref shortCnt, ref longCnt, .08m, true);
-                                //_helper?.CalculatePoints(quote, ref longCnt, ref shortCnt, .75m, true);
+                                double.TryParse(quote?["lastopChange"]?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out double lastopChange);
+                                double.TryParse(quote?["lastopChangePercent"]?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out double lastopChangePercent);
+                                double.TryParse(quote?["PercentHigher"]?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out double percentHigher);
+                                double.TryParse(quote?["PercentLower"]?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out double percentLower);
+                            //_helper?.CalculatePoints(quote, ref longCnt, ref shortCnt, .75m, true);
 
                                 Helper.Log(_logger, LogLevel.Information, $"Score for {coin} (Short: {shortCnt}, Long: {longCnt})");
                                 Debug.WriteLine($"Score for {coin} (Short: {shortCnt}, Long: {longCnt})");
@@ -436,8 +443,8 @@ namespace TMD.PricePrediction.Classes
 
                                 try
                                 {
-                                //count = Convert.ToInt32(bet_amount / current_ask);
-                                count = 1;
+                                    //count = Convert.ToInt32(bet_amount / current_ask);
+                                    count = 1;
                                 }
                                 catch (Exception)
                                 {
@@ -449,8 +456,9 @@ namespace TMD.PricePrediction.Classes
                                 Helper.Log(_logger, LogLevel.Information, $"Market: {marketandTitle.Title}, Current Ask: {current_ask}, Count: {count}, Close Time: {marketandTitle.CloseTime.ToString()} - {closeTime}, Currnet Time {DateTime.UtcNow}, Minutes to Close: {Math.Abs((closeTime - DateTime.UtcNow).TotalMinutes)}");
                                 Debug.WriteLine($"Market: {marketandTitle.Title}, Current Ask: {current_ask}, Count: {count}, Close Time: {marketandTitle.CloseTime.ToString()} - {closeTime}, Currnet Time {DateTime.UtcNow}, Minutes to Close: {Math.Abs((closeTime - DateTime.UtcNow).TotalMinutes)}");
 
-                                if (longCnt >= _settings.CryptoLongCount/*8*/)
-                                {
+                            //if (longCnt >= _settings.CryptoLongCount/*8*/)
+                            if ((lastopChange > 0) && (lastopChangePercent > 0) && (longCnt >= 3) && (percentLower < percentHigher))
+                            {
                                     //continue;
                                     Helper.Log(_logger, LogLevel.Information, $"Buying: {item3.GetProperty("title").GetString()} Going Long");
                                     Debug.WriteLine($"Buying: {item3.GetProperty("title").GetString()} Going Long");
@@ -458,11 +466,15 @@ namespace TMD.PricePrediction.Classes
                                         $"\"ticker\": \"{ticker.Trim()}\"," +
                                         $"\"side\": \"bid\"," +
                                         $"\"action\": \"buy\"," +
-                                        $"\"count\": \"{count}\"," +
+                                        $"\"count\": \"{count.ToString("F2")}\"," +
                                         $"\"price\": \"{current_ask}\"," +
-                                        $"\"time_in_force\": \"good_till_canceled\"," +
+                                        //$"\"time_in_force\": \"good_till_canceled\"," +
+                                        //$"\"time_in_force\": \"fill_or_kill\"," +
+                                        $"\"time_in_force\": \"immediate_or_cancel\"," +
                                         $"\"self_trade_prevention_type\": \"taker_at_cross\"," +
-                                        $"\"client_order_id\": \"{Guid.NewGuid()}\"" +  // Unique ID for deduplication
+                                        $"\"subaccount\": 0," +
+                                        $"\"exchange_index\": {exchange_index}" +
+                                        //$"\"client_order_id\": \"{Guid.NewGuid()}\"" +  // Unique ID for deduplication
                                     "}";
                                     var results4 = kalshiService.SendRequest(HttpMethod.Post, $"/trade-api/v2/portfolio/events/orders", body, true);
                                     System.Threading.Thread.Sleep(250);
@@ -479,40 +491,45 @@ namespace TMD.PricePrediction.Classes
                                     }
                                     //return;
                                 }
-                                else if (shortCnt >= _settings.CryptoShortCount/* || shortCnt == 0*/)
+                            //else if (shortCnt >= _settings.CryptoShortCount/* || shortCnt == 0*/)
+                            else //if ((lastopChange < 0) && (lastopChangePercent < 0) && (shortCnt >= 3) && (percentLower > percentHigher))
+                            {
+                                Helper.Log(_logger, LogLevel.Information, $"Buying: {item3.GetProperty("title").GetString()} Going Short");
+                                Debug.WriteLine($"Buying: {item3.GetProperty("title").GetString()} Going Short");
+                                string body = "{" +
+                                    $"\"ticker\": \"{ticker.Trim()}\"," +
+                                    $"\"action\": \"buy\"," +
+                                    $"\"side\": \"ask\"," +
+                                    $"\"count\": \"{count.ToString("F2")}\"," +
+                                    $"\"price\": \"{current_ask}\"," +
+                                    //$"\"time_in_force\": \"good_till_canceled\"," +
+                                    //$"\"time_in_force\": \"fill_or_kill\"," +
+                                    $"\"time_in_force\": \"immediate_or_cancel\"," +
+                                    $"\"self_trade_prevention_type\": \"taker_at_cross\"," +
+                                    $"\"subaccount\": 0," +
+                                    $"\"exchange_index\": {exchange_index}" +
+                                    //$"\"client_order_id\": \"{Guid.NewGuid()}\"" +  // Unique ID for deduplication
+                                "}";
+                                var results4 = kalshiService.SendRequest(HttpMethod.Post, $"/trade-api/v2/portfolio/events/orders", body, true);
+                                System.Threading.Thread.Sleep(250);
+                                if (results4 is System.Dynamic.ExpandoObject && results4?.status == "Created")
                                 {
-                                    Helper.Log(_logger, LogLevel.Information, $"Buying: {item3.GetProperty("title").GetString()} Going Short");
-                                    Debug.WriteLine($"Buying: {item3.GetProperty("title").GetString()} Going Short");
-                                    string body = "{" +
-                                        $"\"ticker\": \"{ticker.Trim()}\"," +
-                                        $"\"action\": \"buy\"," +
-                                        $"\"side\": \"ask\"," +
-                                        $"\"count\": \"{count}\"," +
-                                        $"\"price\": \"{current_ask}\"," +
-                                        $"\"time_in_force\": \"good_till_canceled\"," +
-                                        $"\"self_trade_prevention_type\": \"taker_at_cross\"," +
-                                        $"\"client_order_id\": \"{Guid.NewGuid()}\"" +  // Unique ID for deduplication
-                                    "}";
-                                    var results4 = kalshiService.SendRequest(HttpMethod.Post, $"/trade-api/v2/portfolio/events/orders", body, true);
-                                    System.Threading.Thread.Sleep(250);
-                                    if (results4 is System.Dynamic.ExpandoObject && results4?.status == "Created")
-                                    {
-                                        Helper.Log(_logger, LogLevel.Information, $"Order for market {ticker} {results4?.status}");
-                                        Debug.WriteLine($"Order for market {ticker} {results4?.status}");
-                                        //marketList.Add(marketandTitle);
-                                    }
-                                    else
-                                    {
-                                        Helper.Log(_logger, LogLevel.Error, $"Order for market {ticker} failed: {results4?.ToString()}");
-                                        Debug.WriteLine($"Order for market {ticker} failed: {results4?.ToString()}");
-                                    }
-                                    //return;
+                                    Helper.Log(_logger, LogLevel.Information, $"Order for market {ticker} {results4?.status}");
+                                    Debug.WriteLine($"Order for market {ticker} {results4?.status}");
+                                    //marketList.Add(marketandTitle);
                                 }
                                 else
                                 {
-                                    Helper.Log(_logger, LogLevel.Warning, $"Not buying: {item3.GetProperty("title").GetString()} No Conditions Met");
-                                    Debug.WriteLine($"Not buying: {item3.GetProperty("title").GetString()} No Conditions Met");
+                                    Helper.Log(_logger, LogLevel.Error, $"Order for market {ticker} failed: {results4?.ToString()}");
+                                    Debug.WriteLine($"Order for market {ticker} failed: {results4?.ToString()}");
                                 }
+                                //return;
+                            }
+                                //else
+                                //{
+                                //    Helper.Log(_logger, LogLevel.Warning, $"Not buying: {item3.GetProperty("title").GetString()} No Conditions Met");
+                                //    Debug.WriteLine($"Not buying: {item3.GetProperty("title").GetString()} No Conditions Met");
+                                //}
                             //}
                         }
                         //if (marketsByEvents is object)

@@ -470,7 +470,7 @@ namespace TMD.PricePrediction
             //if (currentPrice < lastPrice && percentDiffLastPrice >= settings.StopLossPercentLastPriceCrypto && percentDiffPricePurchased >= 3.5m)
             if ((currentPrice < lastPrice) &&
             (pricePurchased < currentPrice) &&
-            (percentDiffPricePurchased >= 4m))
+            (percentDiffPricePurchased >= 4.5m))
             //if (currentPrice < lastPrice && currentBalance > (crypto.Amount * 1.08m))
             {
                 //if (percentDiffLastPrice > settings.StopLossPercentLastPriceCrypto)

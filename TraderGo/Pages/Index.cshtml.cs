@@ -1,15 +1,16 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using TMD.Database.Connect.Managers;
+using TMD.PricePrediction;
 using TMD.Services.Service;
 using TMDInvestments.Context;
 using TMDInvestments.Models;
 using TMDInvestments.Services;
-using Microsoft.EntityFrameworkCore;
 
 namespace TraderGo.Pages
 {
@@ -27,7 +28,9 @@ namespace TraderGo.Pages
         public dynamic? GainersandLosers { get; set; }
         Manager _marketMgr;
         //Manager _NewsMgr;
-        TraderGoService _traderGoService;
+        TraderGoService? _traderGoService;
+        Helper? _helper = null;
+
         public IndexModel(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<MailSettings> mailSettings, IOptions<SchwabSettings> settings, IOptions<yfapiSettings> yfapiSettings, IHttpClientFactory factory, ILogger<IndexModel> logger, IDbContextFactory<TmdContext> contextFactory) //: base(connectionSettings,connectionSettings2, mailSettings)
         {
             _logger = logger;
@@ -36,8 +39,10 @@ namespace TraderGo.Pages
             _factory = factory;
             _marketMgr = new Manager(connectionSettings?.Value?.Connection, "",null);
             //_NewsMgr = new Manager(connectionSettings2?.Value?.Connection, "", _logger);
-            _traderGoService = new TraderGoService(yfapiSettings.Value,_logger, _factory, false, contextFactory);
+            _helper = new Helper(_logger, null, null, null, contextFactory);
             services = new SchwabServices(_logger, _settings, _factory, contextFactory);
+            _traderGoService = new TraderGoService(yfapiSettings.Value,_logger, services, _helper,  _factory, false, contextFactory);
+            
         }
 
         public override IActionResult Execute()

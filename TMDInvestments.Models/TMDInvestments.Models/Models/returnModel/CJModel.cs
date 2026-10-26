@@ -32,7 +32,7 @@ namespace NewsAggregator.models.returnModel
     }
     public sealed class ResultList
     {
-        public int SubCategoryId { get; set; }
+        public long SubCategoryId { get; set; }
         public string SubCategoryName { get; set; }
         public string sourceFeedType { get; set; }
         public string description { get; set; }

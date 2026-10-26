@@ -8,8 +8,8 @@ namespace Bartergora2._0.Models
     public sealed class ProductImage
     {
         [Key]
-        public int? ProductImageId { get; set; }
-        public int? ProductId { get; set; }
+        public long? ProductImageId { get; set; }
+        public long? ProductId { get; set; }
         public byte[]? Image { get; set; }
         public string? ImageUrl { get; set; }
         public DateTime? DateCreated { get; set; }

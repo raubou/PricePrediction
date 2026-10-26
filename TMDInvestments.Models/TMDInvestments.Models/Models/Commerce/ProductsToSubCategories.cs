@@ -11,10 +11,10 @@ namespace Bartergora2._0.Models
     [Table("ProductsToSubCategories", Schema = "tmd")]
     public sealed class ProductsToSubCategories
     {
-        [Key] public int? ProductToSubCategoryId { get; set; }
-        public int? SubCategoryId { get; set; }
+        [Key] public long? ProductToSubCategoryId { get; set; }
+        public long? SubCategoryId { get; set; }
 
-        public int? ProductId { get; set; }
+        public long? ProductId { get; set; }
 
         public DateTime? DateCreated { get; set; }
 

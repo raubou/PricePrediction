@@ -1,5 +1,11 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Linq;
+using System.Security;
+using System.Threading.Tasks;
+
 
 namespace Coinbase.AdvancedTrade.Models.Public
 {
@@ -11,44 +17,51 @@ namespace Coinbase.AdvancedTrade.Models.Public
         /// <summary>
         /// Gets or sets the start time of the candle in UNIX time.
         /// </summary>
-        [JsonProperty("start")]
+        //[JsonProperty("start")]
         public string Start { get; set; }
 
         /// <summary>
         /// Gets or sets the lowest price during the candle's time period.
         /// </summary>
-        [JsonProperty("low")]
+        //[JsonProperty("low")]
         public string Low { get; set; }
 
         /// <summary>
         /// Gets or sets the highest price during the candle's time period.
         /// </summary>
-        [JsonProperty("high")]
+        //[JsonProperty("high")]
         public string High { get; set; }
 
         /// <summary>
         /// Gets or sets the opening price at the start of the candle's time period.
         /// </summary>
-        [JsonProperty("open")]
-        public string Open { get; set; }
+        //[JsonProperty("open")]
+        public float Open { get; set; }
 
         /// <summary>
         /// Gets or sets the closing price at the end of the candle's time period.
         /// </summary>
-        [JsonProperty("close")]
+        //[JsonProperty("close")]
         public float Close { get; set; }
 
         /// <summary>
         /// Gets or sets the trading volume during the candle's time period.
         /// </summary>
-        [JsonProperty("volume")]
-        public string Volume { get; set; }
+        //[JsonProperty("volume")]
+        public float Volume { get; set; }
 
+        //[JsonProperty("opChange")]
+        //public float opChange { get { return Close - Open; } set; }
+        ////[JsonProperty("opPercent")]
+        //public float opPercent { get { return (Close - Open) / ((Close + Open) / 2) * 100; } set; }
+        public float opChange { get => Close - Open; }
+        public float opPercent { get => (Close - Open) / ((Close + Open) / 2) * 100; }
         /// <summary>
         /// Gets the start date and time of the candlestick.
         /// </summary>
-        [JsonIgnore]
+        //[JsonIgnore]
         public DateTime StartDate => !string.IsNullOrEmpty(Start) ? UnixTimeStampToDateTime(Start) : DateTime.MinValue;
+        
 
         /// <summary>
         /// Converts a UNIX timestamp string to its corresponding DateTime value.

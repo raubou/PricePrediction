@@ -1,4 +1,5 @@
-﻿using System.Dynamic;
+﻿using MongoDB.Bson;
+using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -6,6 +7,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Xml.Linq;
 using System.Xml.Serialization;
+using TMDInvestments.Models;
 
 namespace TMD.Services
 {
@@ -193,8 +195,9 @@ namespace TMD.Services
                 {
                     try
                     {
-                        results = JsonSerializer.DeserializeAsync<T>(responseMsg.Content.ReadAsStreamAsync().Result, InitialSerializerOptions()).Result;
-                    }
+                        //results = JsonSerializer.DeserializeAsync<T>(responseMsg.Content.ReadAsStringAsync().Result, InitialSerializerOptions()).Result;
+                        results = JsonSerializer.Deserialize<T>(responseMsg.Content.ReadAsStringAsync().Result);
+                }
                     catch (System.Exception ex)
                     {
                         try
@@ -232,7 +235,7 @@ namespace TMD.Services
                             }
                             catch (System.Exception ex3)
                             {
-                                error = responseMsg.Content.ReadAsStringAsync().Result;
+                                error = ex3.Source + ": " + ex3.StackTrace + ": " + ex3.Message;//responseMsg.Content.ReadAsStringAsync().Result;
                             }
                         }
                         

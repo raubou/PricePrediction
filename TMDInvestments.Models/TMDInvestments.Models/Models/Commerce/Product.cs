@@ -8,8 +8,8 @@ namespace Bartergora2._0.Models
     public sealed class Product
     {
         [Key]
-        public int? ProductId { get; set; }       
-        public int? AdvertiserId { get; set; }
+        public long? ProductId { get; set; }       
+        public long? AdvertiserId { get; set; }
         public string Source { get; set; }
         public string ProductName { get; set; }
         public string? Description { get; set; }

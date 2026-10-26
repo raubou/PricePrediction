@@ -80,11 +80,11 @@ Place holder token
     @if (Model?.AccountInfo != null && Model?.AccountInfo?.securitiesAccount != null && Model?.AccountInfo?.securitiesAccount?.Positions != null)
         @foreach (var item in Model?.AccountInfo?.securitiesAccount?.Positions)
         {
-            Model.stock = Model.StockTracker.Where(x => x.Symbol == item.Instruments.symbol).FirstOrDefault();
+@*             Model.stock = Model.StockTracker.Where(x => x.Symbol == item.Instruments.symbol).FirstOrDefault();
             if (Model.stock == null)
             {
                 continue;
-            }
+            } *@
             <script type="text/javascript">
                 $(function() {
                     $(".overlay").hide();
@@ -132,14 +132,14 @@ Place holder token
                     <div class='col border border-1 border-info'>$@item.marketValue</div>
                     <div id="lastPrice_@Model.stockCnt" class="col border border-1">
                     </div>
-                    <div class="col border border-1">$@Model.stock?.LastPrice</div>
-                    <div class="col border border-1">$@Model.stock?.PricePurchased</div>
+                    <div class="col border border-1">&nbsp;$@Model.stock?.LastPrice</div>
+                    <div class="col border border-1">&nbsp;$@Model.stock?.PricePurchased</div>
                     <div id="priceDiffPurchased_@Model.stockCnt" class="col border border-1 @Model.status">
                     </div>
                     <div id="priceDiffCurrent_@Model.stockCnt" class="col border border-1 @Model.status">
                     </div>
 
-                    <div class='col border border-1 border-info'>@Model.stock.DatePurchased</div>
+                    <div class='col border border-1 border-info'>&nbsp;@Model.stock?.DatePurchased</div>
                     <div class='col border border-1 border-info'>
                         <form method="post">
                             @Html.AntiForgeryToken()
@@ -245,11 +245,11 @@ Place holder token
         if (positions2 != null)
             foreach (var position in positions2)
             {
-                Model.stock = Model.StockTracker.Where(x => x.Symbol == position.Product.symbol).FirstOrDefault();
-                if (Model.stock == null)
-                {
-                    continue;
-                }
+                // Model.stock = Model.StockTracker.Where(x => x.Symbol == position.Product.symbol).FirstOrDefault();
+                // if (Model.stock == null)
+                // {
+                //     continue;
+                // }
                 <script type="text/javascript">
                     $(function() {
                         $(".overlay").hide();
@@ -268,15 +268,15 @@ Place holder token
                     <div class='col border border-1 border-info'>$@position?.marketValue</div>
                     <div id="lastPrice2_@Model.stockCnt" class="col border border-1">
                     </div>
-                    <div class="col border border-1">$@Model.stock?.LastPrice</div>
-                    <div class="col border border-1">$@Model.stock?.PricePurchased</div>
+                    <div class="col border border-1">&nbsp;$@Model.stock?.LastPrice</div>
+                    <div class="col border border-1">&nbsp;$@Model.stock?.PricePurchased</div>
 
                     <div id="priceDiffPurchased2_@Model.stockCnt" class="col border border-1 @Model.status">
                     </div>
 
                     <div id="priceDiffCurrent2_@Model.stockCnt" class="col border border-1 @Model.status">
                     </div>
-                    <div class='col border border-1 border-info'>@Model.stock.DatePurchased</div>
+                    <div class='col border border-1 border-info'>&nbsp;@Model.stock?.DatePurchased</div>
                     <div class='col border border-1 border-info'>
                         <form id="etradeform" name="etradeform" method="post">
                             @Html.AntiForgeryToken()

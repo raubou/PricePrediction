@@ -29,7 +29,7 @@ namespace TMDInvestments.Context
         public DbSet<CryptoList> CryptoList { get; set; }
         //public DbSet<CryptoTracker> CryptoTracker { get; set; }
         public DbSet<CryptoTracker2> CryptoTracker2 { get; set; }
-        //public DbSet<DayTradeTracker> DayTradeTracker { get; set; }
+        public DbSet<Balance> Balance { get; set; }
         public DbSet<Exceptions> Exceptions { get; set; }
 
         public DbSet<KalshiMarketPosition> KalshiMarketPositions { get; set; }

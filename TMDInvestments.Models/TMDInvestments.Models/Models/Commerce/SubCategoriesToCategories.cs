@@ -12,9 +12,9 @@ namespace Bartergora2._0.Models
     public sealed class SubCategoriesToCategories
     {
         [Key] public int? SubCategoryToCategoryId { get; set; }
-        public int? CategoryId { get; set; }
+        public long? CategoryId { get; set; }
 
-        public int? SubCategoryId { get; set; }
+        public long? SubCategoryId { get; set; }
 
         public DateTime? DateCreated { get; set; }
 

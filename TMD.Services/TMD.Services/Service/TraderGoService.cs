@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
@@ -9,19 +10,20 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using TMD.Database.Connect.Helper;
 using TMD.Database.Connect.Managers;
+using TMD.PricePrediction;
+using TMDInvestment.Models;
+using TMDInvestments.Context;
 using TMDInvestments.Models;
 using TMDInvestments.Models.Models.Polygon;
 using TMDInvestments.Services;
-using Microsoft.EntityFrameworkCore;
-using TMDInvestments.Context;
 
 namespace TMD.Services.Service
 {
     public sealed class TraderGoService
     {
-        SchwabSettings _settings;
-        private IOptions<FinnHub> _finnHub;
-        private IOptions<Polygon> _polygon;
+        SchwabSettings? _settings;
+        private IOptions<FinnHub>? _finnHub;
+        private IOptions<Polygon>? _polygon;
         private readonly IHttpClientFactory? _factory;
         //dynamic yfapi = new ExpandoObject();
         yfapiSettings yfapi;
@@ -39,6 +41,8 @@ namespace TMD.Services.Service
         IndicesCalculatorV2 indicesCalculatorV2 = null;
         DataTable? dt;
         IDbContextFactory<TmdContext> _contextFactory;
+        SchwabServices? _schwabServices;
+        Helper? _helper = null;
         static TraderGoService()
         {
             finnhub.GeneralNews = "/news?category=general";
@@ -96,6 +100,87 @@ namespace TMD.Services.Service
             //NewsManager = new Manager(conn, "", _log);
             MarketsManager = new Manager(conn2, "", _log);
         }
+        public TraderGoService(yfapiSettings yfapi, ILogger log, SchwabServices schwabServices, IHttpClientFactory _factory, bool isAzureFunction, IDbContextFactory<TmdContext> contextFactory)
+        {
+            this.yfapi = yfapi;
+            this._schwabServices = schwabServices;
+            _contextFactory = contextFactory;
+            finnhub.URL = "https://finnhub.io/api/v1";
+            finnhub.IPOCalendar = "/calendar/ipo?from={from}&to={to}";
+            finnhub.Earnings = "/calendar/earnings?from={from}&to={to}";
+            finnhub.finnhubKey = "cjbc5i9r01qn9c1l9ncgcjbc5i9r01qn9c1l9nd0";
+
+            _log = log;
+            this._factory = _factory;
+            if (_factory == null)
+            {
+                var handler = new SocketsHttpHandler
+                {
+                    PooledConnectionLifetime = TimeSpan.FromMinutes(7), // Recreate every 15 minutes
+
+                };
+
+                _client = new HttpClient(handler);
+            }
+            else
+            {
+                _client = _factory.CreateClient();
+            }
+            if (!isAzureFunction)
+            {
+                IConfigurationBuilder builder = new ConfigurationBuilder()
+                    .AddJsonFile("appsettings.json");
+                IConfigurationRoot configuration = builder.Build();
+                connection = configuration.GetSection("ConnectionStrings");
+                conn2 = connection.GetSection("connection").Value;
+            }
+            else
+            {
+                conn2 = Environment.GetEnvironmentVariable("ConnectionString2");
+            }
+            MarketsManager = new Manager(conn2, "", _log);
+        }
+        public TraderGoService(yfapiSettings yfapi, ILogger log, SchwabServices schwabServices, Helper? helper, IHttpClientFactory _factory, bool isAzureFunction, IDbContextFactory<TmdContext> contextFactory)
+        {
+            this.yfapi = yfapi;
+            this._schwabServices = schwabServices;
+            _contextFactory = contextFactory;
+            _helper = helper;
+            finnhub.URL = "https://finnhub.io/api/v1";
+            finnhub.IPOCalendar = "/calendar/ipo?from={from}&to={to}";
+            finnhub.Earnings = "/calendar/earnings?from={from}&to={to}";
+            finnhub.finnhubKey = "cjbc5i9r01qn9c1l9ncgcjbc5i9r01qn9c1l9nd0";
+
+            _log = log;
+            this._factory = _factory;
+            if (_factory == null)
+            {
+                var handler = new SocketsHttpHandler
+                {
+                    PooledConnectionLifetime = TimeSpan.FromMinutes(7), // Recreate every 15 minutes
+
+                };
+
+                _client = new HttpClient(handler);
+            }
+            else
+            {
+                _client = _factory.CreateClient();
+            }
+            if (!isAzureFunction)
+            {
+                IConfigurationBuilder builder = new ConfigurationBuilder()
+                    .AddJsonFile("appsettings.json");
+                IConfigurationRoot configuration = builder.Build();
+                connection = configuration.GetSection("ConnectionStrings");
+                conn2 = connection.GetSection("connection").Value;
+            }
+            else
+            {
+                conn2 = Environment.GetEnvironmentVariable("ConnectionString2");
+            }
+            MarketsManager = new Manager(conn2, "", _log);
+        }
         public TraderGoService(ILogger log, HttpClient client, bool isAzureFunction,IOptions<FinnHub> finnHub, IOptions<Polygon> polycon, IHttpClientFactory? _factory, IOptions<SchwabSettings> settings, IDbContextFactory<TmdContext> contextFactory)
         {
             _log = log;
@@ -145,6 +230,14 @@ namespace TMD.Services.Service
         }
         public dynamic GetGainersandLosers(bool GetTechnicalAnalysis)
         {
+            DateTime startDate = DateTime.Now.AddDays(-45);
+            DateTime endDate = DateTime.Now;
+            //float percentHigher = 0f;
+            //float percentLower = 0f;
+            //int higherCount = 0;
+            //int lowerCount = 0;
+            int? shortCnt = 0;
+            int? longCnt = 0;
             dynamic GainersandLosers = new ExpandoObject();
             GainersandLosers.Gainers = new ExpandoObject();
             GainersandLosers.Losers = new ExpandoObject();
@@ -170,6 +263,46 @@ namespace TMD.Services.Service
                     string symbol = item.GetProperty("symbol").ToString();
                     var results = item;
                     gains[gains.Length - 1] = indicesCalculatorV2.CalculateV2(symbol, results);
+                    //higherCount = 0;
+                    //lowerCount = 0;
+                    shortCnt = 0;
+                    longCnt = 0;
+                    //var history = _schwabServices.GetPriceHistory(gains[gains.Length - 1]["Symbol"].ToString(), "month", "1", "daily", 1, startDate, endDate).Result;
+                    //string ser = string.Empty;
+                    //try
+                    //{
+                    //    ser = JsonSerializer.Serialize(history.GetProperty("candles"));
+                    //}
+                    //catch (Exception)
+                    //{
+                    //    continue;
+                    //}
+
+                    //var candles90 = JsonSerializer.Deserialize<List<TMDInvestment.Models.CandleItems>>(ser).OrderByDescending(x => x.datetime).ToList();
+                    //var candleFirst = candles90.FirstOrDefault();
+                    //gains[gains.Length - 1].Add("lastopChange", candleFirst?.opChange ?? 0f);
+                    //gains[gains.Length - 1].Add("lastopChangePercent", candleFirst?.opPercent ?? 0f);
+                    //gains[gains.Length - 1].Add("lastOpen", candleFirst?.open ?? 0f);
+                    //gains[gains.Length - 1].Add("lastClose", candleFirst?.close ?? 0f);
+                    //foreach (var candle in candles90)
+                    //{
+                    //    if (candle.opChange > 0)
+                    //    {
+                    //        higherCount++;
+
+                    //    }
+                    //    else if (candle.opChange < 0)
+                    //    {
+                    //        lowerCount++;
+                    //    }
+                    //}
+                    //percentHigher = ((float)higherCount / (float)candles90.Count) * 100f;
+                    //percentLower = ((float)lowerCount / (float)candles90.Count) * 100f;
+                    //gains[gains.Length - 1].Add("PercentHigher", percentHigher);
+                    //gains[gains.Length - 1].Add("PercentLower", percentLower);
+                    _helper?.CalculatePoints(gains[gains.Length - 1], ref shortCnt, ref longCnt, .25m, true);
+                    gains[gains.Length - 1].Add("shortCnt", shortCnt);
+                    gains[gains.Length - 1].Add("longCnt", longCnt);
                     Array.Resize(ref gains, gains.Length + 1);
                 }
                 foreach (var item in LosersArray)
@@ -177,6 +310,46 @@ namespace TMD.Services.Service
                     string symbol = item.GetProperty("symbol").ToString();
                     var results = item;
                     losses[losses.Length - 1] = indicesCalculatorV2.CalculateV2(symbol, results);
+                    //higherCount = 0;
+                    //lowerCount = 0;
+                    shortCnt = 0;
+                    longCnt = 0;
+                    //var history = _schwabServices.GetPriceHistory(losses[losses.Length - 1]["Symbol"].ToString(), "month", "1", "daily", 1, startDate, endDate).Result;
+                    //string ser2 = string.Empty;
+                    //try
+                    //{
+                    //    ser2 = JsonSerializer.Serialize(history.GetProperty("candles"));
+                    //}
+                    //catch (Exception)
+                    //{
+                    //    continue;
+                    //}
+
+                    //var candles90 = JsonSerializer.Deserialize<List<TMDInvestment.Models.CandleItems>>(ser2).OrderByDescending(x => x.datetime).ToList();
+                    //var candleFirst = candles90.FirstOrDefault();
+                    //losses[losses.Length - 1].Add("lastopChange", candleFirst?.opChange ?? 0f);
+                    //losses[losses.Length - 1].Add("lastopChangePercent", candleFirst?.opPercent ?? 0f);
+                    //losses[losses.Length - 1].Add("lastOpen", candleFirst?.open ?? 0f);
+                    //losses[losses.Length - 1].Add("lastClose", candleFirst?.close ?? 0f);
+                    //foreach (var candle in candles90)
+                    //{
+                    //    if (candle.opChange > 0)
+                    //    {
+                    //        higherCount++;
+
+                    //    }
+                    //    else if (candle.opChange < 0)
+                    //    {
+                    //        lowerCount++;
+                    //    }
+                    //}
+                    //percentHigher = ((float)higherCount / (float)candles90.Count) * 100f;
+                    //percentLower = ((float)lowerCount / (float)candles90.Count) * 100f;
+                    //losses[losses.Length - 1].Add("PercentHigher", percentHigher);
+                    //losses[losses.Length - 1].Add("PercentLower", percentLower);
+                    _helper?.CalculatePoints(losses[losses.Length - 1], ref shortCnt, ref longCnt, .25m, false);
+                    losses[losses.Length - 1].Add("shortCnt", shortCnt);
+                    losses[losses.Length - 1].Add("longCnt", longCnt);
                     Array.Resize(ref losses, losses.Length + 1);
                 }
                 GainersandLosers.Gainers = gains;

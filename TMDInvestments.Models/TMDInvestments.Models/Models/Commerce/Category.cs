@@ -5,11 +5,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Bartergora2._0.Models
 {
-    [Table("Categories2", Schema = "tmd")]
+    [Table("Categories3", Schema = "tmd")]
     public sealed class Category
     {
         [Key]
-        public int? CategoryId { get; set; }
+        public long? CategoryId { get; set; }
         public string? CategoryName { get; set; }
         public string? CategoryDescription { get; set; }
         public byte[]? Image { get; set; }

@@ -226,7 +226,7 @@ namespace TMD.PricePrediction
                                 $"\"ticker\": \"{ticker}\"," +
                                 $"\"side\": \"{reversSide}\"," +
                                 //$"\"action\": \"buy\"," +
-                                $"\"count\": \"{-(position_fp)}\"," +
+                                $"\"count\": \"-{(position_fp.ToString("F2"))}\"," +
                                 $"\"price\": \"{sellPrice.ToString("F2")}\"," +
                                 $"\"reduce_only\": true," +
                                 $"\"time_in_force\": \"immediate_or_cancel\"," +
@@ -255,7 +255,7 @@ namespace TMD.PricePrediction
                                             $"\"ticker\": \"{ticker}\"," +
                                             $"\"side\": \"{reversSide}\"," +
                                             $"\"action\": \"buy\"," +
-                                            $"\"count\": \"{-(position_fp)}\"," +
+                                            $"\"count\": \"-{(position_fp.ToString("F2"))}\"," +
                                             $"\"price\": \"{sellPrice}\"," +
                                             $"\"time_in_force\": \"good_till_canceled\"," +
                                             $"\"self_trade_prevention_type\": \"taker_at_cross\"," +

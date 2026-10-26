@@ -3,21 +3,13 @@ using Coinbase.AdvancedTrade.Enums;
 using Coinbase.AdvancedTrade.Models;
 using Coinbase.AdvancedTrade.Models.Public;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Threading.Tasks;
 using TMD.Services.Service;
-using TMDInvestment.Helpers;
-using TMDInvestment.Models;
-using TMDInvestments.Context;
 using TMDInvestments.Models;
-using TMDInvestments.Models.Models.Polygon;
 using TMD.PricePrediction;
+using TMDInvestments.Context;
+using Microsoft.EntityFrameworkCore;
 
 
 namespace TMD.Services
@@ -27,12 +19,10 @@ namespace TMD.Services
         private readonly ILogger? _logger;
         private readonly CoinBaseSettings? _settings;
         private readonly IHttpClientFactory? _factory;
-        //private TaAPISettings? _taapiSettings;
-        //TmdContext? ctx = null;
         private CoinbaseClient _coinbaseClient = null!;
         private CoinbasePublicClient _coinbasePublicClient = null!;
-        //TaAPIService? taAPIService = null;
-        //Helper _helper = null;
+        Helper _helper = null;
+        TmdContext _ctx = null;
         public CoinBaseService() {
             _coinbasePublicClient = new CoinbasePublicClient();
         }
@@ -41,7 +31,17 @@ namespace TMD.Services
             _logger = logger;
             _settings = settings;
             _factory = factory;
-                        _coinbaseClient = new CoinbaseClient(settings.Name, settings.PrivateKey);
+            _coinbaseClient = new CoinbaseClient(settings.Name, settings.PrivateKey);
+            _coinbasePublicClient = new CoinbasePublicClient();
+        }
+        public CoinBaseService(ILogger logger, CoinBaseSettings settings, Helper helper, IHttpClientFactory? factory, IDbContextFactory<TmdContext> contextFactory)
+        {
+            _logger = logger;
+            _settings = settings;
+            _factory = factory;
+            _helper = helper;
+            _ctx = contextFactory.CreateDbContext();
+            _coinbaseClient = new CoinbaseClient(settings.Name, settings.PrivateKey);
             _coinbasePublicClient = new CoinbasePublicClient();
         }
         //public CoinBaseService(ILogger logger, CoinBaseSettings settings, IHttpClientFactory? factory, Helper helper)
@@ -168,6 +168,83 @@ namespace TMD.Services
             }
 
             return null;
+        }
+        public List<JsonObject> GetArbitrage()
+        {
+            DateTime startDate = DateTime.Now.AddHours(-45);
+            DateTime endDate = DateTime.Now;
+            //float percentHigher = 0f;
+            //float percentLower = 0f;
+            //int higherCount = 0;
+            //int lowerCount = 0;
+            int? shortCnt = 0;
+            int? longCnt = 0;
+
+            var cryptoList = _ctx.CryptoList.AsQueryable();
+            List<JsonObject>? movers = new List<JsonObject>();
+            JsonObject? mover = null;
+            //List<PublicCandle>? candles90 = null;
+            foreach (var crypto in cryptoList)
+            {
+                try
+                {
+                    mover = GetQuoteAsync(crypto.Coin).Result;
+                    System.Threading.Thread.Sleep(300);
+                }
+                catch (Exception ex)
+                {
+                    continue;
+                }
+
+                if (mover == null) { continue; }
+                //higherCount = 0;
+                //lowerCount = 0;
+                shortCnt = 0;
+                longCnt = 0;
+                //var results = await GetPriceHistory(mover["Symbol"].ToString(), "month", "1", "daily", 1, startDate, endDate);
+                //try
+                //{
+                //    candles90 = GetPriceHistoryAsync(crypto.Coin,
+                //        startDate, DateTime.Now,
+                //        Granularity.FIFTEEN_MINUTE).Result.OrderBy(x => x.StartDate).ToList();
+                //    //System.Threading.Thread.Sleep(300);
+                //}
+                //catch (Exception ex)
+                //{
+                //    continue;
+                //}
+
+                //var ser = JsonSerializer.Serialize(results.GetProperty("candles"));
+                //var candles90 = JsonSerializer.Deserialize<List<TMDInvestment.Models.CandleItems>>(ser).OrderByDescending(x => x.datetime).ToList();
+                //var candleFirst = candles90.LastOrDefault();
+                //mover.Add("lastopChange", candleFirst?.opChange ?? 0f);
+                //mover.Add("lastopChangePercent", candleFirst?.opPercent ?? 0f);
+                //mover.Add("lastOpen", candleFirst?.Open ?? 0f);
+                //mover.Add("lastClose", candleFirst?.Close ?? 0f);
+                //foreach (var candle in candles90)
+                //{
+                //    if (candle.opChange > 0)
+                //    {
+                //        higherCount++;
+
+                //    }
+                //    else if (candle.opChange < 0)
+                //    {
+                //        lowerCount++;
+                //    }
+                //}
+                //percentHigher = ((float)higherCount / (float)candles90.Count) * 100f;
+                //percentLower = ((float)lowerCount / (float)candles90.Count) * 100f;
+                //mover.Add("PercentHigher", percentHigher);
+                //mover.Add("PercentLower", percentLower);
+                _helper?.CalculatePoints(mover, ref shortCnt, ref longCnt, .08m, true);
+                mover.Add("shortCnt", shortCnt);
+                mover.Add("longCnt", longCnt);
+                movers.Add(mover);
+                System.Threading.Thread.Sleep(300);
+            }
+            movers = movers.OrderBy(x => decimal.Parse(x["lastopChangePercent"].ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture)).ToList();
+            return movers;
         }
     }
 }

@@ -54,7 +54,7 @@ namespace TMD.Services.Service
         {
             // Create an XmlReader for the local file path
             SyndicationFeed returnItem = null;
-            string filePath = "C:\\source\\Repo\\PricePrediction\\TMD.EquitiesPrediction\\TMD.EquitiesPrediction\\Stack Commerce Feed\\feed.xml";
+            string filePath = "C:\\source\\Repo\\PricePrediction\\TMD.EquitiesPrediction\\TMD.EquitiesPrediction\\Stack Commerce Feed\\feed.txt";
             using (XmlReader reader = XmlReader.Create(filePath))
             {
                 // Load the feed into a SyndicationFeed object

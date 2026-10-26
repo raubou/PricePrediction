@@ -1,15 +1,16 @@
 ﻿using Coinbase.AdvancedTrade.Enums;
 using Coinbase.AdvancedTrade.Models.Public;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Xml.Linq;
+using TMD.Database.Connect.Managers;
 using TMD.PricePrediction;
 using TMDInvestment.Models;
 using TMDInvestments.Context;
 using TMDInvestments.Models;
 using TMDInvestments.Services;
-using Microsoft.EntityFrameworkCore;
 
 namespace TMD.Services.Service
 {
@@ -26,6 +27,8 @@ namespace TMD.Services.Service
         MLPricePredict? mlPricePredict;
         TmdContext? _ctx;
         IDbContextFactory<TmdContext> _contextFactory;
+        //Manager? manager = null;
+
         public IndicesCalculatorV2(ILogger log, SchwabSettings settings, IHttpClientFactory factory, IDbContextFactory<TmdContext> contextFactory)
         {
             _log = log;
@@ -77,6 +80,7 @@ namespace TMD.Services.Service
         public JsonObject CalculateV2(string symbol, JsonElement quote)
         {
             _services = new SchwabServices(_log, _settings, _factory, _contextFactory);
+            //manager = new Manager("", _finnHub, _polygon, _factory, _log);
             mlPricePredict = new MLPricePredict();
             decimal currentPrice = 0m;
             decimal totalVolume = 0m;
@@ -130,7 +134,8 @@ namespace TMD.Services.Service
 
         //DateTime previewDate = DateTime.Now.AddDays(-30);
         GetPriceHistory:
-            DateTime previewDate = DateTime.Now.AddDays(days);
+            //DateTime previewDate = DateTime.Now.AddDays(days);
+            DateTime previewDate = DateTime.Now.AddMonths(-6);
             //    if (previewDate.DayOfWeek == DayOfWeek.Saturday)
             //        previewDate = previewDate.AddDays(-1).AddHours(-48);
             //    else if (previewDate.DayOfWeek == DayOfWeek.Sunday)
@@ -147,14 +152,15 @@ namespace TMD.Services.Service
             //Sleep for 50 milliseconds to avoid throttling
             //results = services.GetPriceHistory(symbol, "day", "2", "minute", 15,
             //        previewDate, DateTime.Now);
-            //    results = services.GetPriceHistory(symbol, "year", "1", "daily", 1,
-            //null, null);
+            //    results = _services.GetPriceHistory(symbol, "year", "1", "daily", 1,
+            //null, null).Result;
             try
             {
                 //results = services.GetPriceHistory(symbol, "day", "2", "minute", 15, null, null);
                 //results = services.GetPriceHistory(symbol, "day", "2", "minute", 15, previewDate, DateTime.Now);
                 //results = _services.GetPriceHistory(symbol, "day", "10", "minute", 15, previewDate, DateTime.Now).Result;
-                results = _services.GetPriceHistory(symbol, "day", "10", "minute", 15, null, null).Result;
+                //results = _services.GetPriceHistory(symbol, "day", "10", "minute", 15, null, null).Result;
+                results = _services.GetPriceHistory(symbol, "month", "1", "daily", 1, previewDate, DateTime.Now).Result;
                 ser = JsonSerializer.Serialize(results.GetProperty("candles"));
                 //if(ser.count() <= 0)
                 //{
@@ -174,7 +180,7 @@ namespace TMD.Services.Service
             }
 
             mlPricePredict.Calculate(candle90, ref output);
-            var test = candle90.OrderByDescending(x => x.datetime).ToList();
+            //var test = candle90.OrderByDescending(x => x.datetime).ToList();
             float? SMA12 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(12).Average(c => c.close) : 0f;
             float? SMA26 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(26)?.Average(c => c.close) : 0f;
             float? SMA20 = (candle90.Count > 0) ? candle90.OrderByDescending(x => x.datetime).Take(20)?.Average(c => c.close) : 0f;
@@ -295,7 +301,7 @@ namespace TMD.Services.Service
             
             try
             {
-                candle = candle90.LastOrDefault();
+                candle = candle90?.LastOrDefault();
                 vwap = (((candle?.close + candle?.high + candle?.low) / 3) * candle?.volume) / candle?.volume;
                 if (vwap is null)
                     vwap = 0f;
@@ -318,6 +324,74 @@ namespace TMD.Services.Service
             {
                 Helper.Log(_log, LogLevel.Error, $"ema9 to vwap diff calculation error {ex2.Message}");
             }
+
+            float? FirstotLastDiff = 0f;
+            float? FirstotMiddleDiff = 0f;
+            float? MiddleToLastDiff = 0f;
+            float? FirstotLastDiffPercent = 0f;
+            float? FirstotMiddleDiffPercent = 0f;
+            float? MiddleToLastDiffPercent = 0f;
+            float? firstPrice = 0f;
+            float? middlePrice = 0f;
+            float? lastPrice = 0f;
+            DateTime? firstDate = null;
+            DateTime? middleDate = null;
+            DateTime? lastDate = null;
+
+            var candleFirst = candle90.FirstOrDefault();
+            var candleLast = candle90.LastOrDefault();
+            int middleIndex = candle90.Count / 2;
+            CandleItems? candleMiddle = null;
+
+            try
+            {
+                candleMiddle = candle90.ElementAt(middleIndex);
+            }
+            catch (Exception ex)
+            {
+                Helper.Log(_log, LogLevel.Error, $"Error occurred while fetching middle candle {ex.Message}");
+            }
+            
+            try
+            {
+                //first = candleFirst?.close;
+                //last = candleLast?.close;
+                //middle = candleMiddle?.close;
+                firstPrice = candleFirst?.close;
+                middlePrice = candleMiddle?.close;
+                lastPrice = candleLast?.close;
+                FirstotLastDiff = (candleLast?.close - candleFirst?.close);
+                FirstotMiddleDiff = (candleMiddle?.close - candleFirst?.close);
+                MiddleToLastDiff = (candleLast?.close - candleMiddle?.close);
+                FirstotLastDiffPercent = (candleLast?.close - candleFirst?.close) / ((candleLast?.close + candleFirst?.close) / 2) * 100;
+                FirstotMiddleDiffPercent = (candleMiddle?.close - candleFirst?.close) / ((candleMiddle?.close + candleFirst?.close) / 2) * 100;
+                MiddleToLastDiffPercent = (candleLast?.close - candleMiddle?.close) / ((candleLast?.close + candleMiddle?.close) / 2) * 100;
+                firstDate = candleFirst?.time;
+                middleDate = candleMiddle?.time;
+                lastDate = candleLast?.time;
+            }
+            catch (Exception ex2)
+            {
+                Helper.Log(_log, LogLevel.Error, $"first to last diff calculation error {ex2.Message}");
+            }
+
+            int higherCount = 0;
+            int lowerCount = 0;
+            foreach (var candle1 in candle90)
+            {
+                if (candle1.opChange > 0)
+                {
+                    higherCount++;
+
+                }
+                else if (candle1.opChange < 0)
+                {
+                    lowerCount++;
+                }
+            }
+            float? percentHigher = ((float)higherCount / (float)candle90.Count) * 100f;
+            float? percentLower = ((float)lowerCount / (float)candle90.Count) * 100f;
+
             output.Add("Symbol", symbol);
             try
             {
@@ -396,6 +470,24 @@ namespace TMD.Services.Service
             output.Add("VWAP", (float.IsNaN(vwap.Value) ? "0" : vwap.Value.ToString("F8")));
             output.Add("volume", totalVolume);
             output.Add("EMA9TOVWAPDIFF", ema9ToVwapDiff);
+            output.Add("FirstToLastDiff", FirstotLastDiff);
+            output.Add("FirstToMiddleDiff", FirstotMiddleDiff);
+            output.Add("MiddleToLastDiff", MiddleToLastDiff);
+            output.Add("FirstotLastDiffPercent", FirstotLastDiffPercent);
+            output.Add("FirstotMiddleDiffPercent", FirstotMiddleDiffPercent);
+            output.Add("MiddleToLastDiffPercent", MiddleToLastDiffPercent);
+            output.Add("FirstPrice", firstPrice);
+            output.Add("MiddlePrice", middlePrice);
+            output.Add("LastPrice", lastPrice);
+            output.Add("FirstDate", firstDate);
+            output.Add("MiddleDate", middleDate);
+            output.Add("LastDate", lastDate);
+            output.Add("lastopChange", candleLast?.opChange ?? 0f);
+            output.Add("lastopChangePercent", candleLast?.opPercent ?? 0f);
+            output.Add("lastOpen", candleLast?.open ?? 0f);
+            output.Add("lastClose", candleLast?.close ?? 0f);
+            output.Add("PercentHigher", percentHigher);
+            output.Add("PercentLower", percentLower);
             return output;
         }
 
@@ -545,6 +637,10 @@ namespace TMD.Services.Service
 
             //VWAP calculation
             PublicCandle candle = null;
+            float percentHigher = 0f;
+            float percentLower = 0f;
+            int higherCount = 0;
+            int lowerCount = 0;
             decimal? vwap = 0m;
 
             try
@@ -558,6 +654,24 @@ namespace TMD.Services.Service
                 Helper.Log(_log, LogLevel.Error, $"vwap calculation error {ex.Message}");
             }
 
+            foreach (var candle1 in candle90)
+            {
+                if (candle1.opChange > 0)
+                {
+                    higherCount++;
+
+                }
+                else if (candle1.opChange < 0)
+                {
+                    lowerCount++;
+                }
+            }
+            percentHigher = 0f;
+            percentLower = 0f;
+            percentHigher = ((float)higherCount / (float)candle90.Count) * 100f;
+            percentLower = ((float)lowerCount / (float)candle90.Count) * 100f;
+
+            //helper?.CalculatePoints(mover, ref shortCnt, ref longCnt, .08m, true);
             decimal? ema9ToVwapDiff = 0m;
             try
             {
@@ -612,6 +726,14 @@ namespace TMD.Services.Service
             output.Add("VWAP", ((vwap != null && vwap.HasValue) ? vwap.Value.ToString("F8") : "0"));
             output.Add("volume", totalVolume);
             output.Add("EMA9TOVWAPDIFF", ema9ToVwapDiff);
+            output.Add("lastopChange", candle?.opChange ?? 0f);
+            output.Add("lastopChangePercent", candle?.opPercent ?? 0f);
+            output.Add("lastOpen", candle?.Open ?? 0f);
+            output.Add("lastClose", candle?.Close ?? 0f);
+            output.Add("PercentHigher", percentHigher);
+            output.Add("PercentLower", percentLower);
+            //output.Add("shortCnt", shortCnt);
+            //output.Add("longCnt", longCnt);
             return output;
         }
 

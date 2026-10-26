@@ -13,12 +13,13 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using TMDInvestments.PricePrediction.Helpers;
 using TMD.Database.Connect;
 using TMD.Database.Connect.Managers;
 //using TMDInvestment.APIProxy;
 using TMDInvestments.Models;
+using TMDInvestments.PricePrediction.Helpers;
 using WikiNews2._0.helpers;
+using static System.Net.Mime.MediaTypeNames;
 //using WikiNewz.DataAggregator;
 
 namespace TMD.Services
@@ -57,9 +58,9 @@ namespace TMD.Services
                 //_connect = new MongodbConnect(MongoDb.GetSection("connection").Value, "Advertising");
                 if (ImpactAPI != null)
                 {
-                    _baseUrl = ImpactAPI.GetSection("baseUrl").Value;
-                    _accountSID = ImpactAPI.GetSection("accountSID").Value;
-                    _token = ImpactAPI.GetSection("token").Value;
+                    _baseUrl = ImpactAPI.GetSection("ImpactBaseUrl").Value;
+                    _accountSID = ImpactAPI.GetSection("ImpactAccountSID").Value;
+                    _token = ImpactAPI.GetSection("ImpactToken").Value;
                     //conn = connection.GetSection("connection").Value;
                     //mongoConn = MongoDb.GetSection("connection").Value;
                 }
@@ -121,17 +122,24 @@ namespace TMD.Services
         //    timer = new Stopwatch();
         //}
 
-        public void GetProducts(List<Category> categories)
+        //public void GetProducts(List<Category> categories)
+        public ImpactModel? GetProducts()
         {
             //GetSettings(client);
+            
+            int? page = 1;
+            int? numPages = 0;
+            int? maxResult = 20000;
+            int? pagesize = maxResult/page;
             timer.Start();
             HttpRequestMessage request;
             RssModel rss;// = new RssModel() { title = "Impact", source = 4848};
-            _actionVerb = "Ads";
+            _actionVerb = "Catalogs/28060/Items?pagesize=" + pagesize + "&page=" + page;// "Ads";
             Dictionary<string, string> headers = new Dictionary<string, string>();
             ImpactAuthenicator.base64 = ImpactAuthenicator.GenerateSignature(_accountSID, _token);
             string url = _baseUrl + "Mediapartners/" + _accountSID + "/" + _actionVerb;
-            headers.Add("Authorization", "Bearer " + ImpactAuthenicator.base64);
+            headers.Add("Authorization", "Basic " + ImpactAuthenicator.base64);
+            headers.Add("Accept", "application/json");
             //    HttpRequestMessage request = new HttpRequestMessage(method, _baseUrl + url) { Version = new Version(2, 0) };
             //    request.Headers.Add("Authorization", "Basic " + ImpactAuthenicator.base64);
             //     request.Content = new StringContent(jsonString, Encoding.UTF8, "application/json");
@@ -139,22 +147,38 @@ namespace TMD.Services
             var results = APIProxy<ImpactModel>.Send(request, "application/json", ref error, _client);
             if (Errors.HasErrors(error))
             {
-                return;
+                return null;
             }
-            rss = LoadProduct(categories, results, _log);            
+            numPages = Convert.ToInt32(results.numpages);
+            for(int I = 2; I <= numPages; I++)
+            {
+                page = I;
+                pagesize = maxResult/page;
+                _actionVerb = "Catalogs/28060/Items?pagesize=" + pagesize + "&page=" + page;// "Ads";
+                url = _baseUrl + "Mediapartners/" + _accountSID + "/" + _actionVerb;
+                request = AuthenicationHelper.GetAuthenicatedRequest(HttpMethod.Get, url, headers, "application/json", "");
+                var result = APIProxy<ImpactModel>.Send(request, "application/json", ref error, _client);
+                if (Errors.HasErrors(error))
+                {
+                    continue;
+                }
+                results.ads.AddRange(result.ads);
+            }
+            //rss = LoadProduct(categories, results, _log);            
             //rss.items.ToList().Shuffle<RssModelItems>();
             //_connect.DeleteBySource("Impact");
             //Console.WriteLine("Total Impact verified to save: " + rss.items.Count());
-            _log.LogInformation("Total Impact verified to save: " + rss.items.Count());
+            //_log.LogInformation("Total Impact verified to save: " + rss.items.Count());
             //_connect.Save(rss);
             //manager.DeleteAdvertisingBySource(null, "Impact");
             //manager.EditAdvertising(rss);
-            manager.AddBulk("[queue].[Advertising]", rss.items);
-            Thread.Sleep(1000);
-            timer.Stop();
+            //manager.AddBulk("[queue].[Advertising]", rss.items);
+            //Thread.Sleep(1000);
+            //timer.Stop();
             TimeSpan ts = timer.Elapsed;
             //Console.WriteLine(nameof(ImpactService) + " Processing Time - " + ts.Hours + ":" + ts.Minutes + ":" + ts.Seconds + ":" + ts.Milliseconds + ":");
             _log.LogInformation(nameof(ImpactService) + " Processing Time - " + ts.Hours + ":" + ts.Minutes + ":" + ts.Seconds + ":" + ts.Milliseconds + ":");
+            return results;
         }
 
         private RssModel LoadProduct(List<Category> categories, ImpactModel products, ILogger _log)
