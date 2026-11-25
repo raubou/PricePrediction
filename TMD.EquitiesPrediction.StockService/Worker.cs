@@ -34,11 +34,14 @@ namespace TMD.EquitiesPrediction.StockService
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            ///Test
+            bool isMarketOpen = false;
+            ///Test
             Helper.Log(_logger, LogLevel.Information, "Technical Analysis! Version " + GetAssemblyVersion());
             while (!stoppingToken.IsCancellationRequested)
             {
-                decimal totalAvailiableforLongTradeSchwab = 500m;
-                decimal totalAvailiableforLongTradeETrade = 500m;
+                decimal totalAvailiableforLongTradeSchwab = 00m;
+                decimal totalAvailiableforLongTradeETrade = 00m;
                 List<BuySellCommodity>? BuySellStockList = new List<BuySellCommodity>();
                 helper = new Helper(_logger, _schwabSettings, _eTradeSettings, _yfapiSettings, _contextFactory);
                 exec1 = new ExecStockPricePredictionSchwab(_logger, _eTradeSettings, _schwabSettings, _httpClientFactory, _contextFactory);
@@ -47,33 +50,46 @@ namespace TMD.EquitiesPrediction.StockService
                 {
                     _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
                 }
-                //Test
-                BuySellStockList = helper.GetQuoteList2();
-                exec3.Exec(totalAvailiableforLongTradeETrade, stoppingToken, ref BuySellStockList);
-                helper.CheckETradeOrderStatus(ref totalAvailiableforLongTradeETrade);
-                helper.UnloadAgingStocks();                
-                //Test
-                if (helper.IsMarketOpenAndPeakForTrading())
+                ///Test
+                //BuySellStockList = helper.GetQuoteList2();
+                //exec3.Exec(totalAvailiableforLongTradeETrade, stoppingToken, ref BuySellStockList);
+                //helper.CheckETradeOrderStatus(ref totalAvailiableforLongTradeETrade);
+                //helper.UnloadAgingStocks();                
+                ///Test
+                //if (helper.IsMarketOpenAndPeakForTrading())
+                //{
+                //    Helper.Log(_logger, LogLevel.Information, "Market Open And Peak For Trading.");                    
+                //    //helper.CheckSchwabOrderStatus(ref totalAvailiableforLongTradeSchwab);
+                //    helper.CheckETradeOrderStatus(ref totalAvailiableforLongTradeETrade);
+                //    helper.UnloadAgingStocks();
+                //    //totalAvailiableforLongTradeSchwab = 100;
+                //    //totalAvailiableforLongTradeETrade = 100;
+                //    //if (totalAvailiableforLongTradeSchwab > 5 || totalAvailiableforLongTradeETrade > 5)
+                //    //    BuySellStockList = helper.GetQuoteList2();
+                //    //exec1.Exec(totalAvailiableforLongTradeSchwab, stoppingToken, ref BuySellStockList);
+                //    //exec3.Exec(totalAvailiableforLongTradeETrade, stoppingToken, ref BuySellStockList);
+                //}
+                //else if(helper.IsMarketNearClosing())
+                //{
+                //    exec3.Exec(totalAvailiableforLongTradeETrade, stoppingToken, ref BuySellStockList);
+                //    helper.CheckETradeOrderStatus(ref totalAvailiableforLongTradeETrade);
+                //    Helper.Log(_logger, LogLevel.Information, "Market is near closing time.");
+                //    if (totalAvailiableforLongTradeSchwab > 5 || totalAvailiableforLongTradeETrade > 5)
+                //        BuySellStockList = helper.GetQuoteList2();
+                //    //exec1.Exec(totalAvailiableforLongTradeSchwab, stoppingToken, ref BuySellStockList);                    
+                //}
+                if(helper.IsNotHolidayorWeekend() || isMarketOpen)
                 {
-                    Helper.Log(_logger, LogLevel.Information, "Market Open And Peak For Trading.");                    
-                    //helper.CheckSchwabOrderStatus(ref totalAvailiableforLongTradeSchwab);
                     helper.CheckETradeOrderStatus(ref totalAvailiableforLongTradeETrade);
-                    helper.UnloadAgingStocks();
-                    //totalAvailiableforLongTradeSchwab = 100;
-                    //totalAvailiableforLongTradeETrade = 100;
-                    //if (totalAvailiableforLongTradeSchwab > 5 || totalAvailiableforLongTradeETrade > 5)
-                    //    BuySellStockList = helper.GetQuoteList2();
-                    //exec1.Exec(totalAvailiableforLongTradeSchwab, stoppingToken, ref BuySellStockList);
-                    //exec3.Exec(totalAvailiableforLongTradeETrade, stoppingToken, ref BuySellStockList);
-                }
-                else if(helper.IsMarketNearClosing())
-                {
-                    exec3.Exec(totalAvailiableforLongTradeETrade, stoppingToken, ref BuySellStockList);
-                    helper.CheckETradeOrderStatus(ref totalAvailiableforLongTradeETrade);
-                    Helper.Log(_logger, LogLevel.Information, "Market is near closing time.");
+                    helper.CheckSchwabOrderStatus(ref totalAvailiableforLongTradeSchwab);
                     if (totalAvailiableforLongTradeSchwab > 5 || totalAvailiableforLongTradeETrade > 5)
                         BuySellStockList = helper.GetQuoteList2();
-                    //exec1.Exec(totalAvailiableforLongTradeSchwab, stoppingToken, ref BuySellStockList);                    
+                    exec3.Exec(totalAvailiableforLongTradeETrade, stoppingToken, ref BuySellStockList);
+                    exec1.Exec(totalAvailiableforLongTradeSchwab, stoppingToken, ref BuySellStockList);
+                }
+                else if (helper.IsMarketNearClosing())
+                {
+                    helper.UnloadAgingStocks();
                 }
                 else
                 {

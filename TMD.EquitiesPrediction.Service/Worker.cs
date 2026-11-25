@@ -49,7 +49,7 @@ namespace TMD.EquitiesPrediction.Service
             //Task.Run(() => task1.Start());
             _helper = new Helper(_logger, null, null, null, _contextFactory);
             execKalshiPricePrediction = new ExecKalshiPricePrediction(_logger, _coinBaseSettings, _httpClientFactory, _helper, _contextFactory);
-            KalshiBalanceAndBuy(stoppingToken);
+            //KalshiBalanceAndBuy(stoppingToken);
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -68,10 +68,10 @@ namespace TMD.EquitiesPrediction.Service
                     //_helper = null;
                     //}
                     await Task.Delay(250, stoppingToken);
-                    if (task1.Status == TaskStatus.RanToCompletion || task1.Status == TaskStatus.Faulted || task1.Status == TaskStatus.Canceled)
-                    {
-                        KalshiBalanceAndBuy(stoppingToken);
-                    }
+                    //if (task1.Status == TaskStatus.RanToCompletion || task1.Status == TaskStatus.Faulted || task1.Status == TaskStatus.Canceled)
+                    //{
+                    //    KalshiBalanceAndBuy(stoppingToken);
+                    //}
                 }
                 catch (Exception ex)
                 {

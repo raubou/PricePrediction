@@ -9,6 +9,7 @@ using System.Text.Json.Nodes;
 using TMD.Services;
 using TMDInvestments.Context;
 using TMDInvestments.Models;
+using TorchSharp.Modules;
 
 namespace TMD.PricePrediction
 {
@@ -22,24 +23,25 @@ namespace TMD.PricePrediction
         //TaAPIService? taapiService = null;
         TmdContext? _ctx = null;
         List<BuySellCommodity> BuySellCryptoList;
-        //RulesEngine? settings = null;
+        RulesEngine? settings = null;
         IQueryable<CryptoTracker2> cryptoTracker = null;
         List<PublicProduct> products = null;
         Helper? _helper = null;
         List<Account>? Accounts = null;
         static readonly System.Threading.Lock _transactLock = new();
-        public CryptoPriceCheck(ILogger logger, CoinBaseSettings settings, IHttpClientFactory httpClientFactory, IDbContextFactory<TmdContext> contextFactory)
+        public CryptoPriceCheck(ILogger logger, CoinBaseSettings coinBaseSettings, IHttpClientFactory httpClientFactory, IDbContextFactory<TmdContext> contextFactory)
         {
 
             _logger = logger;
-            _settings = settings;
+            
             _httpClientFactory = httpClientFactory;
             //_products = products;
             _helper = new Helper(_logger, null, null, null, contextFactory);
-            coinBaseService = new CoinBaseService(logger, settings, _httpClientFactory/*, _helper*/);
+            coinBaseService = new CoinBaseService(logger, coinBaseSettings, _httpClientFactory/*, _helper*/);
             //Accounts = coinBaseService?.GetAccounts();
             var ctx = contextFactory.CreateDbContext();
             _ctx = ctx;
+            settings = _ctx?.RulesEngine?.FirstOrDefault();
         }
 
         public void Exec(CancellationToken token)
@@ -360,9 +362,9 @@ namespace TMD.PricePrediction
                     Helper.Log(_logger, LogLevel.Error, $"Crypto check error. Failed to get {coin.Coin}. Trying again.");
                     try
                     {
-                        //Try again
-                        System.Threading.Thread.Sleep(1000);
+                        //Try again                        
                         results = coinBaseService.GetQuoteAsync(coin.Coin).Result;
+                        System.Threading.Thread.Sleep(300);
                     }
                     catch (Exception ex2)
                     {
@@ -384,8 +386,8 @@ namespace TMD.PricePrediction
         void AnalyiseOwnedCrypto(CryptoTracker2 crypto, JsonObject? results, List<PublicProduct> products)
         {
             //calculate percent difference
-            decimal percentDiffPricePurchased = 0m;
-            decimal percentDiffLastPrice = 0m;
+            decimal percentChangePricePurchased = 0m;
+            decimal percentChangeLastPrice = 0m;
             decimal lastPrice = (crypto.LastPrice ?? 0);
             decimal pricePurchased = (crypto.PricePurchased ?? 0);
             decimal currentPrice = Convert.ToDecimal(results["lastPrice"].ToString());
@@ -393,15 +395,14 @@ namespace TMD.PricePrediction
             var product = products.Where(x => x.DisplayName == crypto.Coin).FirstOrDefault();
             var account = Accounts?.Where(x => x.Currency == crypto.Coin.Split(new char[] { '-' })[0] && Convert.ToDecimal(x.AvailableBalance.Value) > 0m)?.FirstOrDefault();
             var currentBalance = Math.Round(Convert.ToDecimal(account?.AvailableBalance?.Value) * Convert.ToDecimal(product?.Price), 5);
-            //var currentBalance = Math.Round(Convert.ToDecimal(account?.AvailableBalance?.Value), 5); //* Convert.ToDecimal(product?.Price), 5);
-            //if (crypto.Coin == "POPCAT-USD")
-            //{
-            //    //bobo
-            //}
+
             try
             {
-                percentDiffPricePurchased = Math.Abs(((pricePurchased - currentPrice) / ((pricePurchased + currentPrice) / 2)) * 100);
-                percentDiffLastPrice = Math.Abs(((lastPrice - currentPrice) / ((lastPrice + currentPrice) / 2)) * 100);
+                //percentDiffPricePurchased = Math.Abs(((pricePurchased - currentPrice) / ((pricePurchased + currentPrice) / 2)) * 100);
+                //percentDiffLastPrice = Math.Abs(((lastPrice - currentPrice) / ((lastPrice + currentPrice) / 2)) * 100);
+                percentChangePricePurchased = Math.Abs(((currentPrice - pricePurchased) / pricePurchased) * 100);
+                percentChangeLastPrice = Math.Abs(((currentPrice - lastPrice) / lastPrice) * 100);
+                //percentChangeLastPrice = (lastPrice - currentPrice) / lastPrice * 100;
             }
             catch (Exception ex)
             {
@@ -468,31 +469,58 @@ namespace TMD.PricePrediction
             //}
             //else
             //if (currentPrice < lastPrice && percentDiffLastPrice >= settings.StopLossPercentLastPriceCrypto && percentDiffPricePurchased >= 3.5m)
-            if ((currentPrice < lastPrice) &&
-            (pricePurchased < currentPrice) &&
-            (percentDiffPricePurchased >= 4.5m))
-            //if (currentPrice < lastPrice && currentBalance > (crypto.Amount * 1.08m))
-            {
-                //if (percentDiffLastPrice > settings.StopLossPercentLastPriceCrypto)
-                //{
-                //sell
-                Helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) has fallen by more then about {Math.Round(percentDiffLastPrice, 5)}% since last Price. Selling.");
-                UpdateLastPrice(currentPrice, currentBalance, ref crypto);
-                _helper.BuySellCrypto(crypto, results, TradeDirection.SELL, currentBalance, coinBaseService, products/*, false, false*/);
-                //}
-                //else
-                //{
-                //Update Price
-                //_helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) still within about {Math.Round(percentDiffLastPrice, 5)}% tolerance since last Price. Updating last Price.");
-                //UpdateLastPrice(currentPrice, balance, ref crypto);
-                //}
-            }
-            else //if (currentPrice >= lastPrice)
+            //if (((currentPrice < lastPrice) && (percentChangeLastPrice >= settings.StopLossPercentLastPriceCrypto))
+            //    ||
+            //    ((currentPrice < pricePurchased) && (percentChangePricePurchased >= settings.StopLossPercentPurchasedCrypto))
+            //    )
+            //{
+
+            //    //sell
+            //    Helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) has fallen by more then about {Math.Round(percentChangeLastPrice, 5)}% since last Price. Selling.");
+            //    UpdateLastPrice(currentPrice, currentBalance, ref crypto);
+            //    _helper.BuySellCrypto(crypto, results, TradeDirection.SELL, currentBalance, coinBaseService, products/*, false, false*/);
+
+            //}
+            //else //if (currentPrice >= lastPrice)
+            //{
+            //    //update price
+            //    Helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) still within about {Math.Round(percentChangeLastPrice, 5)}% tolerance since last price. Updating last Price.");
+            //    UpdateLastPrice(currentPrice, currentBalance, ref crypto);
+            //}
+            if (currentPrice > pricePurchased)
             {
                 //update price
-                Helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) still within about {Math.Round(percentDiffLastPrice, 5)}% tolerance since last price. Updating last Price.");
+                Helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) still within about {Math.Round(percentChangeLastPrice, 5)}% tolerance since price purchased. Updating last Price.");
+                UpdateLastPrice(currentPrice, currentBalance, ref crypto);
+            } else
+            if (currentPrice > lastPrice)
+            {
+                //update price
+                Helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) still within about {Math.Round(percentChangeLastPrice, 5)}% tolerance since last price. Updating last Price.");
+                UpdateLastPrice(currentPrice, currentBalance, ref crypto);
+            } else
+            if (currentPrice < pricePurchased && percentChangePricePurchased > settings.StopLossPercentPurchasedCrypto)
+            {
+                //sell
+                Helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) has fallen by more then about {Math.Round(percentChangePricePurchased, 5)}% since price purchased. Selling.");
+                UpdateLastPrice(currentPrice, currentBalance, ref crypto);
+                _helper.BuySellCrypto(crypto, results, TradeDirection.SELL, currentBalance, coinBaseService, products);
+            }
+            else
+            if (currentPrice < lastPrice && percentChangeLastPrice > settings.StopLossPercentLastPriceCrypto)
+            {
+                //sell
+                Helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) has fallen by more then about {Math.Round(percentChangeLastPrice, 5)}% since last Price Change. Selling.");
+                UpdateLastPrice(currentPrice, currentBalance, ref crypto);
+                _helper.BuySellCrypto(crypto, results, TradeDirection.SELL, currentBalance, coinBaseService, products);
+            }
+            else
+            {
+                Helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) is within limits {Math.Round(percentChangeLastPrice, 5)}%");
                 UpdateLastPrice(currentPrice, currentBalance, ref crypto);
             }
+
+
             System.Threading.Thread.Sleep(250);
         }
         bool UpdateLastPrice(decimal lastPrice, decimal Balance, ref CryptoTracker2 cryptoTracker)

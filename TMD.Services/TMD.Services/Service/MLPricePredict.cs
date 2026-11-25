@@ -488,10 +488,10 @@ namespace TMD.Services.Service
                 //.AppendCacheCheckpoint(mlContext)
                 .Append(mlContext.Transforms.Text.FeaturizeText(outputColumnName: "SubCategoryDefinition", inputColumnName: nameof(ProductInput.SubCategoryDefinition)))
                 .Append(mlContext.Transforms.Text.FeaturizeText(outputColumnName: "SubCategoryOther", inputColumnName: nameof(ProductInput.SubCategoryOther)))
-                .Append(mlContext.Transforms.Text.FeaturizeText(outputColumnName: "CategoryName", inputColumnName: nameof(ProductInput.CategoryName)))
+                //.Append(mlContext.Transforms.Text.FeaturizeText(outputColumnName: "CategoryName", inputColumnName: nameof(ProductInput.CategoryName)))
                 .Append(mlContext.Transforms.Text.FeaturizeText(outputColumnName: "CategoryDescription", inputColumnName: nameof(ProductInput.CategoryDescription)))
                 // Step C: Concatenate multiple numeric token vectors into a unified column named "Features"
-                .Append(mlContext.Transforms.Concatenate("Features", "SubCategoryName", "SubCategoryDefinition", "SubCategoryOther", "CategoryName", "CategoryDescription"))
+                .Append(mlContext.Transforms.Concatenate("Features", "SubCategoryName", "SubCategoryDefinition", "SubCategoryOther", /*"CategoryName",*/ "CategoryDescription"))
                 .Append(mlContext.MulticlassClassification.Trainers.SdcaMaximumEntropy("Label", "Features"))
                 //.Append(mlContext.MulticlassClassification.Trainers.TextClassification(
                 //labelColumnName: "Label",

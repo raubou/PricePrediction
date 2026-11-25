@@ -21,8 +21,8 @@ using static Tensorboard.ApiDef.Types;
 namespace TMD.EquitiesPrediction;
 class PricePrediction //: BackgroundService
 {
-    static ExecStockPricePredictionSchwab? exec1 = null;
-    static ExecStockPricePredictionETrade? exec3 = null;
+    //static ExecStockPricePredictionSchwab? exec1 = null;
+    //static ExecStockPricePredictionETrade? exec3 = null;
     static ExecCryptoPricePrediction? exec2 = null;
     static ExecKalshiPricePrediction? exec4 = null;
     //static KalshiBalanceAndBuy kalshiBalanceAndBuy = null;
@@ -119,8 +119,8 @@ class PricePrediction //: BackgroundService
         //helper = new Helper(logger, SchwabSettings, ETadeSettings, yfapiSettings, ctxFactory);
 
         List<BuySellCommodity>? BuySellStockList = new List<BuySellCommodity>();
-        exec1 = new ExecStockPricePredictionSchwab(logger, ETadeSettings, SchwabSettings, httpClientFactory, ctxFactory);
-        exec3 = new ExecStockPricePredictionETrade(logger, ETadeSettings, SchwabSettings, httpClientFactory, ctxFactory);
+        //exec1 = new ExecStockPricePredictionSchwab(logger, ETadeSettings, SchwabSettings, httpClientFactory, ctxFactory);
+        //exec3 = new ExecStockPricePredictionETrade(logger, ETadeSettings, SchwabSettings, httpClientFactory, ctxFactory);
         exec2 = new ExecCryptoPricePrediction(logger, CoinBaseSettings, httpClientFactory, ctxFactory);
         //exec4 = new ExecKalshiPricePrediction(logger, CoinBaseSettings, httpClientFactory, helper/*, serviceProvider*/);
         decimal totalAvailiableforLongTradeSchwab = 0m;
@@ -135,7 +135,7 @@ class PricePrediction //: BackgroundService
 
         //task1 = new Task(() =>
         //{
-            
+
         //    cryptoPriceCheck.Exec(token);
         //    //cryptoPriceCheck = null;
         //}, token, TaskCreationOptions.LongRunning);
@@ -277,9 +277,9 @@ class PricePrediction //: BackgroundService
         cryptoPriceCheck = null;
         ctx?.Dispose();
         ctx = null;
-        exec1 = null;
+        //exec1 = null;
         exec2 = null;
-        exec3 = null;
+        //exec3 = null;
         exec4 = null;
         helper = null;
     }

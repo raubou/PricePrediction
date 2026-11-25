@@ -1,9 +1,12 @@
-﻿using Coinbase.AdvancedTrade.Models.Public;
+﻿using Coinbase.AdvancedTrade.Models;
+using Coinbase.AdvancedTrade.Models.Public;
+using GraphQL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
+using System.Collections;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -15,6 +18,7 @@ using TMDInvestment.Models;
 using TMDInvestments.Context;
 using TMDInvestments.Models;
 using TMDInvestments.Services;
+using static MongoDB.Driver.WriteConcern;
 
 namespace TMD.PricePrediction
 {
@@ -651,40 +655,53 @@ namespace TMD.PricePrediction
 
         public List<BuySellCommodity> GetQuoteList2() {
             var BuySellStockList = new List<BuySellCommodity>();
+
+            DateTime? minDate = DateTime.MinValue;
+            var StockHold24Hr = _ctx?.StockTracker2?.AsNoTracking()?.AsEnumerable()?.Where(x => x.PriceSold != null && x.DateSold != null && Math.Abs((x.DateSold - easternTime).Value.TotalHours) < 24).Select(y => new { Symbol = y.Symbol, DateSold = y.DateSold, DateUpdated = y.DateUpdated }).ToList();
+
             var movers = schwabServices.GetArbitrage().Result;
             var GainersandLosers = _traderGoService.GetGainersandLosers(true);
             foreach (var gainer in GainersandLosers.Gainers)
             {
-                if (gainer == null || string.IsNullOrEmpty(gainer["Symbol"].ToString()))
+                if (gainer == null || string.IsNullOrEmpty(gainer?["Symbol"]?.ToString()))
                     continue;
                 if ((bool)gainer?["Exchange"]?.ToString()?.ToLower()?.Contains("otc"))
                     continue;
-                //string symbol = gainer["Symbol"].ToString().Trim();
-                //var stockTrackerInd = _ctx?.StockTracker2?.AsNoTracking()?.Where(x => x.Symbol == symbol && x.PriceSold == null && x.DateSold == null && x.Status == "Filled")?.FirstOrDefault();
-                //if (stockTrackerInd == null)
-                //if (Convert.ToInt32(gainer["shortCnt"].ToString()) >= 3)
-                //{
+                if (StockHold24Hr.Any(y => y.Symbol == gainer?["Symbol"]?.ToString()))
+                {
+                    //if stock was cancelled, check updated date
+                    try
+                    {
+                        Log(_logger, LogLevel.Warning, $"Stock {gainer?["Symbol"]?.ToString()} - ({gainer?["Name"]?.ToString()}) purchased {Math.Round(Math.Abs((StockHold24Hr.Where(y => y.Symbol == gainer?["Symbol"]?.ToString()).Select(z => z.DateSold).FirstOrDefault() - easternTime).Value.TotalHours), 2)} hours ago was purchased less than 24h ago, skipping");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(_logger, LogLevel.Warning, $"Stock {gainer?["Symbol"]?.ToString()} - ({gainer?["Name"]?.ToString()}) cancelled {Math.Round(Math.Abs((StockHold24Hr.Where(y => y.Symbol == gainer?["Symbol"]?.ToString()).Select(z => z.DateUpdated).FirstOrDefault() - easternTime).Value.TotalHours), 2)} hours ago was purchased less than 24h ago, skipping");
+                    }
+                    continue;
+                }
                 AddToList(gainer, ref BuySellStockList);
-                //if (buySellCommodity != null)
-                //{
-                //    BuySellStockList.Add(buySellCommodity);
-                //}
-                //}
             }
             foreach (var loser in GainersandLosers.Losers)
             {
-                if (loser == null || string.IsNullOrEmpty(loser["Symbol"].ToString()))
+                if (loser == null || string.IsNullOrEmpty(loser?["Symbol"]?.ToString()))
                     continue;
                 if ((bool)loser?["Exchange"]?.ToString()?.ToLower()?.Contains("otc"))
                     continue;
-                //string symbol = loser["Symbol"].ToString().Trim();
-                //var stockTrackerInd = _ctx?.StockTracker2?.AsNoTracking()?.Where(x => x.Symbol == symbol && x.PriceSold == null && x.DateSold == null && x.Status == "Filled")?.FirstOrDefault();
-                //if (stockTrackerInd == null)
+                if (StockHold24Hr.Any(y => y.Symbol == loser?["Symbol"]?.ToString()))
+                {
+                    //if stock was cancelled, check updated date
+                    try
+                    {
+                        Log(_logger, LogLevel.Warning, $"Stock {loser?["Symbol"]?.ToString()} - ({loser?["Name"]?.ToString()}) purchased {Math.Round(Math.Abs((StockHold24Hr.Where(y => y.Symbol == loser?["Symbol"]?.ToString()).Select(z => z.DateSold).FirstOrDefault() - easternTime).Value.TotalHours), 2)} hours ago was purchased less than 24h ago, skipping");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(_logger, LogLevel.Warning, $"Stock {loser?["Symbol"]?.ToString()} - ({loser?["Name"]?.ToString()}) cancelled {Math.Round(Math.Abs((StockHold24Hr.Where(y => y.Symbol == loser?["Symbol"]?.ToString()).Select(z => z.DateUpdated).FirstOrDefault() - easternTime).Value.TotalHours), 2)} hours ago was purchased less than 24h ago, skipping");
+                    }
+                    continue;
+                }
                 AddToList(loser, ref BuySellStockList);
-                //if (buySellCommodity != null)
-                //{
-                //    BuySellStockList.Add(buySellCommodity);
-                //}
             }
             foreach (var mover in movers)
             {
@@ -693,39 +710,39 @@ namespace TMD.PricePrediction
                 if ((bool)mover?["Exchange"]?.ToString()?.ToLower()?.Contains("otc"))
                     continue;
                 string symbol = mover["Symbol"].ToString().Trim();
-                if(symbol == "SMCI")
+                if (StockHold24Hr.Any(y => y.Symbol == mover?["Symbol"]?.ToString()))
                 {
-                    var test = 1;
+                    //if stock was cancelled, check updated date
+                    try
+                    {
+                        Log(_logger, LogLevel.Warning, $"Stock {mover?["Symbol"]?.ToString()} - ({mover?["Name"]?.ToString()}) purchased {Math.Round(Math.Abs((StockHold24Hr.Where(y => y.Symbol == mover?["Symbol"]?.ToString()).Select(z => z.DateSold).FirstOrDefault() - easternTime).Value.TotalHours), 2)} hours ago was purchased less than 24h ago, skipping");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(_logger, LogLevel.Warning, $"Stock {mover?["Symbol"]?.ToString()} - ({mover?["Name"]?.ToString()}) cancelled {Math.Round(Math.Abs((StockHold24Hr.Where(y => y.Symbol == mover?["Symbol"]?.ToString()).Select(z => z.DateUpdated).FirstOrDefault() - easternTime).Value.TotalHours), 2)} hours ago was purchased less than 24h ago, skipping");
+                    }
+                    continue;
                 }
-                //var stockTrackerInd = _ctx?.StockTracker2?.AsNoTracking()?.Where(x => x.Symbol == symbol && x.PriceSold == null && x.DateSold == null && x.Status == "Filled")?.FirstOrDefault();
-                //if (Convert.ToInt32(mover["longCnt"].ToString()) >= 3 && Convert.ToDecimal(mover["lastopChange"].ToString()) < 0m)
-                //{
-                //    BuySellStockList.Add(new BuySellCommodity(Convert.ToInt32(mover["longCnt"].ToString()), TradeDirection.BUY, mover));
-                //}
-                //else if (Convert.ToInt32(mover["shortCnt"].ToString()) >= 3 && Convert.ToDecimal(mover["lastopChange"].ToString()) > 0m)
-                //{
-                //    BuySellStockList.Add(new BuySellCommodity(Convert.ToInt32(mover["shortCnt"].ToString()), TradeDirection.SELL_SHORT, mover));
-                //}
                 AddToList(mover, ref BuySellStockList);
-                //if (buySellCommodity != null)
-                //{
-                //    BuySellStockList.Add(buySellCommodity);
-                //}
             }
             return BuySellStockList;
         }
         private void AddToList(JsonObject? results, ref List<BuySellCommodity> buySellStockList)
-        { 
-            if(buySellStockList.Any(x => x.Results["Symbol"].ToString() == results["Symbol"].ToString()))
+        {
+            if (buySellStockList.Any(x => x.Results["Symbol"].ToString() == results["Symbol"].ToString()))
             {
                 return;
             }
-            if (Convert.ToInt32(results["shortCnt"].ToString()) >= 6 /*&& Convert.ToDecimal(results["lastopChange"].ToString()) > 0m*/) {
-                buySellStockList.Add(new BuySellCommodity(Convert.ToInt32(results["shortCnt"].ToString()), TradeDirection.SELL_SHORT, results));
-            }
-            else if (Convert.ToInt32(results["longCnt"].ToString()) >= 6 /*&& Convert.ToDecimal(results["lastopChange"].ToString()) < 0m*/)
+            if (Convert.ToDecimal(results?["lastPrice"].ToString()) < 5m)
             {
-                buySellStockList.Add(new BuySellCommodity(Convert.ToInt32(results["longCnt"].ToString()), TradeDirection.BUY, results));
+                return;
+            }
+            //if (Convert.ToInt32(results["shortCnt"].ToString()) >= 6) {
+            //    buySellStockList.Add(new BuySellCommodity(Convert.ToInt32(results["shortCnt"].ToString()), TradeDirection.SELL_SHORT, results));
+            //}
+            else if (Convert.ToInt32(results?["longCnt"].ToString()) >= 6)
+            {
+                buySellStockList.Add(new BuySellCommodity(Convert.ToInt32(results?["longCnt"].ToString()), TradeDirection.BUY, results));
             }
         }
         public bool CheckMarketIndexes(dynamic index)
@@ -754,19 +771,35 @@ namespace TMD.PricePrediction
         }
         public decimal CalculatePoints(JsonObject? results, ref int? shortCnt, ref int? longCnt, decimal? emaToVwapDiff, bool useRSI) {
             int? count = (useRSI) ? 2 : 3;
+            decimal lastChange = 0m;    
             //if (Convert.ToDecimal(results["VWAP"].ToString()) < Convert.ToDecimal(results["EMA9"].ToString()) && decimal.Parse(results["EMA9TOVWAPDIFF"].ToString(), System.Globalization.NumberStyles.Float) < emaToVwapDiff)
             //{ longCnt = longCnt + count; }
 
             //if (Convert.ToDecimal(results["VWAP"].ToString()) > Convert.ToDecimal(results["EMA9"].ToString()) && decimal.Parse(results["EMA9TOVWAPDIFF"].ToString(), System.Globalization.NumberStyles.Float) < emaToVwapDiff)
             //{ shortCnt = shortCnt + count; }
-            if (Convert.ToDecimal(results["lastopChange"].ToString()) < 0)
-            {                
-                longCnt = longCnt + count;
-            }
-            if (Convert.ToDecimal(results["lastopChange"].ToString()) > 0)
+            try
             {
-                shortCnt = shortCnt + count;
+                lastChange = decimal.Parse(results["lastopChange"].ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture);
+                //if (Convert.ToDecimal(results["lastopChange"].ToString()) < 0)
+                //if (double.TryParse(results["lastopChange"].ToString(), out double result) && result < 0)
+                if (lastChange < 0)
+                {
+                    longCnt = longCnt + count;
+                }
+                if (lastChange > 0)
+                {
+                    shortCnt = shortCnt + count;
+                }
             }
+            catch (Exception ex)
+            {
+                return 0m; 
+            }
+
+            //if (Convert.ToDecimal(results["lastopChange"].ToString()) > 0)
+            //{
+            //    shortCnt = shortCnt + count;
+            //}
             if (Convert.ToDecimal(results["lastPrice"].ToString()) > Convert.ToDecimal(results["EMA9"].ToString()) && decimal.Parse(results["lastPrice"].ToString()) > decimal.Parse(results["VWAP"].ToString()))
             { longCnt = longCnt + count; }
 
@@ -786,6 +819,71 @@ namespace TMD.PricePrediction
             }
 
             return decimal.Parse(results["EMA9TOVWAPDIFF"].ToString(), System.Globalization.NumberStyles.Float);
+        }
+        public void CalculatePoints(JsonObject? results, ref int? shortCnt, ref int? longCnt) {
+            try
+            {
+                if (decimal.Parse(results["lastPrice"].ToString()) > decimal.Parse(results["VWAP"].ToString()))
+                {
+                    { longCnt = longCnt + 2; }
+                    //if (decimal.Parse(results["LastPriceToVWAPDiff"].ToString(), System.Globalization.NumberStyles.Float) < .05m)
+                    //{ longCnt = longCnt + 2; }
+                    //else
+                    //{ shortCnt = shortCnt + 2; }
+                }
+
+                if (decimal.Parse(results["lastPrice"].ToString()) <= decimal.Parse(results["VWAP"].ToString()))
+                { shortCnt = shortCnt + 2; }
+            }
+            catch (Exception ex)
+            {
+
+            }
+            try
+            {
+                //if (decimal.Parse(results["lastPrice"].ToString()) > decimal.Parse(results["EMA9"].ToString()))
+                //    if (decimal.Parse(results["lastPriceToEMA9Diff"].ToString(), System.Globalization.NumberStyles.Float) < .05m)
+                //    { longCnt = longCnt + 2; }
+                //    else
+                //    { shortCnt = shortCnt + 2; }
+                { longCnt = longCnt + 2; }
+
+                if (decimal.Parse(results["lastPrice"].ToString()) < decimal.Parse(results["EMA9"].ToString()))
+                { shortCnt = shortCnt + 2; }
+            }
+            catch (Exception ex)
+            {
+
+            }
+            try
+            {
+                //if (Convert.ToDecimal(results["RSI"].ToString()) > 70)
+                //{
+                //    if (decimal.Parse(results["LastPriceToVWAPDiff"].ToString(), System.Globalization.NumberStyles.Float) < .05m)
+                //    { longCnt = longCnt + 2; }
+                //    else
+                //    { shortCnt = shortCnt + 2; }
+                //}
+                //if (/*Convert.ToDecimal(results["RSI"].ToString()) >= 70*/Convert.ToDecimal(results["RSI"].ToString()) <= 70 && 
+                //    Convert.ToDecimal(results["RSI"].ToString()) >= 50) 
+                //{
+                //    shortCnt = shortCnt + 2;
+                //}
+                if (Convert.ToDecimal(results["RSI"].ToString()) <= 30 && Convert.ToDecimal(results["RSI"].ToString()) > 0) //over sold
+                {
+                    longCnt = longCnt + 2;
+                    //shortCnt = shortCnt + 2;
+                }
+                if (Convert.ToDecimal(results["RSI"].ToString()) >= 70) //over bought
+                {
+                    shortCnt = shortCnt + 2;
+                    //longCnt = longCnt + 2;
+                }
+            }
+            catch (Exception ex)
+            {
+
+            }
         }
         //public void CalculatePointsLegacy(JsonObject? results/**, bool use31016, bool use5138,*/, ref int? shortCnt, ref int? longCnt)
         //{
@@ -814,7 +912,7 @@ namespace TMD.PricePrediction
         //    catch (Exception ex)
         //    {
 
-                
+
         //    }
         //    if (Convert.ToDecimal(results["EMA5"].ToString()) > Convert.ToDecimal(results["EMA20"].ToString()))
         //    { longCnt = longCnt + 1; }
@@ -996,7 +1094,7 @@ namespace TMD.PricePrediction
 
         //    //_logger.LogInformation($"Score. Long total {vixsandpLongCnt}. Short total {vixsandpShortCnt}.");
         //}
-        private bool IsNotHolidayorWeekend()
+        public bool IsNotHolidayorWeekend()
         {
             bool run = true;
             //DateTime runTime = easternTime;
@@ -1268,7 +1366,7 @@ namespace TMD.PricePrediction
             //accountAuthRetry:
             //Get Account Info
             JsonElement account = new JsonElement();
-            schwabServices.GetAccountInfo(ref account);
+            schwabServices?.GetAccountInfo(ref account);
             Log(_logger, LogLevel.Information, $"Get account info for checking stock status and updating");
 
             JsonElement securitiesAccount = new JsonElement();
@@ -1305,9 +1403,10 @@ namespace TMD.PricePrediction
                 //{
                 //    //
                 //}
-                quote = schwabServices.GetQuoteAsync(sym, true, false).Result;
+                
                 try
                 {
+                    quote = schwabServices?.GetQuoteAsync(sym, true, false).Result;
                     if (quote == null || !CheckMarketIndexes(quote))
                     {
                         continue;
@@ -1336,13 +1435,13 @@ namespace TMD.PricePrediction
 
                 //check to see if more than one entry for the same stock, then delete duplicates
                 stockTracker = null;
-                var stockTrackerList = _ctx.StockTracker2.Where(x => x.PriceSold == null && x.DateSold == null
+                var stockTrackerList = _ctx?.StockTracker2?.Where(x => x.PriceSold == null && x.DateSold == null
                         && x.TradePlatform == (int)Platform.CharlesSchwab && /*(x.Status != "Cancelled" && x.Status != "Filled")*/
                         x.Status.Trim() == "FILLED"
                         /*&& (x.DateCreated >= easternTime.AddDays(-1) && x.DateCreated <= easternTime.AddDays(1))*/
                         && x.Symbol == sym
                         );//.ToList();
-                if (stockTrackerList.Count() > 1)
+                if (stockTrackerList?.Count() > 1)
                 {
                     stockTracker = stockTrackerList.FirstOrDefault();
                     var removeList = stockTrackerList.Where(x => x.Id != stockTracker.Id).ToList();
@@ -1350,9 +1449,9 @@ namespace TMD.PricePrediction
                     {
                         try
                         {
-                            _ctx.StockTracker2.Attach(rem);
+                            _ctx?.StockTracker2?.Attach(rem);
                             _ctx.Entry(rem).State = Microsoft.EntityFrameworkCore.EntityState.Deleted;
-                            _ctx.SaveChanges();
+                            _ctx?.SaveChanges();
                             _ctx.Entry(rem).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
                         }
                         catch (Exception ex)
@@ -1363,12 +1462,12 @@ namespace TMD.PricePrediction
                 }
                 else
                 {
-                    stockTracker = stockTrackerList.FirstOrDefault();
+                    stockTracker = stockTrackerList?.FirstOrDefault();
                 }
 
                 if (stockTracker == null)
                 {
-                    stockTracker = _ctx.StockTracker2.Where(x => x.PriceSold == null && x.DateSold == null
+                    stockTracker = _ctx?.StockTracker2?.Where(x => x.PriceSold == null && x.DateSold == null
                     && x.TradePlatform == (int)Platform.CharlesSchwab && /*(x.Status != "Cancelled" && x.Status != "Filled")*/
                     x.Status.Trim() == "{\"$id\":\"1\",\"status\":\"Created\"}"
                     && (x.DateCreated >= easternTime.AddDays(-1) && x.DateCreated <= easternTime.AddDays(1))
@@ -1427,12 +1526,12 @@ namespace TMD.PricePrediction
 
                 if (stockTracker == null)
                 {
-                    stockTracker = _ctx.StockTracker2.Where(x => x.PriceSold == null && x.DateSold == null
+                    stockTracker = _ctx?.StockTracker2?.Where(x => x.PriceSold == null && x.DateSold == null
                     && x.TradePlatform == (int)Platform.ETrade && /*(x.Status != "Cancelled" && x.Status != "Filled")*/
                     x.Status.Trim() == "Success"
                     && (x.DateCreated >= easternTime.AddDays(-1) && x.DateCreated <= easternTime.AddDays(1))
                     && x.Symbol == sym
-                    ).FirstOrDefault();
+                    )?.FirstOrDefault();
                 }
                 try
                 {
@@ -1451,9 +1550,9 @@ namespace TMD.PricePrediction
                     sp.PricePurchased = price;
                     sp.Quantity = qty;
                     sp.DateUpdated = easternTime;
-                    _ctx.StockTracker2.Attach(sp);
+                    _ctx?.StockTracker2?.Attach(sp);
                     _ctx.Entry(sp).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
-                    _ctx.SaveChanges();
+                    _ctx?.SaveChanges();
                     _ctx.Entry(sp).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
                 }
                 catch (Exception ex)
@@ -1462,7 +1561,7 @@ namespace TMD.PricePrediction
                     {
                         _ctx.Entry(sp).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
                         _ctx.Entry(sp).State = Microsoft.EntityFrameworkCore.EntityState.Added;
-                        _ctx.SaveChanges();
+                        _ctx?.SaveChanges();
                         _ctx.Entry(sp).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
                     }
                     catch (Exception ex2)
@@ -1472,7 +1571,7 @@ namespace TMD.PricePrediction
                 }
             }
 
-            var stockTrkList = _ctx.StockTracker2.Where(x => x.PriceSold == null && x.DateSold == null
+            var stockTrkList = _ctx?.StockTracker2?.Where(x => x.PriceSold == null && x.DateSold == null
                         && x.TradePlatform == (int)Platform.CharlesSchwab &&
                         x.Status.Trim() == "FILLED"
                         );//.ToList();
@@ -1485,11 +1584,11 @@ namespace TMD.PricePrediction
                 var pos = securitiesAccount.GetProperty("positions").EnumerateArray().Where(x => x.GetProperty("instrument").GetProperty("symbol").ToString() == stk.Symbol).FirstOrDefault();
                 if (!(pos is JsonElement) || pos.ValueKind == JsonValueKind.Undefined)
                 {
-                    _ctx.StockTracker2.Attach(stk);
+                    _ctx?.StockTracker2?.Attach(stk);
                     _ctx.Entry(stk).State = Microsoft.EntityFrameworkCore.EntityState.Deleted;
                     try
                     {
-                        _ctx.SaveChanges();
+                        _ctx?.SaveChanges();
                         _ctx.Entry(stk).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
                     }
                     catch (Exception ex)
@@ -1511,21 +1610,21 @@ namespace TMD.PricePrediction
             string desc = string.Empty;
             XElement account = null;
             XElement securitiesAccount = null;
-            IEnumerable<XElement> positions;// = new List<XElement>();
+            IEnumerable<XElement>? positions;// = new List<XElement>();
             try
             {
                 //account = services2.Portfolio();
                 try
                 {
-                    account = services2.Account();
-                    securitiesAccount = account.Element("Computed");
+                    account = services2?.Account();
+                    securitiesAccount = account?.Element("Computed");
                 }
                 catch (Exception)
                 {
                     try
                     {
-                        account = services2.Account();
-                        securitiesAccount = account.Element("Computed");
+                        account = services2?.Account();
+                        securitiesAccount = account?.Element("Computed");
                     }
                     catch (Exception ex)
                     {
@@ -1548,7 +1647,7 @@ namespace TMD.PricePrediction
             positions = portfolio?.Element("AccountPortfolio")?.Elements("Position");//.ToList();
 
             //decimal cash = Convert.ToDecimal(securitiesAccount.Element("cashBuyingPower").Value.ToString());
-            decimal cash = Convert.ToDecimal(securitiesAccount.Element("cashAvailableForInvestment").Value.ToString());
+            decimal cash = Convert.ToDecimal(securitiesAccount?.Element("cashAvailableForInvestment")?.Value.ToString());
             decimal margin = 0m;// Convert.ToDecimal(securitiesAccount.Element("marginBuyingPower").Value.ToString());
             //totalAvailiableforLongTrade = Math.Round((cash + margin), 2);
             totalAvailiableforLongTrade = Math.Round((cash + margin) * .99m, 2);
@@ -1568,9 +1667,10 @@ namespace TMD.PricePrediction
                 //{
                 //    //int a = 1;
                 //}
-                quote = schwabServices.GetQuoteAsync(sym, true, false).Result;
+                
                 try
                 {
+                    quote = schwabServices?.GetQuoteAsync(sym, true, false)?.Result;
                     if (quote == null || !CheckMarketIndexes(quote))
                     {
                         continue;
@@ -1599,25 +1699,25 @@ namespace TMD.PricePrediction
 
                 //check to see if more than one entry for the same stock, then delete duplicates
                 stockTracker = null;
-                    var stockTrackerList = _ctx.StockTracker2.Where(x => x.PriceSold == null && x.DateSold == null
+                    var stockTrackerList = _ctx?.StockTracker2?.Where(x => x.PriceSold == null && x.DateSold == null
                             && x.TradePlatform == (int)Platform.ETrade && /*(x.Status != "Cancelled" && x.Status != "Filled")*/
                             x.Status.Trim() == "FILLED"
                             /*&& (x.DateCreated >= easternTime.AddDays(-1) && x.DateCreated <= easternTime.AddDays(1))*/
                             && x.Symbol == sym
                             );//.ToList();
-                if (stockTrackerList.Count() > 1)
+                if (stockTrackerList?.Count() > 1)
                 {
-                    stockTracker = stockTrackerList.FirstOrDefault();
-                    var removeList = stockTrackerList.Where(x => x.Id != stockTracker.Id).ToList();
+                    stockTracker = stockTrackerList?.FirstOrDefault();
+                    var removeList = stockTrackerList?.Where(x => x.Id != stockTracker.Id).ToList();
                     foreach (var rem in removeList)
                     {
                             lock (_transactLock)
                             {
                                 try
                                 {
-                                    _ctx.StockTracker2.Attach(rem);
+                                    _ctx?.StockTracker2?.Attach(rem);
                                     _ctx.Entry(rem).State = Microsoft.EntityFrameworkCore.EntityState.Deleted;
-                                    _ctx.SaveChanges();
+                                    _ctx?.SaveChanges();
                                     _ctx.Entry(rem).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
                                 }
                                 catch (Exception ex)
@@ -1634,7 +1734,7 @@ namespace TMD.PricePrediction
 
                 if (stockTracker == null)
                 {
-                    stockTracker = _ctx.StockTracker2.Where(x => x.PriceSold == null && x.DateSold == null
+                    stockTracker = _ctx?.StockTracker2?.Where(x => x.PriceSold == null && x.DateSold == null
                     && x.TradePlatform == (int)Platform.ETrade && /*(x.Status != "Cancelled" && x.Status != "Filled")*/
                     x.Status.Trim() == "Success"
                     && (x.DateCreated >= easternTime.AddDays(-1) && x.DateCreated <= easternTime.AddDays(1))
@@ -1711,9 +1811,9 @@ namespace TMD.PricePrediction
                     sp.DateUpdated = easternTime;
                         lock (_transactLock)
                         {
-                            _ctx.StockTracker2.Attach(sp);
+                            _ctx?.StockTracker2?.Attach(sp);
                             _ctx.Entry(sp).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
-                            _ctx.SaveChanges();
+                            _ctx?.SaveChanges();
                             _ctx.Entry(sp).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
                         }
                 }
@@ -1725,7 +1825,7 @@ namespace TMD.PricePrediction
                             {
                                 _ctx.Entry(sp).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
                                 _ctx.Entry(sp).State = Microsoft.EntityFrameworkCore.EntityState.Added;
-                                _ctx.SaveChanges();
+                                _ctx?.SaveChanges();
                                 _ctx.Entry(sp).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
                             }
                             catch (Exception ex2)
@@ -1735,7 +1835,7 @@ namespace TMD.PricePrediction
                         }
                 }
             }
-            var stockTrkList = _ctx.StockTracker2.Where(x => x.PriceSold == null && x.DateSold == null
+            var stockTrkList = _ctx?.StockTracker2?.Where(x => x.PriceSold == null && x.DateSold == null
             && x.TradePlatform == (int)Platform.ETrade &&
             x.Status.Trim() == "FILLED"
             );//.ToList();
@@ -1750,11 +1850,11 @@ namespace TMD.PricePrediction
                 {
                     lock (_transactLock)
                     {
-                        _ctx.StockTracker2.Attach(stk);
+                        _ctx?.StockTracker2?.Attach(stk);
                         _ctx.Entry(stk).State = Microsoft.EntityFrameworkCore.EntityState.Deleted;
                         try
                         {
-                            _ctx.SaveChanges();
+                            _ctx?.SaveChanges();
                             _ctx.Entry(stk).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
                         }
                         catch (Exception ex)
@@ -1835,9 +1935,10 @@ namespace TMD.PricePrediction
                 //var qty = Convert.ToInt32(perStockSet / lastPrice);
                 //var qty = Math.Abs((Convert.ToInt32(perStockSet / lastPrice) > settings.MaxNumberofSharesPerStock) ? (int)settings.MaxNumberofSharesPerStock : Convert.ToInt32(perStockSet / lastPrice));
                 //var qty = (Convert.ToInt32(pricePerStock / lastPrice) < settings.MaxNumberofSharesPerStock) ? Convert.ToInt32(pricePerStock / lastPrice) : settings.MaxNumberofSharesPerStock;
-                var qty = (Convert.ToInt32(availiabletoTrade / lastPrice) > 2) ? 2 : Convert.ToInt32(availiabletoTrade / lastPrice);
-                
-                if (qty >= 2 && lastPrice >= 5m)
+                //var qty = (Convert.ToInt32(availiabletoTrade / lastPrice) > 2) ? 2 : Convert.ToInt32(availiabletoTrade / lastPrice);
+                var qty = (Math.Truncate(availiabletoTrade.Value / lastPrice.Value) > 2) ? 2 : Math.Truncate(availiabletoTrade.Value / lastPrice.Value);
+
+                if (qty >= 1 && lastPrice >= 5m)
                 {
                     //BuySellStock(null, result, direction, (int)qty, false, services);
                     lock (_transactLock)

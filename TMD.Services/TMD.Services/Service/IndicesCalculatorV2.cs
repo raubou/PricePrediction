@@ -87,7 +87,7 @@ namespace TMD.Services.Service
             string exchange = string.Empty;
             dynamic? results = null;
             dynamic? ser = null;
-            //int? totalDaysBack = 0;
+            DateTime previewDate = DateTime.Now;
             double days = -7;
             JsonObject output = new JsonObject();
             List<TMDInvestment.Models.CandleItems> candle90 = new List<TMDInvestment.Models.CandleItems>();
@@ -125,23 +125,23 @@ namespace TMD.Services.Service
                         catch (Exception)
                         {
                             Helper.Log(_log, LogLevel.Error, $"{ex3.Message}");
-                            return null;
+                            return output;
                         }
 
                     }
                 }
             }
 
-        //DateTime previewDate = DateTime.Now.AddDays(-30);
+            //DateTime previewDate = DateTime.Now.AddDays(-30);
         GetPriceHistory:
             //DateTime previewDate = DateTime.Now.AddDays(days);
-            DateTime previewDate = DateTime.Now.AddMonths(-6);
-            //    if (previewDate.DayOfWeek == DayOfWeek.Saturday)
-            //        previewDate = previewDate.AddDays(-1).AddHours(-48);
-            //    else if (previewDate.DayOfWeek == DayOfWeek.Sunday)
-            //        previewDate = previewDate.AddDays(-2).AddHours(-48);
-            //    else
-            //        previewDate = previewDate.AddHours(-48);
+            //DateTime previewDate = DateTime.Now.AddMonths(-6);
+            if (previewDate.DayOfWeek == DayOfWeek.Saturday)
+                previewDate = previewDate/*.AddDays(-1)*/.AddHours(-25);
+            else if (previewDate.DayOfWeek == DayOfWeek.Sunday)
+                previewDate = previewDate/*.AddDays(-2)*/.AddHours(-49);
+            else
+                previewDate = previewDate.AddHours(-1);
             //    goto GetPriceHistory;
 
             //GoBackOneDay:
@@ -158,9 +158,9 @@ namespace TMD.Services.Service
             {
                 //results = services.GetPriceHistory(symbol, "day", "2", "minute", 15, null, null);
                 //results = services.GetPriceHistory(symbol, "day", "2", "minute", 15, previewDate, DateTime.Now);
-                //results = _services.GetPriceHistory(symbol, "day", "10", "minute", 15, previewDate, DateTime.Now).Result;
+                results = _services.GetPriceHistory(symbol, "day", "10", "minute", 15, previewDate, DateTime.Now).Result;
                 //results = _services.GetPriceHistory(symbol, "day", "10", "minute", 15, null, null).Result;
-                results = _services.GetPriceHistory(symbol, "month", "1", "daily", 1, previewDate, DateTime.Now).Result;
+                //results = _services.GetPriceHistory(symbol, "month", "1", "daily", 1, previewDate, DateTime.Now).Result;
                 ser = JsonSerializer.Serialize(results.GetProperty("candles"));
                 //if(ser.count() <= 0)
                 //{
@@ -325,6 +325,34 @@ namespace TMD.Services.Service
                 Helper.Log(_log, LogLevel.Error, $"ema9 to vwap diff calculation error {ex2.Message}");
             }
 
+            float? lastPriceToVwapDiff = 0f;
+            try
+            {
+                lastPriceToVwapDiff = Math.Abs(((float)currentPrice - vwap.Value) / ((float)currentPrice + vwap.Value) / 2 * 100);
+                if (float.IsNaN(lastPriceToVwapDiff.Value))
+                {
+                    lastPriceToVwapDiff = 0f;
+                }
+            }
+            catch (Exception ex2)
+            {
+                Helper.Log(_log, LogLevel.Error, $"last price to vwap diff calculation error {ex2.Message}");
+            }
+
+            float? lastPriceToEMA9Diff = 0f;
+            try
+            {
+                lastPriceToEMA9Diff = Math.Abs(((float)currentPrice - EMA9.Value) / ((float)currentPrice + EMA9.Value) / 2 * 100);
+                if (float.IsNaN(lastPriceToEMA9Diff.Value))
+                {
+                    lastPriceToEMA9Diff = 0f;
+                }
+            }
+            catch (Exception ex2)
+            {
+                Helper.Log(_log, LogLevel.Error, $"last price to ema9 diff calculation error {ex2.Message}");
+            }
+
             float? FirstotLastDiff = 0f;
             float? FirstotMiddleDiff = 0f;
             float? MiddleToLastDiff = 0f;
@@ -470,6 +498,8 @@ namespace TMD.Services.Service
             output.Add("VWAP", (float.IsNaN(vwap.Value) ? "0" : vwap.Value.ToString("F8")));
             output.Add("volume", totalVolume);
             output.Add("EMA9TOVWAPDIFF", ema9ToVwapDiff);
+            output.Add("LastPriceToVWAPDiff", lastPriceToVwapDiff);
+            output.Add("LastPriceToEMA9Diff", lastPriceToEMA9Diff);
             output.Add("FirstToLastDiff", FirstotLastDiff);
             output.Add("FirstToMiddleDiff", FirstotMiddleDiff);
             output.Add("MiddleToLastDiff", MiddleToLastDiff);
@@ -681,6 +711,34 @@ namespace TMD.Services.Service
             {
                 Helper.Log(_log, LogLevel.Error, $"ema9 to vwap diff calculation error {ex2.Message}");
             }
+
+            decimal? lastPriceToVwapDiff = 0m;
+            try
+            {
+                lastPriceToVwapDiff = Math.Abs((currentPrice - vwap.Value) / ((currentPrice + vwap.Value) / 2) * 100);
+                //if (float.IsNaN(lastPriceToVwapDiff.Value))
+                //{
+                //    lastPriceToVwapDiff = 0f;
+                //}
+            }
+            catch (Exception ex2)
+            {
+                Helper.Log(_log, LogLevel.Error, $"last price to vwap diff calculation error {ex2.Message}");
+            }
+
+            decimal? lastPriceToEMA9Diff = 0m;
+            try
+            {
+                lastPriceToEMA9Diff = Math.Abs((currentPrice - EMA9.Value) / (currentPrice + EMA9.Value) / 2 * 100);
+                //if (float.IsNaN(lastPriceToEMA9Diff.Value))
+                //{
+                //    lastPriceToEMA9Diff = 0f;
+                //}
+            }
+            catch (Exception ex2)
+            {
+                Helper.Log(_log, LogLevel.Error, $"last price to ema9 diff calculation error {ex2.Message}");
+            }
             output.Add("Symbol", product.ProductId);
             output.Add("Name", product.BaseName);
             output.Add("lastPrice", currentPrice);
@@ -726,6 +784,8 @@ namespace TMD.Services.Service
             output.Add("VWAP", ((vwap != null && vwap.HasValue) ? vwap.Value.ToString("F8") : "0"));
             output.Add("volume", totalVolume);
             output.Add("EMA9TOVWAPDIFF", ema9ToVwapDiff);
+            output.Add("LastPriceToVWAPDiff", lastPriceToVwapDiff);
+            output.Add("LastPriceToEMA9Diff", lastPriceToEMA9Diff);
             output.Add("lastopChange", candle?.opChange ?? 0f);
             output.Add("lastopChangePercent", candle?.opPercent ?? 0f);
             output.Add("lastOpen", candle?.Open ?? 0f);

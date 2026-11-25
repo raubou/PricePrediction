@@ -232,10 +232,6 @@ namespace TMD.Services.Service
         {
             DateTime startDate = DateTime.Now.AddDays(-45);
             DateTime endDate = DateTime.Now;
-            //float percentHigher = 0f;
-            //float percentLower = 0f;
-            //int higherCount = 0;
-            //int lowerCount = 0;
             int? shortCnt = 0;
             int? longCnt = 0;
             dynamic GainersandLosers = new ExpandoObject();
@@ -263,95 +259,32 @@ namespace TMD.Services.Service
                     string symbol = item.GetProperty("symbol").ToString();
                     var results = item;
                     gains[gains.Length - 1] = indicesCalculatorV2.CalculateV2(symbol, results);
-                    //higherCount = 0;
-                    //lowerCount = 0;
                     shortCnt = 0;
                     longCnt = 0;
-                    //var history = _schwabServices.GetPriceHistory(gains[gains.Length - 1]["Symbol"].ToString(), "month", "1", "daily", 1, startDate, endDate).Result;
-                    //string ser = string.Empty;
-                    //try
-                    //{
-                    //    ser = JsonSerializer.Serialize(history.GetProperty("candles"));
-                    //}
-                    //catch (Exception)
-                    //{
-                    //    continue;
-                    //}
-
-                    //var candles90 = JsonSerializer.Deserialize<List<TMDInvestment.Models.CandleItems>>(ser).OrderByDescending(x => x.datetime).ToList();
-                    //var candleFirst = candles90.FirstOrDefault();
-                    //gains[gains.Length - 1].Add("lastopChange", candleFirst?.opChange ?? 0f);
-                    //gains[gains.Length - 1].Add("lastopChangePercent", candleFirst?.opPercent ?? 0f);
-                    //gains[gains.Length - 1].Add("lastOpen", candleFirst?.open ?? 0f);
-                    //gains[gains.Length - 1].Add("lastClose", candleFirst?.close ?? 0f);
-                    //foreach (var candle in candles90)
-                    //{
-                    //    if (candle.opChange > 0)
-                    //    {
-                    //        higherCount++;
-
-                    //    }
-                    //    else if (candle.opChange < 0)
-                    //    {
-                    //        lowerCount++;
-                    //    }
-                    //}
-                    //percentHigher = ((float)higherCount / (float)candles90.Count) * 100f;
-                    //percentLower = ((float)lowerCount / (float)candles90.Count) * 100f;
-                    //gains[gains.Length - 1].Add("PercentHigher", percentHigher);
-                    //gains[gains.Length - 1].Add("PercentLower", percentLower);
-                    _helper?.CalculatePoints(gains[gains.Length - 1], ref shortCnt, ref longCnt, .25m, true);
+                    //_helper?.CalculatePoints(gains[gains.Length - 1], ref shortCnt, ref longCnt, .25m, true);
+                    _helper?.CalculatePoints(gains[gains.Length - 1], ref shortCnt, ref longCnt);
                     gains[gains.Length - 1].Add("shortCnt", shortCnt);
                     gains[gains.Length - 1].Add("longCnt", longCnt);
                     Array.Resize(ref gains, gains.Length + 1);
                 }
+                gains = gains.OrderByDescending(g => g?["longCnt"]?.GetValue<int>()).ToArray();
                 foreach (var item in LosersArray)
                 {
                     string symbol = item.GetProperty("symbol").ToString();
                     var results = item;
                     losses[losses.Length - 1] = indicesCalculatorV2.CalculateV2(symbol, results);
-                    //higherCount = 0;
-                    //lowerCount = 0;
                     shortCnt = 0;
                     longCnt = 0;
-                    //var history = _schwabServices.GetPriceHistory(losses[losses.Length - 1]["Symbol"].ToString(), "month", "1", "daily", 1, startDate, endDate).Result;
-                    //string ser2 = string.Empty;
-                    //try
-                    //{
-                    //    ser2 = JsonSerializer.Serialize(history.GetProperty("candles"));
-                    //}
-                    //catch (Exception)
-                    //{
-                    //    continue;
-                    //}
-
-                    //var candles90 = JsonSerializer.Deserialize<List<TMDInvestment.Models.CandleItems>>(ser2).OrderByDescending(x => x.datetime).ToList();
-                    //var candleFirst = candles90.FirstOrDefault();
-                    //losses[losses.Length - 1].Add("lastopChange", candleFirst?.opChange ?? 0f);
-                    //losses[losses.Length - 1].Add("lastopChangePercent", candleFirst?.opPercent ?? 0f);
-                    //losses[losses.Length - 1].Add("lastOpen", candleFirst?.open ?? 0f);
-                    //losses[losses.Length - 1].Add("lastClose", candleFirst?.close ?? 0f);
-                    //foreach (var candle in candles90)
-                    //{
-                    //    if (candle.opChange > 0)
-                    //    {
-                    //        higherCount++;
-
-                    //    }
-                    //    else if (candle.opChange < 0)
-                    //    {
-                    //        lowerCount++;
-                    //    }
-                    //}
-                    //percentHigher = ((float)higherCount / (float)candles90.Count) * 100f;
-                    //percentLower = ((float)lowerCount / (float)candles90.Count) * 100f;
-                    //losses[losses.Length - 1].Add("PercentHigher", percentHigher);
-                    //losses[losses.Length - 1].Add("PercentLower", percentLower);
-                    _helper?.CalculatePoints(losses[losses.Length - 1], ref shortCnt, ref longCnt, .25m, false);
-                    losses[losses.Length - 1].Add("shortCnt", shortCnt);
-                    losses[losses.Length - 1].Add("longCnt", longCnt);
-                    Array.Resize(ref losses, losses.Length + 1);
+                    //_helper?.CalculatePoints(losses[losses.Length - 1], ref shortCnt, ref longCnt, .25m, true);
+                    _helper?.CalculatePoints(losses[losses.Length - 1], ref shortCnt, ref longCnt);
+                    if (losses[losses.Length - 1] != null)
+                    {
+                        losses[losses.Length - 1].Add("shortCnt", shortCnt);
+                        losses[losses.Length - 1].Add("longCnt", longCnt);
+                        Array.Resize(ref losses, losses.Length + 1);
+                    }
                 }
+                losses = losses.OrderByDescending(g => g?["longCnt"]?.GetValue<int>()).ToArray();
                 GainersandLosers.Gainers = gains;
                 GainersandLosers.Losers = losses;
             }
@@ -361,7 +294,7 @@ namespace TMD.Services.Service
                 GainersandLosers.Losers = LosersArray;
             }
             return GainersandLosers;
-            return null;
+            //return null;
         }
         DateTime fromDate = DateTime.Now;
         DateTime toDate = DateTime.Now.AddDays(35);

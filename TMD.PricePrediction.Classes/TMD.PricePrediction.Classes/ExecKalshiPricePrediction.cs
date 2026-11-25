@@ -113,14 +113,21 @@ namespace TMD.PricePrediction.Classes
                     }
                 }
                 Debug.WriteLine($"Getting series for Crypto");
-                var results = kalshiService?.SendRequest(HttpMethod.Get, "/trade-api/v2/series?category=Crypto", "", false);
+                //var results = kalshiService?.SendRequest(HttpMethod.Get, "/trade-api/v2/series?category=Crypto", "", false);
+                JsonElement results = kalshiService?.SendRequest(HttpMethod.Get, "/trade-api/v2/series", "", false);
                 System.Threading.Thread.Sleep(250);
-                var series = (IEnumerable<JsonElement>)results?.GetProperty("series")?.EnumerateArray();//.GetProperty("category");
-                                                                                                      //var seriesList = series.ToList(); 
-                var categories = series.Where(x => x.GetProperty("category").GetString() == "Crypto" && (x.GetProperty("frequency").GetString() == "fifteen_min" /*|| x.GetProperty("frequency").GetString() == "hourly"*/) && (/*x.GetProperty("title").GetString().Contains("Above/below") ||*/ x.GetProperty("title").GetString().Contains("15 Minute"))).ToList();
+                //var series = (IEnumerable<JsonElement>)results?.GetProperty("series")?.EnumerateArray();//.GetProperty("category");
+                var series = results.GetProperty("series");//.EnumerateArray();
+                var seriesArray = series.EnumerateArray();
+                var categories = seriesArray.Where(x => x.GetProperty("category").GetString() == "Crypto" 
+                && (x.GetProperty("frequency").GetString() == "fifteen_min" || /*x.GetProperty("frequency").GetString() == "hourly") ||*/
+                x.GetProperty("title").GetString().Contains("Above/below") ||
+                x.GetProperty("title").GetString().Contains("15 Minute"))).ToList();
 
-                var tickerandTitle = categories.Select(x => new { SeriesTicker = x.GetProperty("ticker").GetString(), Title = x.GetProperty("title").GetString(), Frequency = x.GetProperty("frequency").GetString() }).ToList();
+                //var tickerandTitle = categories.Select(x => new { SeriesTicker = x.GetProperty("ticker").GetString(), Title = x.GetProperty("title").GetString(), Frequency = x.GetProperty("frequency").GetString() }).ToList();
+                //IEnumerable<JsonElement> tickerandTitle = null;
                 //var tickerandTitle = series.Select(x => new { SeriesTicker = x.GetProperty("ticker").GetString(), Title = x.GetProperty("title").GetString() }).ToList();
+                var tickerandTitle = categories.Select(x => new { SeriesTicker = x.GetProperty("ticker").GetString(), Title = x.GetProperty("title").GetString() });
                 JsonElement eventsCursor = new JsonElement();
                 JsonElement marketsCursor = new JsonElement();
                 IEnumerable <JsonElement> events = null;
@@ -129,7 +136,7 @@ namespace TMD.PricePrediction.Classes
                 {
                 EventsBySeries:
                     dynamic eventsBySeries = null;
-                    //if(eventsCursor.ValueKind != JsonValueKind.Undefined && eventsCursor.TryGetProperty("cursor", out eventsCursor))
+
                     if (eventsCursor.ValueKind == JsonValueKind.String && !string.IsNullOrEmpty(eventsCursor.GetString()))
                         eventsBySeries = kalshiService?.SendRequest(HttpMethod.Get, $"/trade-api/v2/events?series_ticker={item.SeriesTicker}&cursor={eventsCursor.GetString()}", "", false);
                     else
@@ -137,12 +144,10 @@ namespace TMD.PricePrediction.Classes
                     System.Threading.Thread.Sleep(250);
                     try
                     {
-                        //var getEvents = results2.GetProperty("events").EnumerateArray();
                         if (eventsBySeries is System.Dynamic.ExpandoObject)
                         {
                             Helper.Log(_logger, LogLevel.Warning, $"Events for series {item.SeriesTicker} is an ExpandoObject, skipping. {eventsBySeries.errors.Details}");
                             Debug.WriteLine($"Events for series {item.SeriesTicker} is an ExpandoObject, skipping. {eventsBySeries.errors.Details}");
-                            //System.Threading.Thread.Sleep(250);
                             continue;
                         }
                         events = (IEnumerable<JsonElement>)eventsBySeries.GetProperty("events").EnumerateArray();
@@ -409,7 +414,8 @@ namespace TMD.PricePrediction.Classes
                                 Task.Delay(250).Wait();
                                 int? shortCnt = 0; int? longCnt = 0;
                                 Debug.WriteLine($"Calculating points for {coin}");
-                                _helper?.CalculatePoints(quote, ref shortCnt, ref longCnt, .08m, true);
+                                //_helper?.CalculatePoints(quote, ref shortCnt, ref longCnt, .08m, true);
+                                _helper?.CalculatePoints(quote, ref shortCnt, ref longCnt);
                                 double.TryParse(quote?["lastopChange"]?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out double lastopChange);
                                 double.TryParse(quote?["lastopChangePercent"]?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out double lastopChangePercent);
                                 double.TryParse(quote?["PercentHigher"]?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out double percentHigher);
@@ -456,8 +462,8 @@ namespace TMD.PricePrediction.Classes
                                 Helper.Log(_logger, LogLevel.Information, $"Market: {marketandTitle.Title}, Current Ask: {current_ask}, Count: {count}, Close Time: {marketandTitle.CloseTime.ToString()} - {closeTime}, Currnet Time {DateTime.UtcNow}, Minutes to Close: {Math.Abs((closeTime - DateTime.UtcNow).TotalMinutes)}");
                                 Debug.WriteLine($"Market: {marketandTitle.Title}, Current Ask: {current_ask}, Count: {count}, Close Time: {marketandTitle.CloseTime.ToString()} - {closeTime}, Currnet Time {DateTime.UtcNow}, Minutes to Close: {Math.Abs((closeTime - DateTime.UtcNow).TotalMinutes)}");
 
-                            //if (longCnt >= _settings.CryptoLongCount/*8*/)
-                            if ((lastopChange > 0) && (lastopChangePercent > 0) && (longCnt >= 3) && (percentLower < percentHigher))
+                            if (longCnt >= _settings.CryptoLongCount/*8*/)
+                            //if ((lastopChange > 0) && (lastopChangePercent > 0) && (longCnt >= 3) && (percentLower < percentHigher))
                             {
                                     //continue;
                                     Helper.Log(_logger, LogLevel.Information, $"Buying: {item3.GetProperty("title").GetString()} Going Long");
@@ -512,10 +518,10 @@ namespace TMD.PricePrediction.Classes
                                 "}";
                                 var results4 = kalshiService.SendRequest(HttpMethod.Post, $"/trade-api/v2/portfolio/events/orders", body, true);
                                 System.Threading.Thread.Sleep(250);
-                                if (results4 is System.Dynamic.ExpandoObject && results4?.status == "Created")
+                                if (results4 is System.Dynamic.ExpandoObject && !string.IsNullOrEmpty(results4.order_id.ToString()) /* results4?.status == "Created"*/)
                                 {
-                                    Helper.Log(_logger, LogLevel.Information, $"Order for market {ticker} {results4?.status}");
-                                    Debug.WriteLine($"Order for market {ticker} {results4?.status}");
+                                    Helper.Log(_logger, LogLevel.Information, $"Order for market {ticker} Order Id: {results4?.order_id}");
+                                    Debug.WriteLine($"Order for market {ticker} Order Id: {results4?.order_id}");
                                     //marketList.Add(marketandTitle);
                                 }
                                 else

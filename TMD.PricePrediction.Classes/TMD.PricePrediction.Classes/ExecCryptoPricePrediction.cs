@@ -86,16 +86,22 @@ namespace TMD.PricePrediction.Classes
             decimal cryptoBalance = 0m;
             decimal totalAvailiableforLongTrade = 0m;
 
+            //GetSettings
+            settings = _ctx?.RulesEngine?.FirstOrDefaultAsync().Result;
+            Helper.Log(_logger, LogLevel.Information, $"Get settings");
+
+            //Get Crypto already in trade being tracked.
+            cryptoTracker = _ctx?.CryptoTracker2?.AsNoTracking()?.Where(x => x.PriceSold == null && x.DateSold == null && (x.BuyStatus.ToLower() == "filled" /*|| x.BuyStatus.ToLower() == "open" || x.BuyStatus.ToLower() == "pending"*/));//.ToList();
+
+            if (cryptoTracker.Count() >= (int)settings.MaxNumberofCryptotoBuy)
+                return;
+
             //Get Products
             lock (_transactLock)
             {
                 products = coinBaseService?.GetProducts();
             }
-
-            //GetSettings
-            settings = _ctx?.RulesEngine?.FirstOrDefaultAsync().Result;
-            Helper.Log(_logger, LogLevel.Information, $"Get settings");
-            //_logger.LogInformation($"Get settings");
+            _logger.LogInformation($"Get products");
 
             //Clear Ophan wallet or crypto tracker
             //ClearOrphanWallets();
@@ -124,8 +130,6 @@ namespace TMD.PricePrediction.Classes
             Helper.Log(_logger, LogLevel.Information, $"Check for queued crypto");
             //CheckforQueuedCrypto(); 
 
-            //Get Crypto already in trade being tracked.
-            cryptoTracker = _ctx?.CryptoTracker2?.AsNoTracking()?.Where(x => x.PriceSold == null && x.DateSold == null && (x.BuyStatus.ToLower() == "filled" /*|| x.BuyStatus.ToLower() == "open" || x.BuyStatus.ToLower() == "pending"*/));//.ToList();
             var cryptoTrackerList = cryptoTracker?.AsNoTracking()?.Select(y => y.Coin);
             Helper.Log(_logger, LogLevel.Information, $"Get exiting Crypto tracker");
 
@@ -141,7 +145,7 @@ namespace TMD.PricePrediction.Classes
 
             Helper.Log(_logger, LogLevel.Information, $"Cash Balance ${cash}. Crypto Balance ${cryptoBalance}. Total Availiable ${totalAvailiableforLongTrade}");
 
-            if (totalAvailiableforLongTrade > 2)
+            if (totalAvailiableforLongTrade >= 2)
             {
                 //Get list of Crypto to trade not in tracker
                 //var cryptoList = _ctx.CryptoList.AsNoTracking().Where(x => (!cryptoTrackerList.Contains(x.Coin) && !cryptoTrackerList.Contains(x.Coin.Substring(0, (x.Coin.Length - 1)))) && !x.ExcludeFromAutomation).OrderBy(y => Guid.NewGuid());//.ToList();
@@ -162,7 +166,7 @@ namespace TMD.PricePrediction.Classes
 
                 BuySellCryptoList = new List<BuySellCommodity>();
 
-                if (cryptoTracker.Count() < (int)settings.MaxNumberofCryptotoBuy)
+                
                 foreach (var crypto in cryptoList)
                 //foreach (var crypto in Enum.GetNames<TMDInvestments.Models.Enum.CryptoList>())
                 {
@@ -302,7 +306,7 @@ namespace TMD.PricePrediction.Classes
                     //_logger.LogInformation($"{crypto.Coin} - ({crypto.Name}) Score. Long score: {longCnt}. Short score {shortCnt}");
                     Helper.Log(_logger, LogLevel.Information, $"{crypto["Symbol"].ToString()} - ({crypto["Name"].ToString()}) Score. Long score: {crypto["longCnt"].ToString()}. Short score {crypto["shortCnt"].ToString()}");
 
-                    if (decimal.Parse(crypto["longCnt"].ToString()) >= settings.CryptoLongCount && decimal.Parse(crypto["lastopChangePercent"].ToString()) < 0)
+                    if (decimal.Parse(crypto["longCnt"].ToString()) >= settings.CryptoLongCount && (!crypto["Symbol"].ToString().Contains("USDT") && !crypto["Symbol"].ToString().Contains("USDC")))
                     {
                         Helper.Log(_logger, LogLevel.Information, $"Adding {crypto["Symbol"].ToString()} - ({crypto["Name"].ToString()}) to potential long list.");
                         //BuySellCryptoList.Add(new BuySellCommodity(longCnt, TradeDirection.BUY, results));
@@ -327,7 +331,7 @@ namespace TMD.PricePrediction.Classes
                 //BuySellCryptoList = BuySellCryptoList.Where(x => Convert.ToDecimal(x.Results?["RSI"]?.ToString()) <= 30 || Convert.ToDecimal(x.Results?["RSI"]?.ToString()) >= 70).ToList();
                 //BuySellCryptoList = BuySellCryptoList.Where(x => Convert.ToDecimal(x.Results?["RSI"]?.ToString()) <= 5m).ToList();
                 if (BuySellCryptoList.Count > 0)
-                    CalculatePurchaseAmount2(totalAvailiableforLongTrade, products, cryptoTracker, ref BuySellCryptoList);
+                    CalculatePurchaseAmount(totalAvailiableforLongTrade, products, cryptoTracker, ref BuySellCryptoList);
                 else
                     Helper.Log(_logger, LogLevel.Warning, "No Crypto was found to trade matching setting, or max number of stock reached, or 24h hold");
 
@@ -617,174 +621,36 @@ namespace TMD.PricePrediction.Classes
             
             return true;
         }
-        //bool UpdateLastPrice(decimal lastPrice, decimal Balance, ref CryptoTracker2 cryptoTracker)
-        //{
-        //    _ctx = new TmdContext();
-        //    if ((cryptoTracker.TradeDirection == (int)TradeDirection.BUY && (lastPrice > cryptoTracker.LastPrice && lastPrice > cryptoTracker.PricePurchased)) || cryptoTracker.LastPrice is null)
-        //    {
-        //        cryptoTracker.LastPrice = lastPrice;
-        //    }
-        //    if ((cryptoTracker.TradeDirection == (int)TradeDirection.SELL_SHORT && (lastPrice < cryptoTracker.LastPrice && lastPrice < cryptoTracker.PricePurchased)) || cryptoTracker.LastPrice is null)
-        //    {
-        //        cryptoTracker.LastPrice = lastPrice;
-        //    }
-        //    cryptoTracker.CurrentBalance = Balance;
-        //    cryptoTracker.DateUpdated = Helper.easternTime;
-        //    try
-        //    {
-        //        _ctx.Entry(cryptoTracker).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
-        //        System.Threading.Thread.Sleep(200);
-        //        _ctx.SaveChanges();
-        //        _ctx.Entry(cryptoTracker).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Helper.Log(_logger, LogLevel.Error, $"Price Update Failed! {ex.Message}");
-        //    }
-        //    return true;
-        //}
 
-        //void AnalyiseOwnedCrypto(CryptoTracker2 crypto, JsonObject? results, List<PublicProduct> products)
-        //{
-        //    //calculate percent difference
-        //    decimal percentDiffPricePurchased = 0m;
-        //    decimal percentDiffLastPrice = 0m;
-        //    decimal lastPrice = (crypto.LastPrice ?? 0);
-        //    decimal pricePurchased = (crypto.PricePurchased ?? 0);
-        //    decimal currentPrice = Convert.ToDecimal(results["lastPrice"].ToString());
+        void CalculatePurchaseAmount(decimal? availiabletoTrade, List<PublicProduct> products, IQueryable<CryptoTracker2> cryptoTracker, ref List<BuySellCommodity> BuySellCryptoList)
+        {
+            //var alreadyQueuedStock = ctx?.CryptoTracker2?.Where(x => x.BuyStatus == "QUEUED").ToList();
+            if (cryptoTracker.Count() >= settings.MaxNumberofCryptotoBuy)
+                return;
+            int cryptoCnt = 0;
+            var totalCanBuy = (BuySellCryptoList.Count() > (settings.MaxNumberofCryptotoBuy - cryptoTracker.Count())) ? (settings.MaxNumberofCryptotoBuy - cryptoTracker.Count()) : BuySellCryptoList.Count();
+            //decimal? perCrypto = (availiabletoTrade / BuySellCryptoList.Count()) > settings.MaxDollarAmountPerCrypto ? (availiabletoTrade < settings.MaxDollarAmountPerCrypto) ? availiabletoTrade : settings.MaxDollarAmountPerCrypto : (availiabletoTrade / BuySellCryptoList.Count());
+            decimal? perCrypto = (availiabletoTrade / totalCanBuy) > settings.MaxDollarAmountPerCrypto ? (availiabletoTrade < settings.MaxDollarAmountPerCrypto) ? availiabletoTrade : settings.MaxDollarAmountPerCrypto : (availiabletoTrade / totalCanBuy);
+            foreach (var item in BuySellCryptoList)
+            {
+                if ((cryptoTracker.Count() + cryptoCnt) >= settings.MaxNumberofCryptotoBuy)
+                    break;
 
-        //    var product = products.Where(x => x.DisplayName == crypto.Coin).FirstOrDefault();
-        //    var account = coinBaseService?.GetAccounts().Where(x => x.Currency == crypto.Coin.Split(new char[] { '-' })[0] && Convert.ToDecimal(x.AvailableBalance.Value) > 0m).FirstOrDefault();
-        //    var currentBalance = Math.Round(Convert.ToDecimal(account?.AvailableBalance?.Value) * Convert.ToDecimal(product?.Price), 5);
-        //    //var currentBalance = Math.Round(Convert.ToDecimal(account?.AvailableBalance?.Value), 5); //* Convert.ToDecimal(product?.Price), 5);
-        //    //if (crypto.Coin == "POPCAT-USD")
-        //    //{
-        //    //    //bobo
-        //    //}
-        //    try
-        //    {
-        //        percentDiffPricePurchased = Math.Abs(((pricePurchased - currentPrice) / ((pricePurchased + currentPrice) / 2)) * 100);
-        //        percentDiffLastPrice = Math.Abs(((lastPrice - currentPrice) / ((lastPrice + currentPrice) / 2)) * 100);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Helper.Log(_logger, LogLevel.Error, $"{ex.Message} at AnalyiseOwnedStock Percent Diff. Setting to zero.");
-        //    }
-        //    //Short
-        //    //if (crypto.TradeDirection == (int)TradeDirection.SELL_SHORT) //selling short
-        //    //{
-        //    //    if (currentPrice > pricePurchased)
-        //    //    {
-        //    //        if (percentDiffPricePurchased > settings.StopLossPercentPurchasedCrypto)
-        //    //        {
-        //    //            //buy to cover
-        //    //            _helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) has fallen by more then about {Math.Round(percentDiffPricePurchased, 5)}% since price purchased. Buying to cover.");
-        //    //            BuySellCrypto(crypto, results, TradeDirection.BUY_TO_COVER, Math.Round(Convert.ToDecimal(order.FilledSize), 5), services, products, false);
-        //    //        }
-        //    //        else
-        //    //        {
-        //    //            //Update Price
-        //    //            _helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) still within about {Math.Round(percentDiffPricePurchased, 5)}% tolerance since price purchased. Updating last Price.");
-        //    //            UpdateLastPrice(currentPrice, balance, ref crypto);
-        //    //        }
-        //    //    }
-        //    //    else
-        //    //    if (currentPrice > lastPrice)
-        //    //    {
-        //    //        if (percentDiffLastPrice > settings.StopLossPercentLastPriceCrypto)
-        //    //        {
-        //    //            //buy to cover
-        //    //            _helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) has fallen by more then about {Math.Round(percentDiffLastPrice, 5)}% since last price. Buying to cover.");
-        //    //            BuySellCrypto(crypto, results, TradeDirection.BUY_TO_COVER, Math.Round(Convert.ToDecimal(order.FilledSize), 5), services, products, false);
-        //    //        }
-        //    //        else
-        //    //        {
-        //    //            //Update Price
-        //    //            //_helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) still within about {Math.Round(percentDiffLastPrice, 5)}% tolerance since last price. Updating last Price.");
-        //    //            //UpdateLastPrice(currentPrice, balance, ref crypto);
-        //    //        }
-        //    //    }
-        //    //    else //if (currentPrice <= lastPrice)
-        //    //    {
-        //    //            //update price
-        //    //            _helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) still within about {Math.Round(percentDiffLastPrice, 5)}% tolerance since last price. Updating last Price.");
-        //    //            UpdateLastPrice(currentPrice, balance, ref crypto);
-        //    //    }
-        //    //}
-        //    //else //Going Long
-        //    //{
-        //        //if (currentPrice < pricePurchased)
-        //        //{
-        //        //    if (percentDiffPricePurchased > settings.StopLossPercentPurchasedCrypto)
-        //        //    {
-        //        //        //buy to cover
-        //        //        Helper.Log(_logger, LogLevel.Information, $"crypto  {crypto.Coin}  - ( {crypto.Name}) has fallen by more then about {Math.Round(percentDiffPricePurchased, 5)}% since price purchased. Selling.");
-        //        //        UpdateLastPrice(currentPrice, currentBalance, ref crypto);
-        //        //        BuySellCrypto(crypto, results, TradeDirection.SELL, currentBalance, coinBaseService, products, false/*, false*/);
-        //        //    }
-        //        //    else
-        //        //    {
-        //        //        //Update Price
-        //        //        Helper.Log(_logger, LogLevel.Information, $"crypto  {crypto.Coin}  - ( {crypto.Name}) still within about {Math.Round(percentDiffPricePurchased, 5)}% tolerance since price purchased. Updating last Price.");
-        //        //        UpdateLastPrice(currentPrice, currentBalance, ref crypto);
-        //        //    }
-        //        //}
-        //        //else
-        //        //if (currentPrice < lastPrice && percentDiffLastPrice >= settings.StopLossPercentLastPriceCrypto && percentDiffPricePurchased >= 3.5m)
-        //        if ((currentPrice < lastPrice) &&
-        //        (pricePurchased < currentPrice) &&                
-        //        (percentDiffPricePurchased >= 3.5m)) 
-        //        //if (currentPrice < lastPrice && currentBalance > (crypto.Amount * 1.08m))
-        //        {
-        //            //if (percentDiffLastPrice > settings.StopLossPercentLastPriceCrypto)
-        //            //{
-        //                //sell
-        //                Helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) has fallen by more then about {Math.Round(percentDiffLastPrice, 5)}% since last Price. Selling.");
-        //                UpdateLastPrice(currentPrice, currentBalance, ref crypto);
-        //        _helper.BuySellCrypto(crypto, results, TradeDirection.SELL, currentBalance, coinBaseService, products, false/*, false*/);
-        //            //}
-        //            //else
-        //            //{
-        //                //Update Price
-        //                //_helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) still within about {Math.Round(percentDiffLastPrice, 5)}% tolerance since last Price. Updating last Price.");
-        //                //UpdateLastPrice(currentPrice, balance, ref crypto);
-        //            //}
-        //        }
-        //        else //if (currentPrice >= lastPrice)
-        //        {
-        //                //update price
-        //                Helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) still within about {Math.Round(percentDiffLastPrice, 5)}% tolerance since last price. Updating last Price.");
-        //                UpdateLastPrice(currentPrice, currentBalance, ref crypto);
-        //        }
-        //    //}
-        //}
-       
-        //void CalculatePurchaseAmount(decimal? availiabletoTrade, List<PublicProduct> products, IQueryable<CryptoTracker2> cryptoTracker, ref List<BuySellCommodity> BuySellCryptoList)
-        //{
-        //    //var alreadyQueuedStock = ctx?.CryptoTracker2?.Where(x => x.BuyStatus == "QUEUED").ToList();
-        //    if (cryptoTracker.Count() >= settings.MaxNumberofCryptotoBuy)
-        //        return;
-        //    int cryptoCnt = 0;
-        //    var totalCanBuy = (BuySellCryptoList.Count() > (settings.MaxNumberofCryptotoBuy - cryptoTracker.Count())) ? (settings.MaxNumberofCryptotoBuy - cryptoTracker.Count()) : BuySellCryptoList.Count();
-        //    //decimal? perCrypto = (availiabletoTrade / BuySellCryptoList.Count()) > settings.MaxDollarAmountPerCrypto ? (availiabletoTrade < settings.MaxDollarAmountPerCrypto) ? availiabletoTrade : settings.MaxDollarAmountPerCrypto : (availiabletoTrade / BuySellCryptoList.Count());
-        //    decimal? perCrypto = (availiabletoTrade / totalCanBuy) > settings.MaxDollarAmountPerCrypto ? (availiabletoTrade < settings.MaxDollarAmountPerCrypto) ? availiabletoTrade : settings.MaxDollarAmountPerCrypto : (availiabletoTrade / totalCanBuy);
-        //    foreach (var item in BuySellCryptoList)
-        //    {
-        //        if ((cryptoTracker.Count() + cryptoCnt) >= settings.MaxNumberofCryptotoBuy)
-        //            break;
-
-        //        var result = item.Results;
-        //        var direction = item.Direction;
-        //        bool sellShort = (direction == TradeDirection.SELL_SHORT) ? true : false;
-        //        if (perCrypto >= 5)
-        //        {
-        //            BuySellCrypto(null, result, direction,Math.Round((decimal)perCrypto, 5), services, products, sellShort);
-        //            //if (!alreadyQueuedStock.Where(x => x.Coin == result["Symbol"].ToString()).Any())
-        //            //    QueueCryptotoBuy(result, direction, Math.Round((decimal)perCrypto, 5));
-        //            cryptoCnt++;
-        //        }
-        //    }
-        //}
+                var result = item.Results;
+                var direction = item.Direction;
+                if(perCrypto > 5)
+                {
+                    perCrypto = 5;
+                }
+                //if (perCrypto >= 5)
+                //{
+                    _helper.BuySellCrypto(null, result, direction, Math.Round((decimal)perCrypto, 5), coinBaseService, products);
+                    //if (!alreadyQueuedStock.Where(x => x.Coin == result["Symbol"].ToString()).Any())
+                    //    QueueCryptotoBuy(result, direction, Math.Round((decimal)perCrypto, 5));
+                    cryptoCnt++;
+                //}
+            }
+        }
 
         void CalculatePurchaseAmount2(decimal? availiabletoTrade, List<PublicProduct>? products, IQueryable<CryptoTracker2> cryptoTracker, ref List<BuySellCommodity> BuySellCryptoList)
         {
@@ -793,7 +659,7 @@ namespace TMD.PricePrediction.Classes
             int cryptoCnt = 0;
             //var totalCanBuy = (BuySellCryptoList.Count() > (settings.MaxNumberofCryptotoBuy - cryptoTracker.Count())) ? (settings.MaxNumberofCryptotoBuy - cryptoTracker.Count()) : BuySellCryptoList.Count();
             //decimal? perCrypto = (availiabletoTrade / totalCanBuy) > settings.MaxDollarAmountPerCrypto ? (availiabletoTrade < settings.MaxDollarAmountPerCrypto) ? availiabletoTrade : settings.MaxDollarAmountPerCrypto : (availiabletoTrade / totalCanBuy);
-            decimal perCrypto = 3m;
+            decimal perCrypto = 2m;
             foreach (var item in BuySellCryptoList)
             {
                 if ((cryptoTracker.Count() + cryptoCnt) >= settings.MaxNumberofCryptotoBuy)

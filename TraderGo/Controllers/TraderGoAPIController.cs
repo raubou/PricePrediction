@@ -37,12 +37,12 @@ namespace TraderGo.Controllers
         IDbContextFactory<TmdContext> _contextFactory;
 
 
-        public TraderGoAPIController(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<FinnHub> finnHub, IOptions<Polygon> polycon, IHttpClientFactory? httpClientFactory, ILogger<TraderGoAPIController> logger, IOptions<SchwabSettings> settings, IDbContextFactory<TmdContext> contextFactory)
+        public TraderGoAPIController(IOptions<ConnectionSettings> connectionSettings, IOptions<ConnectionSettings2> connectionSettings2, IOptions<FinnHub> finnHub, IOptions<Polygon> polygon, IHttpClientFactory? httpClientFactory, ILogger<TraderGoAPIController> logger, IOptions<SchwabSettings> settings, IDbContextFactory<TmdContext> contextFactory)
         {
             _connectionSettings = connectionSettings;
             _connectionSettings2 = connectionSettings2;
             _finnHub = finnHub;
-            _polygon = polycon;
+            _polygon = polygon;
             _logger = logger;
             _settings = settings.Value;
             _factory = httpClientFactory;

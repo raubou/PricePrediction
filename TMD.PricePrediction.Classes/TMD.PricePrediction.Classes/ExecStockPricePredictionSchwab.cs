@@ -12,7 +12,7 @@ using TMDInvestments.Context;
 using TMDInvestments.Models;
 using TMDInvestments.Models.Models;
 using TMDInvestments.Services;
-using ZstdSharp.Unsafe;
+//using ZstdSharp.Unsafe;
 
 namespace TMD.PricePrediction.Classes
 {
@@ -304,16 +304,17 @@ namespace TMD.PricePrediction.Classes
         void AnalyiseOwnedStock(StockTracker2 stock, JsonObject? results)
         {
             //calculate percent difference
-            decimal percentDiffPricePurchased = 0m;
-            decimal percentDiffLastPrice = 0m;
+            decimal percentChangePricePurchased = 0m;
+            decimal percentChangeLastPrice = 0m;
             decimal lastPrice = (stock.LastPrice ?? 0);
             decimal pricePurchased = (stock.PricePurchased ?? 0);
             decimal currentPrice = Convert.ToDecimal(results["lastPrice"].ToString());
-
             try
             {
-                percentDiffPricePurchased = Math.Abs(((pricePurchased - currentPrice) / ((pricePurchased + currentPrice) / 2)) * 100);
-                percentDiffLastPrice = Math.Abs(((lastPrice - currentPrice) / ((lastPrice + currentPrice) / 2)) * 100);
+                //percentDiffPricePurchased = Math.Abs(((pricePurchased - currentPrice) / ((pricePurchased + currentPrice) / 2)) * 100);
+                //percentDiffLastPrice = Math.Abs(((lastPrice - currentPrice) / ((lastPrice + currentPrice) / 2)) * 100);
+                percentChangePricePurchased = Math.Abs(((currentPrice - pricePurchased) / pricePurchased) * 100);
+                percentChangeLastPrice = Math.Abs(((currentPrice - lastPrice) / lastPrice) * 100);
             }
             catch (Exception ex)
             {
@@ -322,102 +323,75 @@ namespace TMD.PricePrediction.Classes
 
             if (stock.TradeDirection == (int)TradeDirection.SELL_SHORT) //selling short
             {
-                //if (currentPrice > pricePurchased)
-                //if (currentPrice > lastPrice && percentDiffLastPrice >= settings.StopLossPercentPurchasedStock && percentDiffPricePurchased >= 3.5m)
-                //if ((currentPrice > lastPrice) && (pricePurchased > lastPrice) && (pricePurchased > currentPrice) && (percentDiffLastPrice >= settings.StopLossPercentLastPriceCrypto && percentDiffPricePurchased >= 3.5m))
-                if (((currentPrice > lastPrice) && (percentDiffLastPrice >= settings.StopLossPercentLastPriceStock)) ||
-                    ((currentPrice > pricePurchased) && (percentDiffPricePurchased >= settings.StopLossPercentPurchasedStock)) ||
-                    (pricePurchased > lastPrice) && (pricePurchased > currentPrice) && percentDiffPricePurchased >= 3.5m)
-                {
-                    //if (percentDiffPricePurchased > settings.StopLossPercentPurchasedStock)
-                    //{
-                    //buy to cover
-                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentDiffPricePurchased, 4)}% since price purchased. Buying to cover.");
-                        UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
-                        //_helper.BuySellStock(stock, results, TradeDirection.BUY_TO_COVER, stock.Quantity, false, schwabServices);
-                        //Attempt to reverse stock
-                        //if (stock.IsReversed != null && !(bool)stock.IsReversed)
-                        //    ReverseStock(stock, results);
-                    //}
-                    //else
-                    //{
-                    //    //Update Price
-                    //    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentDiffPricePurchased, 4)}% tolerance since price purchased. Updating last Price.");
-                    //    UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
-                    //}
-                }
-                //else
-                //if (currentPrice > lastPrice)
-                //{
-                //    if (percentDiffLastPrice > settings.StopLossPercentLastPriceStock)
-                //    {
-                //        //buy to cover
-                //        Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentDiffLastPrice, 4)}% since last price. Buying to cover.");
-                //        UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
-                //        _helper.BuySellStock(stock, results, TradeDirection.BUY_TO_COVER, stock.Quantity, false, schwabServices);
-                //    }
-                //    else
-                //    {
-                //        //Update Price
-                //        //_helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentDiffLastPrice, 4)}% tolerance since last price. Updating last Price.");
-                //        //UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
-                //    }
-                //}
-                //else if (currentPrice <= pricePurchased)
-                else //if (currentPrice <= lastPrice)
+                if (currentPrice < pricePurchased)
                 {
                     //update price
-                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentDiffLastPrice, 4)}% tolerance since purchase. Updating last Price.");
+                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentChangeLastPrice, 5)}% tolerance since price purchased. Updating last Price.");
+                    UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
+                }
+                else
+                if (currentPrice < lastPrice)
+                {
+                    //update price
+                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentChangeLastPrice, 5)}% tolerance since last price. Updating last Price.");
+                    UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
+                }
+                else
+                if (currentPrice > pricePurchased && percentChangePricePurchased > settings.StopLossPercentPurchasedStock)
+                {
+                    //sell
+                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentChangePricePurchased, 5)}% since last Price Purchased. Buying to Cover.");
+                    UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
+                    _helper.BuySellStock(stock, results, TradeDirection.BUY_TO_COVER, stock.Quantity, false, schwabServices);
+                }
+                else
+                if (currentPrice > lastPrice && percentChangeLastPrice > settings.StopLossPercentLastPriceStock)
+                {
+                    //sell
+                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentChangeLastPrice, 5)}% since last Price Change. Buying to Cover.");
+                    UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
+                    _helper.BuySellStock(stock, results, TradeDirection.BUY_TO_COVER, stock.Quantity, false, schwabServices);
+                }
+                else
+                {
+                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) is within limits {Math.Round(percentChangeLastPrice, 5)}%");
                     UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
                 }
             }
             else //Going Long
             {
-                //if (currentPrice < pricePurchased)
-                //if (currentPrice < lastPrice && percentDiffLastPrice >= settings.StopLossPercentPurchasedStock && percentDiffPricePurchased >= 3.5m)
-                //if ((currentPrice < lastPrice) && (pricePurchased < lastPrice) && (pricePurchased < currentPrice) && (percentDiffLastPrice >= settings.StopLossPercentLastPriceCrypto && percentDiffPricePurchased >= 3.5m))
-                if (((currentPrice < lastPrice) && (percentDiffLastPrice >= settings.StopLossPercentLastPriceStock)) ||
-                    ((currentPrice < pricePurchased) && (percentDiffPricePurchased >= settings.StopLossPercentPurchasedStock)) ||
-                    (pricePurchased < lastPrice) && (pricePurchased < currentPrice) && percentDiffPricePurchased >= 3.5m)   
-                {
-                    //if (percentDiffPricePurchased > settings.StopLossPercentPurchasedStock)
-                    //{
-                    //buy to cover
-                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentDiffPricePurchased, 4)}% since price purchased. Buying to cover.");
-                        UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
-                        //_helper.BuySellStock(stock, results, TradeDirection.SELL, stock.Quantity, false, schwabServices);
-                        //Attempt to reverse stock
-                        //if (stock.IsReversed != null && !(bool)stock.IsReversed)
-                        //    ReverseStock(stock, results);
-                    //}
-                    //else
-                    //{
-                    //    //Update Price
-                    //    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentDiffPricePurchased, 4)}% tolerance since price purchased. Updating last Price.");
-                    //    UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
-                    //}
-                }
-                //else
-                //if (currentPrice < lastPrice)
-                //{
-                //    if (percentDiffLastPrice > settings.StopLossPercentLastPriceStock)
-                //    {
-                //        //sell
-                //        Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentDiffLastPrice, 4)}% since last price. Buying to cover.");
-                //        UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
-                //        _helper.BuySellStock(stock, results, TradeDirection.SELL, stock.Quantity, false, schwabServices);
-                //    }
-                //    else
-                //    {
-                //        //Update Price
-                //        //helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentDiffLastPrice, 4)}% tolerance since last price. Updating last Price.");
-                //        //UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
-                //    }
-                //}
-                else //if (currentPrice >= lastPrice)
+                if (currentPrice > pricePurchased)
                 {
                     //update price
-                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentDiffLastPrice, 4)}% tolerance since purchase. Updating last Price.");
+                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentChangeLastPrice, 5)}% tolerance since price purchased. Updating last Price.");
+                    UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
+                }
+                else
+                if (currentPrice > lastPrice)
+                {
+                    //update price
+                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentChangeLastPrice, 5)}% tolerance since last price. Updating last Price.");
+                    UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
+                }
+                else
+                if (currentPrice < pricePurchased && percentChangePricePurchased > settings.StopLossPercentPurchasedStock)
+                {
+                    //sell
+                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentChangePricePurchased, 5)}% since last Price Purchased. Selling.");
+                    UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
+                    _helper.BuySellStock(stock, results, TradeDirection.SELL, stock.Quantity, false, schwabServices);
+                }
+                else
+                if (currentPrice < lastPrice && percentChangeLastPrice > settings.StopLossPercentLastPriceStock)
+                {
+                    //sell
+                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentChangeLastPrice, 5)}% since last Price Change. Selling.");
+                    UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
+                    _helper.BuySellStock(stock, results, TradeDirection.SELL, stock.Quantity, false, schwabServices);
+                }
+                else
+                {
+                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) is within limits {Math.Round(percentChangeLastPrice, 5)}%");
                     UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
                 }
             }

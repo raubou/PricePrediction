@@ -26,7 +26,7 @@ namespace TMD.Services.Service
         Bartergora2._0.Models.Advertiser advertiser = null;
         Bartergora2._0.Models.Product products = null;
         Bartergora2._0.Models.ProductImage productImage = null;
-        private readonly object _lockObject = new object();
+        private readonly System.Threading.Lock _lockObject = new();
         public BartergoraDataLoadService(ILogger? logger, IHttpClientFactory httpClientFactory)
         {
             ctx2 = new BartergoraDBContext();
@@ -43,7 +43,7 @@ namespace TMD.Services.Service
             // Implement data loading logic here
             IEnumerable<CategoriesWithDescription>? categories = null;
 
-            ctx2?.Database.ExecuteSqlRaw("EXEC [TMD].[TruncateAllTables]");
+            //ctx2?.Database.ExecuteSqlRaw("EXEC [TMD].[TruncateAllTables]");
             
             categories = ctx2?.Database?.SqlQueryRaw<CategoriesWithDescription>("EXEC [tmd].[GetCategoriesWithDescription]");
 
@@ -79,65 +79,78 @@ namespace TMD.Services.Service
                 if (!Uri.TryCreate(item.linkCode.imageUrl, UriKind.Absolute, out Uri uriResult)
                     || !(uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps))
                     continue;
-                advertiser = ctx2.Advertisers.Where(x => x.AdvertiserName.ToLower().Trim() == item.advertiserName.ToLower().Trim() /*&& x.AdvertiserKey == Convert.ToInt64(item.advertiserId)*/).FirstOrDefault();
-                if (advertiser == null)
+                lock (_lockObject)
                 {
-                    advertiser = new Advertiser() { AdvertiserName = item.advertiserName, AdvertiserKey = Convert.ToInt64(item.advertiserId), DateCreated = DateTime.Now, Deleted = false, IsActive = true };
-                    lock (_lockObject)
+                    advertiser = ctx2.Advertisers.Where(x => x.AdvertiserName.ToLower().Trim() == item.advertiserName.ToLower().Trim() /*&& x.AdvertiserKey == Convert.ToInt64(item.advertiserId)*/).FirstOrDefault();
+                    //}
+                    if (advertiser == null)
                     {
-                        ctx2.Advertisers.Add(advertiser);
-                        ctx2.Entry(advertiser).State = Microsoft.EntityFrameworkCore.EntityState.Added;
-                        ctx2.SaveChanges();
-                        ctx2.Entry(advertiser).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                        advertiser = new Advertiser() { AdvertiserName = item.advertiserName, AdvertiserKey = Convert.ToInt64(item.advertiserId), DateCreated = DateTime.Now, Deleted = false, IsActive = true };
+                        lock (_lockObject)
+                        {
+                            ctx2.Advertisers.Add(advertiser);
+                            ctx2.Entry(advertiser).State = Microsoft.EntityFrameworkCore.EntityState.Added;
+                            ctx2.SaveChanges();
+                            ctx2.Entry(advertiser).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                        }
                     }
-                }
-                products = ctx2.Products.Where(x => x.AdvertiserId == advertiser.AdvertiserId && x.ProductName == item.title && x.Description == item.description).FirstOrDefault();
-                if (products == null)
-                {
-                    products = new Bartergora2._0.Models.Product()
+                    //lock (_lockObject)
+                    //{
+                    products = ctx2.Products.Where(x => x.AdvertiserId == advertiser.AdvertiserId && x.ProductName == item.title && x.Description == item.description).FirstOrDefault();
+                    //}
+                    if (products == null)
                     {
-                        Source = "Commission Junction",
-                        AdvertiserId = advertiser.AdvertiserId,
-                        ProductName = item.title,
-                        Description = item.description,
-                        Price = Convert.ToDecimal(item?.price?.amount ?? "0"),
-                        SalePrice = Convert.ToDecimal(item?.salePrice?.amount ?? "0"),
-                        //SKU = item.sku,
-                        //UPC = item.upccode,
-                        linkURL = item.linkCode.clickUrl,
-                        DateCreated = DateTime.Now,
-                        Deleted = false
-                    };
-                    lock (_lockObject)
-                    {
+                        products = new Bartergora2._0.Models.Product()
+                        {
+                            Source = "Commission Junction",
+                            AdvertiserId = advertiser.AdvertiserId,
+                            ProductName = item.title,
+                            Description = item.description,
+                            Price = Convert.ToDecimal(item?.price?.amount ?? "0"),
+                            SalePrice = Convert.ToDecimal(item?.salePrice?.amount ?? "0"),
+                            //SKU = item.sku,
+                            //UPC = item.upccode,
+                            linkURL = item.linkCode.clickUrl,
+                            DateCreated = DateTime.Now,
+                            Deleted = false
+                        };
+                        //lock (_lockObject)
+                        //{
                         ctx2.Products.Add(products);
                         ctx2.Entry(products).State = Microsoft.EntityFrameworkCore.EntityState.Added;
                         ctx2.SaveChanges();
                         ctx2.Entry(products).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                        //}
                     }
-                }
-                productImage = ctx2.ProductImages.Where(x => x.ProductId == products.ProductId && x.ImageUrl == item.linkCode.imageUrl).FirstOrDefault();
-                if (productImage == null)
-                {
-                    productImage = new ProductImage() { ProductId = products.ProductId, ImageUrl = item.linkCode.imageUrl, DateCreated = DateTime.Now, Deleted = false };
-                    lock (_lockObject)
+                    //lock (_lockObject)
+                    //{
+                    productImage = ctx2.ProductImages.Where(x => x.ProductId == products.ProductId && x.ImageUrl == item.linkCode.imageUrl).FirstOrDefault();
+                    // }
+                    if (productImage == null)
                     {
+                        productImage = new ProductImage() { ProductId = products.ProductId, ImageUrl = item.linkCode.imageUrl, DateCreated = DateTime.Now, Deleted = false };
+                        //lock (_lockObject)
+                        //{
                         ctx2.ProductImages.Add(productImage);
                         ctx2.Entry(productImage).State = Microsoft.EntityFrameworkCore.EntityState.Added;
                         ctx2.SaveChanges();
                         ctx2.Entry(productImage).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                        //}
                     }
-                }
-                productsToSubCategories = ctx2.ProductsToSubCategories.Where(x => x.SubCategoryId == item.SubCategoryId && x.ProductId == products.ProductId).FirstOrDefault();
-                if (productsToSubCategories == null)
-                {
-                    productsToSubCategories = new ProductsToSubCategories() { SubCategoryId = item.SubCategoryId, ProductId = products.ProductId, DateCreated = DateTime.Now, Deleted = false };
-                    lock (_lockObject)
+                    //lock (_lockObject)
+                    //{
+                    productsToSubCategories = ctx2.ProductsToSubCategories.Where(x => x.SubCategoryId == item.SubCategoryId && x.ProductId == products.ProductId).FirstOrDefault();
+                    // }
+                    if (productsToSubCategories == null)
                     {
-                        ctx2.ProductsToSubCategories.Add(productsToSubCategories);
-                        ctx2.Entry(productsToSubCategories).State = Microsoft.EntityFrameworkCore.EntityState.Added;
-                        ctx2.SaveChanges();
-                        ctx2.Entry(productsToSubCategories).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                        productsToSubCategories = new ProductsToSubCategories() { SubCategoryId = item.SubCategoryId, ProductId = products.ProductId, DateCreated = DateTime.Now, Deleted = false };
+                        lock (_lockObject)
+                        {
+                            ctx2.ProductsToSubCategories.Add(productsToSubCategories);
+                            ctx2.Entry(productsToSubCategories).State = Microsoft.EntityFrameworkCore.EntityState.Added;
+                            ctx2.SaveChanges();
+                            ctx2.Entry(productsToSubCategories).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                        }
                     }
                 }
             }
@@ -220,11 +233,6 @@ namespace TMD.Services.Service
                     }
                 }
                 price = Convert.ToDecimal(digitsOnly);
-                //}
-                //catch (Exception ex)
-                //{
-                //    continue;
-                //}
 
                 var doc = new HtmlDocument();
                 doc.LoadHtml(item.Summary?.Text); // or item.Content
@@ -241,69 +249,82 @@ namespace TMD.Services.Service
                 if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out Uri uriResult)
                     || !(uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps))
                     continue;
-
-                advertiser = ctx2.Advertisers.Where(x => x.AdvertiserName.ToLower().Trim() == "Stack Commerce" && x.AdvertiserKey == 999).FirstOrDefault();
-                if (advertiser == null)
+                lock (_lockObject)
                 {
-                    advertiser = new Advertiser() { AdvertiserName = "Stack Commerce", AdvertiserKey = 999, DateCreated = DateTime.Now, Deleted = false, IsActive = true };
-                    lock (_lockObject)
+                    advertiser = ctx2.Advertisers.Where(x => x.AdvertiserName.ToLower().Trim() == "Stack Commerce" && x.AdvertiserKey == 999).FirstOrDefault();
+                    //}
+                    if (advertiser == null)
                     {
+                        advertiser = new Advertiser() { AdvertiserName = "Stack Commerce", AdvertiserKey = 999, DateCreated = DateTime.Now, Deleted = false, IsActive = true };
+                        //lock (_lockObject)
+                        //{
                         ctx2.Advertisers.Add(advertiser);
                         ctx2.Entry(advertiser).State = Microsoft.EntityFrameworkCore.EntityState.Added;
                         ctx2.SaveChanges();
                         ctx2.Entry(advertiser).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                        // }
                     }
-                }
-                products = ctx2.Products.Where(x => x.Source == "Stack Commerce" && x.ProductName == item.Title.Text && x.Description == item.Summary.Text).FirstOrDefault();
-                if (products == null)
-                {
-                    products = new Bartergora2._0.Models.Product()
+                    //lock (_lockObject)
+                    //{
+                    products = ctx2.Products.Where(x => x.Source == "Stack Commerce" && x.ProductName == item.Title.Text && x.Description == item.Summary.Text).FirstOrDefault();
+                    //}
+                    if (products == null)
                     {
-                        Source = "Stack Commerce",
-                        AdvertiserId = advertiser.AdvertiserId,
-                        ProductName = item.Title.Text,
-                        Description = item.Summary?.Text,
-                        Price = price,
-                        SalePrice = 0,
-                        SKU = "0",
-                        UPC = "0",
-                        linkURL = item.Links[0].Uri.ToString(),
-                        DateCreated = DateTime.Now,
-                        Deleted = false
-                    };
-                    lock (_lockObject)
-                    {
+                        products = new Bartergora2._0.Models.Product()
+                        {
+                            Source = "Stack Commerce",
+                            AdvertiserId = advertiser.AdvertiserId,
+                            ProductName = item.Title.Text,
+                            Description = item.Summary?.Text,
+                            Price = price,
+                            SalePrice = 0,
+                            SKU = "0",
+                            UPC = "0",
+                            linkURL = item.Links[0].Uri.ToString(),
+                            DateCreated = DateTime.Now,
+                            Deleted = false
+                        };
+                        //lock (_lockObject)
+                        //{
                         ctx2.Products.Add(products);
                         ctx2.Entry(products).State = Microsoft.EntityFrameworkCore.EntityState.Added;
                         ctx2.SaveChanges();
                         ctx2.Entry(products).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                        //}
                     }
-                }
-                productImage = ctx2.ProductImages.Where(x => x.ProductId == products.ProductId && x.ImageUrl == imageUrl).FirstOrDefault();
-                if (productImage == null)
-                {
-                    productImage = new ProductImage() { ProductId = products.ProductId, ImageUrl = imageUrl, DateCreated = DateTime.Now, Deleted = false };
-                    lock (_lockObject)
+                    //lock (_lockObject)
+                    //{
+                    productImage = ctx2.ProductImages.Where(x => x.ProductId == products.ProductId && x.ImageUrl == imageUrl).FirstOrDefault();
+                    //}
+                    if (productImage == null)
                     {
+                        productImage = new ProductImage() { ProductId = products.ProductId, ImageUrl = imageUrl, DateCreated = DateTime.Now, Deleted = false };
+                        //lock (_lockObject)
+                        //{
                         ctx2.ProductImages.Add(productImage);
                         ctx2.Entry(productImage).State = Microsoft.EntityFrameworkCore.EntityState.Added;
                         ctx2.SaveChanges();
                         ctx2.Entry(productImage).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                        //}
                     }
-                }
-                var label = (item?.Categories[0]?.Label ?? "0").Trim();
-                productsToSubCategory = ctx2.ProductsToSubCategories.Where(x => x.SubCategoryId == Convert.ToInt32(label) && x.ProductId == products.ProductId).FirstOrDefault();
-                if (productsToSubCategory == null)
-                {
-                    productsToSubCategory = new ProductsToSubCategories() { SubCategoryId = Convert.ToInt32(label), ProductId = products.ProductId, DateCreated = DateTime.Now, Deleted = false };
-                    lock (_lockObject)
+                    var label = (item?.Categories[0]?.Label ?? "0").Trim();
+                    //lock (_lockObject)
+                    //{
+                    productsToSubCategory = ctx2.ProductsToSubCategories.Where(x => x.SubCategoryId == Convert.ToInt32(label) && x.ProductId == products.ProductId).FirstOrDefault();
+                    //}
+                    if (productsToSubCategory == null)
                     {
+                        productsToSubCategory = new ProductsToSubCategories() { SubCategoryId = Convert.ToInt32(label), ProductId = products.ProductId, DateCreated = DateTime.Now, Deleted = false };
+                        //lock (_lockObject)
+                        //{
                         ctx2.ProductsToSubCategories.Add(productsToSubCategory);
                         ctx2.Entry(productsToSubCategory).State = Microsoft.EntityFrameworkCore.EntityState.Added;
                         ctx2.SaveChanges();
                         ctx2.Entry(productsToSubCategory).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                        //}
                     }
                 }
+
             }
         }
         private void LoadImactRadiusData(PredictionEngine<ProductInput, ProductPrediction> predEngine, List<ProductInput> categoryResults)
@@ -316,65 +337,78 @@ namespace TMD.Services.Service
                 if (!Uri.TryCreate(item.ImageUrl, UriKind.Absolute, out Uri uriResult)
                     || !(uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps))
                     continue;
-                advertiser = ctx2.Advertisers.Where(x => x.AdvertiserName.ToLower().Trim() == item.Manufacturer.ToLower().Trim() /*&& x.AdvertiserKey == Convert.ToInt32(item.CatalogItemId)*/).FirstOrDefault();
-                if (advertiser == null)
+                lock (_lockObject)
                 {
-                    lock (_lockObject)
+                    advertiser = ctx2.Advertisers.Where(x => x.AdvertiserName.ToLower().Trim() == item.Manufacturer.ToLower().Trim() /*&& x.AdvertiserKey == Convert.ToInt32(item.CatalogItemId)*/).FirstOrDefault();
+                    //}
+                    if (advertiser == null)
                     {
+                        //lock (_lockObject)
+                        // {
                         advertiser = new Advertiser() { AdvertiserName = item.Manufacturer, AdvertiserKey = Convert.ToInt32(item.CatalogItemId), DateCreated = DateTime.Now, Deleted = false, IsActive = true };
                         ctx2.Advertisers.Add(advertiser);
                         ctx2.Entry(advertiser).State = Microsoft.EntityFrameworkCore.EntityState.Added;
                         ctx2.SaveChanges();
                         ctx2.Entry(advertiser).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                        //}
                     }
-                }
-                products = ctx2.Products.Where(x => x.AdvertiserId == advertiser.AdvertiserId && x.ProductName == item.Name && x.Description == item.Description).FirstOrDefault();
-                if (products == null)
-                {
-                    products = new Bartergora2._0.Models.Product()
+                    //lock (_lockObject)
+                    //{
+                    products = ctx2.Products.Where(x => x.AdvertiserId == advertiser.AdvertiserId && x.ProductName == item.Name && x.Description == item.Description).FirstOrDefault();
+                    //}
+                    if (products == null)
                     {
-                        Source = "Impact",
-                        AdvertiserId = advertiser.AdvertiserId,
-                        ProductName = item.Name,
-                        Description = item.Description,
-                        Price = Convert.ToDecimal(item.OriginalPrice),
-                        SalePrice = Convert.ToDecimal(item.CurrentPrice),
-                        SKU = item.Mpn,
-                        UPC = item.Gtin,
-                        linkURL = item.Url,
-                        DateCreated = DateTime.Now,
-                        Deleted = false
-                    };
-                    lock (_lockObject)
-                    {
+                        products = new Bartergora2._0.Models.Product()
+                        {
+                            Source = "Impact",
+                            AdvertiserId = advertiser.AdvertiserId,
+                            ProductName = item.Name,
+                            Description = item.Description,
+                            Price = Convert.ToDecimal(item.OriginalPrice),
+                            SalePrice = Convert.ToDecimal(item.CurrentPrice),
+                            SKU = item.Mpn,
+                            UPC = item.Gtin,
+                            linkURL = item.Url,
+                            DateCreated = DateTime.Now,
+                            Deleted = false
+                        };
+                        //lock (_lockObject)
+                        //{
                         ctx2.Products.Add(products);
                         ctx2.Entry(products).State = Microsoft.EntityFrameworkCore.EntityState.Added;
                         ctx2.SaveChanges();
                         ctx2.Entry(products).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                        //}
                     }
-                }
-                productImage = ctx2.ProductImages.Where(x => x.ProductId == products.ProductId && x.ImageUrl == item.ImageUrl).FirstOrDefault();
-                if (productImage == null)
-                {
-                    productImage = new ProductImage() { ProductId = products.ProductId, ImageUrl = item.ImageUrl, DateCreated = DateTime.Now, Deleted = false };
-                    lock (_lockObject)
+                    //lock (_lockObject)
+                    //{
+                    productImage = ctx2.ProductImages.Where(x => x.ProductId == products.ProductId && x.ImageUrl == item.ImageUrl).FirstOrDefault();
+                    //}
+                    if (productImage == null)
                     {
+                        productImage = new ProductImage() { ProductId = products.ProductId, ImageUrl = item.ImageUrl, DateCreated = DateTime.Now, Deleted = false };
+                        //lock (_lockObject)
+                        //{
                         ctx2.ProductImages.Add(productImage);
                         ctx2.Entry(productImage).State = Microsoft.EntityFrameworkCore.EntityState.Added;
                         ctx2.SaveChanges();
                         ctx2.Entry(productImage).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                        //}
                     }
-                }
-                productsToSubCategories = ctx2.ProductsToSubCategories.Where(x => x.SubCategoryId == item.SubCategoryId && x.ProductId == products.ProductId).FirstOrDefault();
-                if (productsToSubCategories == null)
-                {
-                    productsToSubCategories = new ProductsToSubCategories() { SubCategoryId = item.SubCategoryId, ProductId = products.ProductId, DateCreated = DateTime.Now, Deleted = false };
-                    lock (_lockObject)
+                    //lock (_lockObject)
+                    //{
+                    productsToSubCategories = ctx2.ProductsToSubCategories.Where(x => x.SubCategoryId == item.SubCategoryId && x.ProductId == products.ProductId).FirstOrDefault();
+                    //}
+                    if (productsToSubCategories == null)
                     {
+                        productsToSubCategories = new ProductsToSubCategories() { SubCategoryId = item.SubCategoryId, ProductId = products.ProductId, DateCreated = DateTime.Now, Deleted = false };
+                        //lock (_lockObject)
+                        //{
                         ctx2.ProductsToSubCategories.Add(productsToSubCategories);
                         ctx2.Entry(productsToSubCategories).State = Microsoft.EntityFrameworkCore.EntityState.Added;
                         ctx2.SaveChanges();
                         ctx2.Entry(productsToSubCategories).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                        //}
                     }
                 }
 
@@ -390,68 +424,80 @@ namespace TMD.Services.Service
                 if (!Uri.TryCreate(item.imageurl, UriKind.Absolute, out Uri uriResult)
                     || !(uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps))
                     continue;
-                advertiser = ctx2.Advertisers.Where(x => x.AdvertiserName.ToLower().Trim() == item.merchantname.ToLower().Trim() /*&& x.AdvertiserKey == Convert.ToInt32(item.mid)*/).FirstOrDefault();
-                if (advertiser == null)
+                lock (_lockObject)
                 {
-                    advertiser = new Advertiser() { AdvertiserName = item.merchantname, AdvertiserKey = Convert.ToInt32(item.mid), DateCreated = DateTime.Now, Deleted = false, IsActive = true };
-                    lock (_lockObject)
+                    advertiser = ctx2.Advertisers.Where(x => x.AdvertiserName.ToLower().Trim() == item.merchantname.ToLower().Trim() /*&& x.AdvertiserKey == Convert.ToInt32(item.mid)*/).FirstOrDefault();
+                    //}
+                    if (advertiser == null)
                     {
+                        advertiser = new Advertiser() { AdvertiserName = item.merchantname, AdvertiserKey = Convert.ToInt32(item.mid), DateCreated = DateTime.Now, Deleted = false, IsActive = true };
+                        //lock (_lockObject)
+                        //{
                         ctx2.Advertisers.Add(advertiser);
                         ctx2.Entry(advertiser).State = Microsoft.EntityFrameworkCore.EntityState.Added;
                         ctx2.SaveChanges();
                         ctx2.Entry(advertiser).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                        //}
                     }
-                }
-                products = ctx2.Products.Where(x => x.AdvertiserId == advertiser.AdvertiserId && x.ProductName == item.productname && x.Description == item.description[0].secondary).FirstOrDefault();
-                if (products == null)
-                {
-                    products = new Bartergora2._0.Models.Product()
+                    //lock (_lockObject)
+                    //{
+                    products = ctx2.Products.Where(x => x.AdvertiserId == advertiser.AdvertiserId && x.ProductName == item.productname && x.Description == item.description[0].secondary).FirstOrDefault();
+                    //}
+                    if (products == null)
                     {
-                        Source = "Rakuten",
-                        AdvertiserId = advertiser.AdvertiserId,
-                        ProductName = item.productname,
-                        Description = item.description[0]._short,
-                        Price = Convert.ToDecimal(item.price),
-                        SalePrice = Convert.ToDecimal(item.saleprice),
-                        SKU = item.sku,
-                        UPC = item.upccode,
-                        linkURL = item.linkurl,
-                        DateCreated = DateTime.Now,
-                        Deleted = false
-                    };
-                    lock (_lockObject)
-                    {
+                        products = new Bartergora2._0.Models.Product()
+                        {
+                            Source = "Rakuten",
+                            AdvertiserId = advertiser.AdvertiserId,
+                            ProductName = item.productname,
+                            Description = item.description[0]._short,
+                            Price = Convert.ToDecimal(item.price),
+                            SalePrice = Convert.ToDecimal(item.saleprice),
+                            SKU = item.sku,
+                            UPC = item.upccode,
+                            linkURL = item.linkurl,
+                            DateCreated = DateTime.Now,
+                            Deleted = false
+                        };
+                        //lock (_lockObject)
+                        //{
                         ctx2.Products.Add(products);
                         ctx2.Entry(products).State = Microsoft.EntityFrameworkCore.EntityState.Added;
                         ctx2.SaveChanges();
                         ctx2.Entry(products).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
                     }
-                }
-                productImage = ctx2.ProductImages.Where(x => x.ProductId == products.ProductId && x.ImageUrl == item.imageurl).FirstOrDefault();
-                if (productImage == null)
-                {
-                    productImage = new ProductImage() { ProductId = products.ProductId, ImageUrl = item.imageurl, DateCreated = DateTime.Now, Deleted = false };
-                    lock (_lockObject)
+                    //}
+                    //lock (_lockObject)
+                    //{
+                    productImage = ctx2.ProductImages.Where(x => x.ProductId == products.ProductId && x.ImageUrl == item.imageurl).FirstOrDefault();
+                    //}
+                    if (productImage == null)
                     {
+                        productImage = new ProductImage() { ProductId = products.ProductId, ImageUrl = item.imageurl, DateCreated = DateTime.Now, Deleted = false };
+                        //lock (_lockObject)
+                        //{
                         ctx2.ProductImages.Add(productImage);
                         ctx2.Entry(productImage).State = Microsoft.EntityFrameworkCore.EntityState.Added;
                         ctx2.SaveChanges();
                         ctx2.Entry(productImage).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                        //}
                     }
-                }
-                productsToSubCategories = ctx2.ProductsToSubCategories.Where(x => x.SubCategoryId == item.SubCategoryId && x.ProductId == products.ProductId).FirstOrDefault();
-                if (productsToSubCategories == null)
-                {
-                    productsToSubCategories = new ProductsToSubCategories() { SubCategoryId = item.SubCategoryId, ProductId = products.ProductId, DateCreated = DateTime.Now, Deleted = false };
-                    lock (_lockObject)
+                    //lock (_lockObject)
+                    //{
+                    productsToSubCategories = ctx2.ProductsToSubCategories.Where(x => x.SubCategoryId == item.SubCategoryId && x.ProductId == products.ProductId).FirstOrDefault();
+                    //}
+                    if (productsToSubCategories == null)
                     {
+                        productsToSubCategories = new ProductsToSubCategories() { SubCategoryId = item.SubCategoryId, ProductId = products.ProductId, DateCreated = DateTime.Now, Deleted = false };
+                        //lock (_lockObject)
+                        //{
                         ctx2.ProductsToSubCategories.Add(productsToSubCategories);
                         ctx2.Entry(productsToSubCategories).State = Microsoft.EntityFrameworkCore.EntityState.Added;
                         ctx2.SaveChanges();
                         ctx2.Entry(productsToSubCategories).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                        //}
                     }
                 }
-
             }
         }
 

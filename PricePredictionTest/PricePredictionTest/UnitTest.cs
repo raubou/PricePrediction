@@ -540,6 +540,36 @@ namespace PricePredictionTest
 
         }
         [TestMethod]
+        public void TestCoinBaseGetQuote()
+        {
+            List<BuySellCommodity> BuySellCryptoList = new List<BuySellCommodity>();
+            var sw = new Stopwatch();
+            sw.Start();
+            var cryptoList = services.GetArbitrage();
+            sw.Stop();
+            TimeSpan timeElapsed = sw.Elapsed;
+            var products = services?.GetProducts();
+            foreach (var crypto in cryptoList)
+            {
+                var product = products.Where(x => x.DisplayName == crypto["Symbol"].ToString()).FirstOrDefault();
+                if (product == null)
+                {
+                    continue;
+                }
+                if (product.CancelOnly || product.IsDisabled || product.LimitOnly || product.PostOnly || product.TradingDisabled || product.ViewOnly || product.Status != "online")
+                {
+                    Helper.Log(_logger, LogLevel.Warning, $"Crypto {crypto["Symbol"].ToString()} - ({crypto["Name"].ToString()}) Does not meet the criteria for purchase at this time.");
+                    continue;
+                }
+                if (decimal.Parse(crypto["longCnt"].ToString()) >= settings.CryptoLongCount && (!crypto["Symbol"].ToString().Contains("USDT") && !crypto["Symbol"].ToString().Contains("USDC"))/*&& decimal.Parse(crypto["lastopChangePercent"].ToString()) < 0*/)
+                {
+                    Helper.Log(_logger, LogLevel.Information, $"Adding {crypto["Symbol"].ToString()} - ({crypto["Name"].ToString()}) to potential long list.");
+                    BuySellCryptoList.Add(new BuySellCommodity(int.Parse(crypto["longCnt"].ToString()), TradeDirection.BUY, crypto));
+                    
+                }
+            }
+        }
+        [TestMethod]
         public void GetPriceHistoryCoinTest()
         {
             string[] productIds = new string[5] { "BTC-USD", "ETH-USD", "LTC-USD", "BCH-USD", "DASH-USD" };
@@ -915,7 +945,7 @@ namespace PricePredictionTest
         [TestMethod]
         public void GetSchwabQuote()
         {
-            var quote = SchwabService.GetQuoteAsync("SMCI", true, false).Result;
+            var quote = SchwabService.GetQuoteAsync("BJ", true, false).Result;
             Assert.IsNotNull(quote);
         }
         [TestMethod]
