@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>dotnet-TMD.EquitiesPrediction.StockService-79a5d95d-60f0-40c7-aec8-bceb45c15080</UserSecretsId>
-	<Version>2.8.0.4</Version>
+	<Version>2.8.1.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

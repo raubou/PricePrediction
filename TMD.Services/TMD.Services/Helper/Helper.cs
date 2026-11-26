@@ -871,13 +871,13 @@ namespace TMD.PricePrediction
                 //}
                 if (Convert.ToDecimal(results["RSI"].ToString()) <= 30 && Convert.ToDecimal(results["RSI"].ToString()) > 0) //over sold
                 {
-                    longCnt = longCnt + 2;
-                    //shortCnt = shortCnt + 2;
+                    //longCnt = longCnt + 2;
+                    shortCnt = shortCnt + 2;
                 }
                 if (Convert.ToDecimal(results["RSI"].ToString()) >= 70) //over bought
                 {
-                    shortCnt = shortCnt + 2;
-                    //longCnt = longCnt + 2;
+                    //shortCnt = shortCnt + 2;
+                    longCnt = longCnt + 2;
                 }
             }
             catch (Exception ex)

@@ -348,13 +348,6 @@ namespace TMD.PricePrediction.Classes
 
             if (stock.TradeDirection == (int)TradeDirection.SELL_SHORT) //selling short
             {
-                if (currentPrice < pricePurchased)
-                {
-                    //update price
-                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentChangeLastPrice, 5)}% tolerance since price purchased. Updating last Price.");
-                    UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
-                }
-                else
                 if (currentPrice < lastPrice)
                 {
                     //update price
@@ -362,18 +355,25 @@ namespace TMD.PricePrediction.Classes
                     UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
                 }
                 else
-                if (currentPrice > pricePurchased && percentChangePricePurchased > settings.StopLossPercentPurchasedStock)
+                if (currentPrice < pricePurchased)
+                {
+                    //update price
+                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentChangeLastPrice, 5)}% tolerance since price purchased. Updating last Price.");
+                    UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
+                }
+                else
+                if ((currentPrice < pricePurchased) && currentPrice > lastPrice && percentChangeLastPrice > settings.StopLossPercentLastPriceStock)
                 {
                     //sell
-                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentChangePricePurchased, 5)}% since last Price Purchased. Buying to Cover.");
+                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentChangeLastPrice, 5)}% since last Price Change. Buying to Cover.");
                     UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
                     _helper.BuySellStock(stock, results, TradeDirection.BUY_TO_COVER, stock.Quantity, false, eTradeService);
                 }
                 else
-                if (currentPrice > lastPrice && percentChangeLastPrice > settings.StopLossPercentLastPriceStock)
+                if (currentPrice > pricePurchased && percentChangePricePurchased > settings.StopLossPercentPurchasedStock)
                 {
                     //sell
-                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentChangeLastPrice, 5)}% since last Price Change. Buying to Cover.");
+                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentChangePricePurchased, 5)}% since last Price Purchased. Buying to Cover.");
                     UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
                     _helper.BuySellStock(stock, results, TradeDirection.BUY_TO_COVER, stock.Quantity, false, eTradeService);
                 }
@@ -385,6 +385,13 @@ namespace TMD.PricePrediction.Classes
             }
             else //Going Long
             {
+
+                if (currentPrice > lastPrice)
+                {
+                    //update price
+                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentChangeLastPrice, 5)}% tolerance since last price. Updating last Price.");
+                    UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
+                }
                 if (currentPrice > pricePurchased)
                 {
                     //update price
@@ -392,25 +399,18 @@ namespace TMD.PricePrediction.Classes
                     UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
                 }
                 else
-                if (currentPrice > lastPrice)
+                if ((currentPrice > pricePurchased) && currentPrice < lastPrice && percentChangeLastPrice > settings.StopLossPercentLastPriceCrypto)
                 {
-                    //update price
-                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) still within about {Math.Round(percentChangeLastPrice, 5)}% tolerance since last price. Updating last Price.");
+                    //sell
+                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentChangeLastPrice, 5)}% since last Price Change. Selling.");
                     UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
+                    _helper.BuySellStock(stock, results, TradeDirection.SELL, stock.Quantity, false, eTradeService);
                 }
-                else
+                else                
                 if (currentPrice < pricePurchased && percentChangePricePurchased > settings.StopLossPercentPurchasedCrypto)
                 {
                     //sell
                     Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentChangePricePurchased, 5)}% since last Price Purchased. Selling.");
-                    UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
-                    _helper.BuySellStock(stock, results, TradeDirection.SELL, stock.Quantity, false, eTradeService);
-                }
-                else
-                if (currentPrice < lastPrice && percentChangeLastPrice > settings.StopLossPercentLastPriceCrypto)
-                {
-                    //sell
-                    Helper.Log(_logger, LogLevel.Information, $"stock {stock.Symbol} - ({stock.Name}) has fallen by more then about {Math.Round(percentChangeLastPrice, 5)}% since last Price Change. Selling.");
                     UpdateLastPrice(Convert.ToDecimal(results["lastPrice"].ToString()), ref stock);
                     _helper.BuySellStock(stock, results, TradeDirection.SELL, stock.Quantity, false, eTradeService);
                 }

@@ -326,7 +326,7 @@ namespace TMD.PricePrediction.Classes
                         Helper.Log(_logger, LogLevel.Information, $"Not buying/selling short {crypto["Symbol"].ToString()} - ({crypto["Name"].ToString()}). Long score: {crypto["longCnt"].ToString()}. Short score {crypto["shortCnt"].ToString()}");
                     }
                 }
-
+                BuySellCryptoList = BuySellCryptoList.OrderBy(x => Convert.ToDecimal(x.Results["RSI"].ToString())).ToList();
                 //BuySellCryptoList = BuySellCryptoList/*.Where(x => Convert.ToDecimal(x.Results["RSIOneHour"].ToString()) <= 35)*/.OrderByDescending(x => x.Points).ThenBy(x => Convert.ToDecimal(x.Results["RSI"].ToString()))/*.ThenBy(x => Convert.ToDecimal(x.Results["RSI"].ToString()))*/.ToList();
                 //BuySellCryptoList = BuySellCryptoList.Where(x => Convert.ToDecimal(x.Results?["RSI"]?.ToString()) <= 30 || Convert.ToDecimal(x.Results?["RSI"]?.ToString()) >= 70).ToList();
                 //BuySellCryptoList = BuySellCryptoList.Where(x => Convert.ToDecimal(x.Results?["RSI"]?.ToString()) <= 5m).ToList();
@@ -642,9 +642,13 @@ namespace TMD.PricePrediction.Classes
                 {
                     perCrypto = 5;
                 }
+                if(perCrypto < 2)
+                {
+                    perCrypto = 2;
+                }
                 //if (perCrypto >= 5)
                 //{
-                    _helper.BuySellCrypto(null, result, direction, Math.Round((decimal)perCrypto, 5), coinBaseService, products);
+                _helper.BuySellCrypto(null, result, direction, Math.Round((decimal)perCrypto, 5), coinBaseService, products);
                     //if (!alreadyQueuedStock.Where(x => x.Coin == result["Symbol"].ToString()).Any())
                     //    QueueCryptotoBuy(result, direction, Math.Round((decimal)perCrypto, 5));
                     cryptoCnt++;

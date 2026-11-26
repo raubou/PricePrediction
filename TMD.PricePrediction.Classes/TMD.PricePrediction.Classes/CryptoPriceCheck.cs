@@ -487,30 +487,31 @@ namespace TMD.PricePrediction
             //    Helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) still within about {Math.Round(percentChangeLastPrice, 5)}% tolerance since last price. Updating last Price.");
             //    UpdateLastPrice(currentPrice, currentBalance, ref crypto);
             //}
-            if (currentPrice > pricePurchased)
-            {
-                //update price
-                Helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) still within about {Math.Round(percentChangeLastPrice, 5)}% tolerance since price purchased. Updating last Price.");
-                UpdateLastPrice(currentPrice, currentBalance, ref crypto);
-            } else
             if (currentPrice > lastPrice)
             {
                 //update price
                 Helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) still within about {Math.Round(percentChangeLastPrice, 5)}% tolerance since last price. Updating last Price.");
                 UpdateLastPrice(currentPrice, currentBalance, ref crypto);
             } else
-            if (currentPrice < pricePurchased && percentChangePricePurchased > settings.StopLossPercentPurchasedCrypto)
+            if (currentPrice > pricePurchased)
+            {
+                //update price
+                Helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) still within about {Math.Round(percentChangeLastPrice, 5)}% tolerance since price purchased. Updating last Price.");
+                UpdateLastPrice(currentPrice, currentBalance, ref crypto);
+            } 
+            else
+            if ((currentPrice > pricePurchased) && currentPrice < lastPrice && percentChangeLastPrice > settings.StopLossPercentLastPriceCrypto)
             {
                 //sell
-                Helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) has fallen by more then about {Math.Round(percentChangePricePurchased, 5)}% since price purchased. Selling.");
+                Helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) has fallen by more then about {Math.Round(percentChangeLastPrice, 5)}% since last Price Change. Selling.");
                 UpdateLastPrice(currentPrice, currentBalance, ref crypto);
                 _helper.BuySellCrypto(crypto, results, TradeDirection.SELL, currentBalance, coinBaseService, products);
             }
             else
-            if (currentPrice < lastPrice && percentChangeLastPrice > settings.StopLossPercentLastPriceCrypto)
+            if (currentPrice < pricePurchased && percentChangePricePurchased > settings.StopLossPercentPurchasedCrypto)
             {
                 //sell
-                Helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) has fallen by more then about {Math.Round(percentChangeLastPrice, 5)}% since last Price Change. Selling.");
+                Helper.Log(_logger, LogLevel.Information, $"crypto {crypto.Coin} - ({crypto.Name}) has fallen by more then about {Math.Round(percentChangePricePurchased, 5)}% since price purchased. Selling.");
                 UpdateLastPrice(currentPrice, currentBalance, ref crypto);
                 _helper.BuySellCrypto(crypto, results, TradeDirection.SELL, currentBalance, coinBaseService, products);
             }
@@ -526,14 +527,14 @@ namespace TMD.PricePrediction
         bool UpdateLastPrice(decimal lastPrice, decimal Balance, ref CryptoTracker2 cryptoTracker)
         {
             _ctx = new TmdContext();
-            if ((cryptoTracker.TradeDirection == (int)TradeDirection.BUY && (lastPrice > cryptoTracker.LastPrice && lastPrice > cryptoTracker.PricePurchased)) || cryptoTracker.LastPrice is null)
-            {
+            //if ((cryptoTracker.TradeDirection == (int)TradeDirection.BUY && (lastPrice > cryptoTracker.LastPrice && lastPrice > cryptoTracker.PricePurchased)) || cryptoTracker.LastPrice is null)
+            //{
                 cryptoTracker.LastPrice = lastPrice;
-            }
-            if ((cryptoTracker.TradeDirection == (int)TradeDirection.SELL_SHORT && (lastPrice < cryptoTracker.LastPrice && lastPrice < cryptoTracker.PricePurchased)) || cryptoTracker.LastPrice is null)
-            {
-                cryptoTracker.LastPrice = lastPrice;
-            }
+            //}
+            //if ((cryptoTracker.TradeDirection == (int)TradeDirection.SELL_SHORT && (lastPrice < cryptoTracker.LastPrice && lastPrice < cryptoTracker.PricePurchased)) || cryptoTracker.LastPrice is null)
+            //{
+            //    cryptoTracker.LastPrice = lastPrice;
+            //}
             cryptoTracker.CurrentBalance = Balance;
             cryptoTracker.DateUpdated = Helper.easternTime;
             try
